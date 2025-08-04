@@ -39,3 +39,26 @@ yarn-error.log*
 # typescript
 *.tsbuildinfo
 next-env.d.ts
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# logs
+logs
+*.log
+
+# clinic management specific
+/uploads
+/temp
+/backups
+
+# security (don't commit real credentials)
+.env.local
+.env.production

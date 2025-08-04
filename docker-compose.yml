@@ -1,0 +1,26 @@
+version: '3.8'
+
+services:
+  swamidesk:
+    build: .
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+    restart: unless-stopped
+    
+  # Example database service (uncomment when ready to add real database)
+  # database:
+  #   image: postgres:15
+  #   environment:
+  #     POSTGRES_DB: swamidesk
+  #     POSTGRES_USER: swamidesk
+  #     POSTGRES_PASSWORD: your_password_here
+  #   volumes:
+  #     - postgres_data:/var/lib/postgresql/data
+  #   ports:
+  #     - "5432:5432"
+  #   restart: unless-stopped
+
+# volumes:
+#   postgres_data:
