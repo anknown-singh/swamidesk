@@ -65,7 +65,7 @@ jobs:
         run: npm audit --audit-level=moderate
 
   deploy-preview:
-    name: Deploy Preview
+    name: Deploy Preview Info
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
     needs: [test]
@@ -81,5 +81,13 @@ jobs:
               issue_number: context.issue.number,
               owner: context.repo.owner,
               repo: context.repo.repo,
-              body: '🚀 Preview deployment will be available once this PR is merged to main branch.'
+              body: `## 🚀 SwamIDesk Deployment Status
+              
+              ✅ **CI/CD Pipeline**: All tests passed!
+              
+              🔄 **Vercel Preview**: A preview deployment will be automatically created for this PR.
+              
+              📱 **Current Production**: https://swamidesk-oo10xe5ab-anknownsinghs-projects.vercel.app
+              
+              Once this PR is merged to main, it will be automatically deployed to production.`
             })
