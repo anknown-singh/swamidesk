@@ -60,6 +60,15 @@ logs
 /temp
 /backups
 
+# development temporary files
+*.temp.sql
+*-temp.js
+*-test.js
+proxy-server.js
+test-server.js
+askpass.sh
+setup-database.js
+
 # security (don't commit real credentials)
 .env.local
 .env.production
