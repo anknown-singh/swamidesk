@@ -2,35 +2,55 @@
 
 ## 🏷️ Current Version: 1.0.0
 
-## 📋 Quick Commands
+## 🚀 **NEW: Automatic Version Bumping**
+
+SwamIDesk now uses **Release-Please** for automatic version management based on conventional commits!
+
+## 📋 Conventional Commit Commands
 
 ```bash
-# Check current version
-npm version
+# Use commitizen for guided commits
+npm run commit
 
-# Create patch version (bug fixes) - 1.0.0 → 1.0.1
-npm run version:patch
+# Manual conventional commits format:
+# <type>(<scope>): <subject>
 
-# Create minor version (new features) - 1.0.0 → 1.1.0  
-npm run version:minor
-
-# Create major version (breaking changes) - 1.0.0 → 2.0.0
-npm run version:major
-
-# Build and test before release
-npm run build && npm run lint
-
-# Push version and tags to GitHub
-git push origin main && git push origin --tags
+# Examples:
+git commit -m "feat(auth): add user authentication system"        # Minor bump
+git commit -m "fix(dashboard): resolve loading spinner issue"     # Patch bump
+git commit -m "feat(api)!: change authentication method"          # Major bump
 ```
 
-## 🔄 Release Workflow
+## 🔄 New Automated Release Workflow
 
 1. **Make changes** and test locally
-2. **Update CHANGELOG.md** with changes
-3. **Run version command**: `npm run version:[patch|minor|major]`
-4. **Push to GitHub**: `git push origin main --follow-tags`
-5. **Create release** on GitHub with release notes
+2. **Use conventional commits**: `npm run commit` or follow format
+3. **Push to main**: `git push origin main`
+4. **Release-Please creates PR** with version bump and changelog
+5. **Review and merge PR** to trigger release and deployment
+6. **Vercel automatically deploys** the new version
+
+## 📝 Commit Types & Version Impact
+
+| Commit Type | Version Impact | Example |
+|-------------|---------------|---------|
+| `feat:` | **Minor** (1.0.0 → 1.1.0) | New features |
+| `fix:` | **Patch** (1.0.0 → 1.0.1) | Bug fixes |
+| `feat!:` or `BREAKING CHANGE:` | **Major** (1.0.0 → 2.0.0) | Breaking changes |
+| `docs:`, `style:`, `test:`, `chore:` | **No bump** | Non-functional changes |
+
+## 🛠️ Available Commit Types
+
+- **feat**: New features
+- **fix**: Bug fixes  
+- **docs**: Documentation changes
+- **style**: Code formatting (no logic changes)
+- **refactor**: Code restructuring (no behavior changes)
+- **perf**: Performance improvements
+- **test**: Adding or updating tests
+- **build**: Build system changes
+- **ci**: CI/CD configuration changes
+- **chore**: Maintenance tasks
 
 ## 📊 Version History
 
