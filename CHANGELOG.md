@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## 1.0.0 (2025-08-04)
+
+
+### Features
+
+* activate automatic version management system ([f012a5a](https://github.com/anknown-singh/swamidesk/commit/f012a5a66042c6f593fe2013cbe2f2601a4c031f))
+* add automatic version management with release-please ([1456e89](https://github.com/anknown-singh/swamidesk/commit/1456e8942ef8ad5f1508ebea5e1b06ca5d72d852))
+* add Vercel automatic deployment with CI/CD pipeline ([bf6b10f](https://github.com/anknown-singh/swamidesk/commit/bf6b10fd87f164579c01cf54680e87e643940abb))
+* initial release of SwamIDesk clinic management system v1.0.0 ([9a73668](https://github.com/anknown-singh/swamidesk/commit/9a73668223de7af0a486a4635bc9912215850e55))
+
+
+### Bug Fixes
+
+* remove deprecated husky initialization lines ([e32bf2e](https://github.com/anknown-singh/swamidesk/commit/e32bf2eda622d34c8fed855295c7c9e7fcf67ef2))
+* update github actions permissions for pull request creation ([8ee0fad](https://github.com/anknown-singh/swamidesk/commit/8ee0fad0465e8942016ac973def23fcd0711d06d))
+
 ## [1.0.0] - 2025-01-XX
 
 ### Added
