@@ -164,3 +164,4 @@ The project uses Tailwind CSS v4 with shadcn/ui components. Color scheme and sty
 This project is licensed under the MIT License.
 🚀 SwamIDesk is now live with automatic version management!
 # Force deployment refresh
+# Trigger fresh Vercel deployment after Git connection
