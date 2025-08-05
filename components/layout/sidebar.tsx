@@ -154,22 +154,6 @@ export function Sidebar({ userProfile }: SidebarProps) {
   const allowedItems = sidebarItems.filter(item => item.roles.includes(userRole as UserRole))
 
   const baseHref = `/${userRole}`
-  
-  // Comprehensive debugging
-  console.log('Sidebar Debug Info:', {
-    originalRole: userProfile.role,
-    normalizedRole: userRole,
-    baseHref,
-    allowedItemsCount: allowedItems.length,
-    currentPath: pathname,
-    userProfile: userProfile,
-    allowedItems: allowedItems.map(item => ({
-      href: item.href,
-      label: item.label,
-      fullHref: `${baseHref}${item.href}`,
-      roles: item.roles
-    }))
-  })
 
   const handleLogout = async () => {
     const supabase = createClient()
@@ -191,16 +175,11 @@ export function Sidebar({ userProfile }: SidebarProps) {
           const Icon = item.icon
           
           return (
-            <a
+            <Link
               key={item.href}
               href={href}
-              onClick={(e) => {
-                console.log(`Sidebar navigation: ${item.label} -> ${href}`)
-                console.log('Click event:', e)
-                // Let the default navigation happen
-              }}
               className={cn(
-                'flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer',
+                'flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors',
                 isActive
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -208,7 +187,7 @@ export function Sidebar({ userProfile }: SidebarProps) {
             >
               <Icon className="mr-3 h-5 w-5" />
               {item.label}
-            </a>
+            </Link>
           )
         })}
       </nav>
