@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -42,6 +43,7 @@ export default function QueuePage() {
   const [success, setSuccess] = useState<string | null>(null)
 
   const supabase = createClient()
+  // const router = useRouter() // Reserved for future navigation features
 
   useEffect(() => {
     fetchTodaysQueue()
@@ -160,7 +162,11 @@ export default function QueuePage() {
       if (error) throw error
       
       fetchTodaysQueue()
-      setSuccess('Visit status updated successfully')
+      if (newStatus === 'in_consultation') {
+        setSuccess('Consultation started! Patient ready for doctor.')
+      } else {
+        setSuccess('Visit status updated successfully')
+      }
     } catch (error) {
       console.error('Error updating visit status:', error)
       setError('Failed to update visit status')

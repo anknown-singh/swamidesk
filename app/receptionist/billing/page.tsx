@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -82,6 +83,7 @@ export default function BillingPage() {
   const [success, setSuccess] = useState<string | null>(null)
 
   const supabase = createClient()
+  const router = useRouter()
 
   useEffect(() => {
     fetchInvoices()
@@ -258,7 +260,7 @@ export default function BillingPage() {
         .update({ status: 'billed' })
         .eq('id', selectedVisit.id)
 
-      setSuccess(`Invoice generated successfully! Invoice #${data[0].invoice_number}`)
+      setSuccess(`Invoice generated successfully! Invoice #${data[0].invoice_number}. Patient cycle complete.`)
       setShowForm(false)
       setSelectedVisit(null)
       setVisitServices([])
@@ -357,7 +359,14 @@ export default function BillingPage() {
 
       {success && (
         <Alert>
-          <AlertDescription>{success}</AlertDescription>
+          <AlertDescription className="flex items-center justify-between">
+            <span>{success}</span>
+            {success.includes('Patient cycle complete') && (
+              <Button size="sm" onClick={() => router.push('/receptionist/queue')}>
+                Return to Queue
+              </Button>
+            )}
+          </AlertDescription>
         </Alert>
       )}
 

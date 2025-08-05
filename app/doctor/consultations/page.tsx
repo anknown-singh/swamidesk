@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -48,6 +49,7 @@ export default function ConsultationsPage() {
   const [success, setSuccess] = useState<string | null>(null)
 
   const supabase = createClient()
+  const router = useRouter()
 
   useEffect(() => {
     fetchConsultations()
@@ -149,7 +151,7 @@ export default function ConsultationsPage() {
 
       if (error) throw error
 
-      setSuccess('Consultation completed')
+      setSuccess('Consultation completed! Ready to create prescription.')
       setActiveVisit(null)
       setDiagnosis('')
       setNotes('')
@@ -218,7 +220,14 @@ export default function ConsultationsPage() {
 
       {success && (
         <Alert>
-          <AlertDescription>{success}</AlertDescription>
+          <AlertDescription className="flex items-center justify-between">
+            <span>{success}</span>
+            {success.includes('prescription') && (
+              <Button size="sm" onClick={() => router.push('/doctor/prescriptions')}>
+                Create Prescription
+              </Button>
+            )}
+          </AlertDescription>
         </Alert>
       )}
 

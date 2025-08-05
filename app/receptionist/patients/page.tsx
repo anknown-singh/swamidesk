@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -48,6 +49,7 @@ export default function PatientsPage() {
   const [success, setSuccess] = useState<string | null>(null)
 
   const supabase = createClient()
+  const router = useRouter()
 
   useEffect(() => {
     fetchPatients()
@@ -148,7 +150,12 @@ export default function PatientsPage() {
 
       {success && (
         <Alert>
-          <AlertDescription>{success}</AlertDescription>
+          <AlertDescription className="flex items-center justify-between">
+            <span>{success}</span>
+            <Button size="sm" onClick={() => router.push('/receptionist/queue')}>
+              Add to Queue
+            </Button>
+          </AlertDescription>
         </Alert>
       )}
 

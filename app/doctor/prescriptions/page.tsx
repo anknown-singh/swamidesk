@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -68,6 +69,7 @@ export default function PrescriptionsPage() {
   const [success, setSuccess] = useState<string | null>(null)
 
   const supabase = createClient()
+  const router = useRouter()
 
   useEffect(() => {
     fetchPrescriptions()
@@ -211,7 +213,7 @@ export default function PrescriptionsPage() {
 
       if (error) throw error
 
-      setSuccess('Prescription saved successfully')
+      setSuccess('Prescription saved successfully! Ready for billing.')
       setSelectedVisit('')
       setPrescriptionItems([])
       setShowForm(false)
@@ -263,7 +265,14 @@ export default function PrescriptionsPage() {
 
       {success && (
         <Alert>
-          <AlertDescription>{success}</AlertDescription>
+          <AlertDescription className="flex items-center justify-between">
+            <span>{success}</span>
+            {success.includes('billing') && (
+              <Button size="sm" onClick={() => router.push('/receptionist/billing')}>
+                Go to Billing
+              </Button>
+            )}
+          </AlertDescription>
         </Alert>
       )}
 
