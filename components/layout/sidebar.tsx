@@ -37,7 +37,7 @@ const sidebarItems: SidebarItem[] = [
     href: '/dashboard',
     label: 'Dashboard',
     icon: Home,
-    roles: ['admin', 'doctor', 'receptionist', 'service_attendant', 'pharmacist'],
+    roles: ['admin', 'doctor', 'receptionist', 'attendant', 'pharmacist'],
   },
   // Receptionist specific
   {
@@ -76,13 +76,13 @@ const sidebarItems: SidebarItem[] = [
     href: '/services',
     label: 'Service Queue',
     icon: UserCog,
-    roles: ['admin', 'service_attendant'],
+    roles: ['admin', 'attendant'],
   },
   {
     href: '/procedures',
     label: 'Procedures',
     icon: Activity,
-    roles: ['admin', 'service_attendant'],
+    roles: ['admin', 'attendant'],
   },
   // Pharmacist specific
   {
@@ -132,7 +132,7 @@ const sidebarItems: SidebarItem[] = [
     href: '/settings',
     label: 'Settings',
     icon: Settings,
-    roles: ['admin', 'doctor', 'receptionist', 'service_attendant', 'pharmacist'],
+    roles: ['admin', 'doctor', 'receptionist', 'attendant', 'pharmacist'],
   },
 ]
 
@@ -143,8 +143,15 @@ interface SidebarProps {
 export function Sidebar({ userProfile }: SidebarProps) {
   const pathname = usePathname()
   const router = useRouter()
-  const userRole = userProfile.role
-  const allowedItems = sidebarItems.filter(item => item.roles.includes(userRole))
+  
+  // Normalize role name to match directory structure
+  const normalizeRole = (role: string): string => {
+    if (role === 'service_attendant') return 'attendant'
+    return role
+  }
+  
+  const userRole = normalizeRole(userProfile.role)
+  const allowedItems = sidebarItems.filter(item => item.roles.includes(userRole as UserRole))
 
   const baseHref = `/${userRole}`
 

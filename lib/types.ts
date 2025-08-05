@@ -1,5 +1,5 @@
 // User & Authentication Types
-export type UserRole = 'admin' | 'doctor' | 'receptionist' | 'service_attendant' | 'pharmacist'
+export type UserRole = 'admin' | 'doctor' | 'receptionist' | 'attendant' | 'pharmacist'
 
 export type VisitStatus = 'waiting' | 'in_consultation' | 'services_pending' | 'completed' | 'billed'
 
