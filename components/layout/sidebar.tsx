@@ -178,6 +178,12 @@ export function Sidebar({ userProfile }: SidebarProps) {
             <Link
               key={item.href}
               href={href}
+              onClick={() => {
+                console.log(`Sidebar navigation: ${item.label} -> ${href}`)
+                if (item.label === 'Billing & Invoices') {
+                  console.log('Billing link clicked!', { userRole, href, pathname })
+                }
+              }}
               className={cn(
                 'flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors',
                 isActive
