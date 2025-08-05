@@ -154,6 +154,22 @@ export function Sidebar({ userProfile }: SidebarProps) {
   const allowedItems = sidebarItems.filter(item => item.roles.includes(userRole as UserRole))
 
   const baseHref = `/${userRole}`
+  
+  // Comprehensive debugging
+  console.log('Sidebar Debug Info:', {
+    originalRole: userProfile.role,
+    normalizedRole: userRole,
+    baseHref,
+    allowedItemsCount: allowedItems.length,
+    currentPath: pathname,
+    userProfile: userProfile,
+    allowedItems: allowedItems.map(item => ({
+      href: item.href,
+      label: item.label,
+      fullHref: `${baseHref}${item.href}`,
+      roles: item.roles
+    }))
+  })
 
   const handleLogout = async () => {
     const supabase = createClient()
