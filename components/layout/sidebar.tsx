@@ -191,17 +191,16 @@ export function Sidebar({ userProfile }: SidebarProps) {
           const Icon = item.icon
           
           return (
-            <Link
+            <a
               key={item.href}
               href={href}
-              onClick={() => {
+              onClick={(e) => {
                 console.log(`Sidebar navigation: ${item.label} -> ${href}`)
-                if (item.label === 'Billing & Invoices') {
-                  console.log('Billing link clicked!', { userRole, href, pathname })
-                }
+                console.log('Click event:', e)
+                // Let the default navigation happen
               }}
               className={cn(
-                'flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors',
+                'flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors cursor-pointer',
                 isActive
                   ? 'bg-primary text-primary-foreground'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
@@ -209,7 +208,7 @@ export function Sidebar({ userProfile }: SidebarProps) {
             >
               <Icon className="mr-3 h-5 w-5" />
               {item.label}
-            </Link>
+            </a>
           )
         })}
       </nav>
