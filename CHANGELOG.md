@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.1.0](https://github.com/anknown-singh/swamidesk/compare/v1.0.0...v1.1.0) (2025-08-06)
+
+
+### Features
+
+* complete swamicare clinic management system foundation ([8a88f17](https://github.com/anknown-singh/swamidesk/commit/8a88f1740ebb28e094d2cac439f9cae2f201b15c))
+* implement comprehensive testing framework for swamidesk ([9a7615d](https://github.com/anknown-singh/swamidesk/commit/9a7615d629875acc6b1edfc405e2120da11b2311))
+
+
+### Bug Fixes
+
+* improve eslint compliance and pre-commit workflow ([eea6245](https://github.com/anknown-singh/swamidesk/commit/eea62454ebca44ac07e9a2100d3beea8158d7510))
+
 ## 1.0.0 (2025-08-04)
 
 
