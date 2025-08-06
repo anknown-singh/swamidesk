@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.1](https://github.com/anknown-singh/swamidesk/compare/v1.5.0...v1.5.1) (2025-08-06)
+
+
+### Bug Fixes
+
+* ignore eslint and typescript errors during production builds ([0ccdcdb](https://github.com/anknown-singh/swamidesk/commit/0ccdcdb330a33c935448212080660cd5e973cab0))
+* make environment validation optional for vercel ci builds ([e67031e](https://github.com/anknown-singh/swamidesk/commit/e67031e006d939d2baeeb1dff13886d01707a327))
+
 ## [1.5.0](https://github.com/anknown-singh/swamidesk/compare/v1.4.0...v1.5.0) (2025-08-06)
 
 
