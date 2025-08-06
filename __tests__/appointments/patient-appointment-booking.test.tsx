@@ -158,10 +158,12 @@ describe('PatientAppointmentBooking', () => {
         />
       )
 
-      const consultationOption = screen.getByText('New Consultation').closest('div')
+      const consultationOption = screen.getByText('New Consultation').closest('[class*="p-4"]')
       fireEvent.click(consultationOption!)
 
-      expect(consultationOption).toHaveClass('border-primary', 'bg-primary/5')
+      await waitFor(() => {
+        expect(consultationOption).toHaveClass('border-primary', 'bg-primary/5')
+      })
     })
 
     it('should disable next button until type is selected', () => {
@@ -209,10 +211,12 @@ describe('PatientAppointmentBooking', () => {
     })
 
     it('should highlight selected department', async () => {
-      const generalMedicine = screen.getByText('General Medicine').closest('div')
+      const generalMedicine = screen.getByText('General Medicine').closest('[class*="p-4"]')
       fireEvent.click(generalMedicine!)
 
-      expect(generalMedicine).toHaveClass('border-primary', 'bg-primary/5')
+      await waitFor(() => {
+        expect(generalMedicine).toHaveClass('border-primary', 'bg-primary/5')
+      })
     })
   })
 
@@ -258,10 +262,12 @@ describe('PatientAppointmentBooking', () => {
     })
 
     it('should highlight selected doctor', async () => {
-      const doctor = screen.getByText('Dr. Sarah Smith').closest('div')
+      const doctor = screen.getByText('Dr. Sarah Smith').closest('[class*="p-4"]')
       fireEvent.click(doctor!)
 
-      expect(doctor).toHaveClass('border-primary', 'bg-primary/5')
+      await waitFor(() => {
+        expect(doctor).toHaveClass('border-primary', 'bg-primary/5')
+      })
     })
   })
 
@@ -563,8 +569,46 @@ describe('PatientAppointmentBooking', () => {
         />
       )
 
-      // Complete booking process and submit
-      // ... (abbreviated for brevity)
+      // Complete all steps
+      fireEvent.click(screen.getByText('New Consultation').closest('div')!)
+      fireEvent.click(screen.getByRole('button', { name: /next/i }))
+      
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('General Medicine').closest('div')!)
+      })
+      fireEvent.click(screen.getByRole('button', { name: /next/i }))
+      
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Dr. Sarah Smith').closest('div')!)
+      })
+      fireEvent.click(screen.getByRole('button', { name: /next/i }))
+
+      await waitFor(() => {
+        const dateOption = screen.getAllByText(/slots available/)[0].closest('div')
+        fireEvent.click(dateOption!)
+      })
+
+      await waitFor(() => {
+        const timeOption = screen.getByText('9:00 AM').closest('div')
+        fireEvent.click(timeOption!)
+      })
+      
+      fireEvent.click(screen.getByRole('button', { name: /next/i }))
+
+      await waitFor(async () => {
+        await user.type(screen.getByLabelText(/full name/i), 'John Doe')
+        await user.type(screen.getByLabelText(/mobile number/i), '+91-9876543210')
+      })
+      
+      fireEvent.click(screen.getByRole('button', { name: /next/i }))
+
+      await waitFor(() => {
+        const termsCheckbox = screen.getByLabelText(/terms and conditions/i)
+        fireEvent.click(termsCheckbox)
+      })
+
+      const confirmButton = screen.getByRole('button', { name: /confirm appointment/i })
+      fireEvent.click(confirmButton)
       
       await waitFor(() => {
         expect(screen.getByText(/error submitting/i)).toBeInTheDocument()
@@ -605,12 +649,14 @@ describe('PatientAppointmentBooking', () => {
         />
       )
 
-      const consultationOption = screen.getByText('New Consultation').closest('div')
+      const consultationOption = screen.getByText('New Consultation').closest('.p-4')
       consultationOption?.focus()
       
       fireEvent.keyDown(consultationOption!, { key: 'Enter' })
       
-      expect(consultationOption).toHaveClass('border-primary')
+      await waitFor(() => {
+        expect(consultationOption).toHaveClass('border-primary')
+      })
     })
   })
 
