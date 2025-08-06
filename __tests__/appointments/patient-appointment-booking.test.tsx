@@ -365,7 +365,7 @@ describe('PatientAppointmentBooking', () => {
       
       fireEvent.click(screen.getByRole('button', { name: /next/i }))
 
-      await waitFor(() => {
+      await waitFor(async () => {
         await user.type(screen.getByLabelText(/full name/i), 'John Doe')
         await user.type(screen.getByLabelText(/mobile number/i), '+91-9876543210')
       })
@@ -449,7 +449,7 @@ describe('PatientAppointmentBooking', () => {
       
       fireEvent.click(screen.getByRole('button', { name: /next/i }))
 
-      await waitFor(() => {
+      await waitFor(async () => {
         await user.type(screen.getByLabelText(/full name/i), 'John Doe')
         await user.type(screen.getByLabelText(/mobile number/i), '+91-9876543210')
         await user.type(screen.getByLabelText(/reason for visit/i), 'Regular checkup')
