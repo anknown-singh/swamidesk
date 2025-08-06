@@ -4,6 +4,51 @@ import userEvent from '@testing-library/user-event'
 import { PatientAppointmentBooking } from '@/components/appointments/patient-appointment-booking'
 import type { AppointmentBookingForm } from '@/lib/types'
 
+// Mock Supabase
+const mockDoctorsData = [
+  {
+    id: 'doctor-1',
+    full_name: 'Dr. Sarah Smith',
+    email: 'sarah.smith@swamidesk.com',
+    phone: '+91-9876543220',
+    department: 'General Medicine',
+    specialization: 'Internal Medicine, Family Practice',
+    is_active: true,
+    created_at: '2025-01-01T00:00:00Z',
+    updated_at: '2025-01-01T00:00:00Z'
+  },
+  {
+    id: 'doctor-2', 
+    full_name: 'Dr. John Davis',
+    email: 'john.davis@swamidesk.com',
+    phone: '+91-9876543221',
+    department: 'Cardiology',
+    specialization: 'Interventional Cardiology',
+    is_active: true,
+    created_at: '2025-01-01T00:00:00Z',
+    updated_at: '2025-01-01T00:00:00Z'
+  }
+]
+
+const mockSupabaseClient = {
+  from: vi.fn(() => ({
+    select: vi.fn(() => ({
+      eq: vi.fn(() => ({
+        eq: vi.fn(() => ({
+          order: vi.fn(() => Promise.resolve({
+            data: mockDoctorsData,
+            error: null
+          }))
+        }))
+      }))
+    }))
+  }))
+}
+
+vi.mock('@/lib/supabase/client', () => ({
+  createClient: () => mockSupabaseClient
+}))
+
 describe('PatientAppointmentBooking', () => {
   const mockOnSubmit = vi.fn()
   const mockOnCancel = vi.fn()
@@ -149,6 +194,11 @@ describe('PatientAppointmentBooking', () => {
       await waitFor(() => {
         expect(screen.getByText('Select the medical department')).toBeInTheDocument()
       })
+
+      // Wait for departments to load
+      await waitFor(() => {
+        expect(screen.getByText('General Medicine')).toBeInTheDocument()
+      }, { timeout: 3000 })
     })
 
     it('should display all departments with descriptions', () => {
@@ -179,15 +229,22 @@ describe('PatientAppointmentBooking', () => {
       fireEvent.click(screen.getByText('New Consultation').closest('div')!)
       fireEvent.click(screen.getByRole('button', { name: /next/i }))
       
+      // Wait for departments to load and select one
       await waitFor(() => {
-        fireEvent.click(screen.getByText('General Medicine').closest('div')!)
-      })
+        expect(screen.getByText('General Medicine')).toBeInTheDocument()
+      }, { timeout: 3000 })
       
+      fireEvent.click(screen.getByText('General Medicine').closest('div')!)
       fireEvent.click(screen.getByRole('button', { name: /next/i }))
 
       await waitFor(() => {
         expect(screen.getByText('Choose your preferred doctor')).toBeInTheDocument()
       })
+
+      // Wait for doctors to load
+      await waitFor(() => {
+        expect(screen.getByText('Dr. Sarah Smith')).toBeInTheDocument()
+      }, { timeout: 3000 })
     })
 
     it('should display doctors for selected department', () => {
@@ -221,14 +278,20 @@ describe('PatientAppointmentBooking', () => {
       fireEvent.click(screen.getByText('New Consultation').closest('div')!)
       fireEvent.click(screen.getByRole('button', { name: /next/i }))
       
+      // Wait for departments to load and select one
       await waitFor(() => {
-        fireEvent.click(screen.getByText('General Medicine').closest('div')!)
-      })
+        expect(screen.getByText('General Medicine')).toBeInTheDocument()
+      }, { timeout: 3000 })
+      
+      fireEvent.click(screen.getByText('General Medicine').closest('div')!)
       fireEvent.click(screen.getByRole('button', { name: /next/i }))
       
+      // Wait for doctors to load and select one
       await waitFor(() => {
-        fireEvent.click(screen.getByText('Dr. Sarah Smith').closest('div')!)
-      })
+        expect(screen.getByText('Dr. Sarah Smith')).toBeInTheDocument()
+      }, { timeout: 3000 })
+      
+      fireEvent.click(screen.getByText('Dr. Sarah Smith').closest('div')!)
       fireEvent.click(screen.getByRole('button', { name: /next/i }))
 
       await waitFor(() => {
@@ -272,14 +335,20 @@ describe('PatientAppointmentBooking', () => {
       fireEvent.click(screen.getByText('New Consultation').closest('div')!)
       fireEvent.click(screen.getByRole('button', { name: /next/i }))
       
+      // Wait for departments to load and select one
       await waitFor(() => {
-        fireEvent.click(screen.getByText('General Medicine').closest('div')!)
-      })
+        expect(screen.getByText('General Medicine')).toBeInTheDocument()
+      }, { timeout: 3000 })
+      
+      fireEvent.click(screen.getByText('General Medicine').closest('div')!)
       fireEvent.click(screen.getByRole('button', { name: /next/i }))
       
+      // Wait for doctors to load and select one
       await waitFor(() => {
-        fireEvent.click(screen.getByText('Dr. Sarah Smith').closest('div')!)
-      })
+        expect(screen.getByText('Dr. Sarah Smith')).toBeInTheDocument()
+      }, { timeout: 3000 })
+      
+      fireEvent.click(screen.getByText('Dr. Sarah Smith').closest('div')!)
       fireEvent.click(screen.getByRole('button', { name: /next/i }))
 
       await waitFor(() => {
@@ -343,14 +412,20 @@ describe('PatientAppointmentBooking', () => {
       fireEvent.click(screen.getByText('New Consultation').closest('div')!)
       fireEvent.click(screen.getByRole('button', { name: /next/i }))
       
+      // Wait for departments to load and select one
       await waitFor(() => {
-        fireEvent.click(screen.getByText('General Medicine').closest('div')!)
-      })
+        expect(screen.getByText('General Medicine')).toBeInTheDocument()
+      }, { timeout: 3000 })
+      
+      fireEvent.click(screen.getByText('General Medicine').closest('div')!)
       fireEvent.click(screen.getByRole('button', { name: /next/i }))
       
+      // Wait for doctors to load and select one
       await waitFor(() => {
-        fireEvent.click(screen.getByText('Dr. Sarah Smith').closest('div')!)
-      })
+        expect(screen.getByText('Dr. Sarah Smith')).toBeInTheDocument()
+      }, { timeout: 3000 })
+      
+      fireEvent.click(screen.getByText('Dr. Sarah Smith').closest('div')!)
       fireEvent.click(screen.getByRole('button', { name: /next/i }))
 
       await waitFor(() => {
