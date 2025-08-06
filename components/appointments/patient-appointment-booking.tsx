@@ -198,9 +198,9 @@ export function PatientAppointmentBooking({
     ? doctors.filter(doc => doc.department === selectedDepartment)
     : doctors
 
-  const availableDates = Object.keys(availableSlots).sort()
+  const availableDates = Object.keys(availableSlots || mockAvailableSlots).sort()
   const availableTimesForDate = formData.scheduled_date 
-    ? availableSlots[formData.scheduled_date] || []
+    ? (availableSlots || mockAvailableSlots)[formData.scheduled_date] || []
     : []
 
   useEffect(() => {
@@ -487,7 +487,7 @@ export function PatientAppointmentBooking({
                           <span className="font-medium">{formatDate(date)}</span>
                         </div>
                         <div className="text-sm text-muted-foreground mt-1">
-                          {availableSlots[date]?.length || 0} slots available
+                          {(availableSlots || mockAvailableSlots)[date]?.length || 0} slots available
                         </div>
                       </div>
                     ))}
