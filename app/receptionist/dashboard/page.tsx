@@ -1,7 +1,139 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, Clock, Calendar, CreditCard } from 'lucide-react'
+import { Users, Clock, Calendar, CreditCard, AlertTriangle } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { Skeleton } from '@/components/ui/skeleton'
+
+interface ReceptionistStats {
+  todayPatients: number
+  queueLength: number
+  appointments: number
+  todayRevenue: number
+  yesterdayPatients: number
+}
+
+interface DepartmentQueue {
+  department: string
+  waiting: number
+}
 
 export default function ReceptionistDashboard() {
+  const [stats, setStats] = useState<ReceptionistStats | null>(null)
+  const [departments, setDepartments] = useState<DepartmentQueue[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
+  const supabase = createClient()
+
+  useEffect(() => {
+    fetchDashboardData()
+  }, [])
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Fetch all data in parallel
+      const [
+        todayVisitsResult,
+        queueResult,
+        todayRevenueResult,
+        yesterdayVisitsResult,
+        departmentQueueResult
+      ] = await Promise.all([
+        // Today's total visits
+        supabase
+          .from('visits')
+          .select('id', { count: 'exact', head: true })
+          .eq('visit_date', new Date().toISOString().split('T')[0]),
+        
+        // Current queue length
+        supabase
+          .from('visits')
+          .select('id', { count: 'exact', head: true })
+          .eq('visit_date', new Date().toISOString().split('T')[0])
+          .in('status', ['waiting', 'in_consultation']),
+        
+        // Today's revenue
+        supabase
+          .from('invoices')
+          .select('total_amount')
+          .gte('created_at', new Date().toISOString().split('T')[0])
+          .lt('created_at', new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
+        
+        // Yesterday's visits for growth calculation
+        supabase
+          .from('visits')
+          .select('id', { count: 'exact', head: true })
+          .eq('visit_date', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
+        
+        // Queue by department
+        supabase
+          .from('visits')
+          .select('department')
+          .eq('visit_date', new Date().toISOString().split('T')[0])
+          .in('status', ['waiting', 'in_consultation'])
+      ])
+
+      // Process results
+      const todayPatients = todayVisitsResult.count || 0
+      const yesterdayPatients = yesterdayVisitsResult.count || 0
+      const todayRevenue = todayRevenueResult.data?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0
+
+      setStats({
+        todayPatients,
+        queueLength: queueResult.count || 0,
+        appointments: todayPatients, // Using visits as appointments for now
+        todayRevenue,
+        yesterdayPatients
+      })
+
+      // Process department queue data
+      const deptMap = new Map<string, number>()
+      departmentQueueResult.data?.forEach(visit => {
+        const dept = visit.department || 'General'
+        deptMap.set(dept, (deptMap.get(dept) || 0) + 1)
+      })
+
+      const departmentQueues: DepartmentQueue[] = Array.from(deptMap.entries()).map(([dept, count]) => ({
+        department: dept,
+        waiting: count
+      }))
+
+      setDepartments(departmentQueues.slice(0, 3))
+
+    } catch (error) {
+      console.error('Error fetching receptionist dashboard data:', error)
+      setError('Failed to load dashboard data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatCurrency = (amount: number) => {
+    return `₹${amount.toLocaleString()}`
+  }
+
+  const getGrowthText = (today: number, yesterday: number) => {
+    if (yesterday === 0) return '+0%'
+    const growth = Math.round(((today - yesterday) / yesterday) * 100)
+    const sign = growth >= 0 ? '+' : ''
+    return `${sign}${growth}%`
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+          <p className="text-sm text-gray-600">{error}</p>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="space-y-6">
       <div>
@@ -19,9 +151,17 @@ export default function ReceptionistDashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">45</div>
+            {loading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl font-bold">{stats?.todayPatients || 0}</div>
+            )}
             <p className="text-xs text-muted-foreground">
-              +12% from yesterday
+              {loading ? (
+                <Skeleton className="h-3 w-24" />
+              ) : (
+                `${getGrowthText(stats?.todayPatients || 0, stats?.yesterdayPatients || 0)} from yesterday`
+              )}
             </p>
           </CardContent>
         </Card>
@@ -32,7 +172,11 @@ export default function ReceptionistDashboard() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
+            {loading ? (
+              <Skeleton className="h-8 w-12" />
+            ) : (
+              <div className="text-2xl font-bold">{stats?.queueLength || 0}</div>
+            )}
             <p className="text-xs text-muted-foreground">
               Patients waiting
             </p>
@@ -45,7 +189,11 @@ export default function ReceptionistDashboard() {
             <Calendar className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            {loading ? (
+              <Skeleton className="h-8 w-12" />
+            ) : (
+              <div className="text-2xl font-bold">{stats?.appointments || 0}</div>
+            )}
             <p className="text-xs text-muted-foreground">
               Scheduled today
             </p>
@@ -58,7 +206,11 @@ export default function ReceptionistDashboard() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹15,240</div>
+            {loading ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <div className="text-2xl font-bold">{formatCurrency(stats?.todayRevenue || 0)}</div>
+            )}
             <p className="text-xs text-muted-foreground">
               Today&apos;s collection
             </p>
@@ -101,20 +253,37 @@ export default function ReceptionistDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between items-center">
-                <span className="font-medium">ENT</span>
-                <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-sm">3 waiting</span>
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex justify-between items-center">
+                    <Skeleton className="h-4 w-20" />
+                    <Skeleton className="h-6 w-16 rounded-full" />
+                  </div>
+                ))}
               </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Dental</span>
-                <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-sm">2 waiting</span>
+            ) : (
+              <div className="space-y-3">
+                {departments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No patients in queue</p>
+                ) : (
+                  departments.map((dept) => {
+                    const colors = ['blue', 'green', 'purple', 'orange', 'red']
+                    const colorIndex = Math.abs(dept.department.charCodeAt(0)) % colors.length
+                    const color = colors[colorIndex]
+                    
+                    return (
+                      <div key={dept.department} className="flex justify-between items-center">
+                        <span className="font-medium">{dept.department}</span>
+                        <span className={`bg-${color}-100 text-${color}-800 px-2 py-1 rounded-full text-sm`}>
+                          {dept.waiting} waiting
+                        </span>
+                      </div>
+                    )
+                  })
+                )}
               </div>
-              <div className="flex justify-between items-center">
-                <span className="font-medium">Cosmetic</span>
-                <span className="bg-purple-100 text-purple-800 px-2 py-1 rounded-full text-sm">3 waiting</span>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
       </div>

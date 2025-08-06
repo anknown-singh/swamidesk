@@ -1,7 +1,137 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Activity, Clock, CheckCircle, AlertCircle } from 'lucide-react'
+import { Activity, Clock, CheckCircle, AlertCircle, AlertTriangle } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+import { Skeleton } from '@/components/ui/skeleton'
+import { useUser } from '@/hooks/use-user'
+
+interface AttendantStats {
+  assignedServices: number
+  inProgress: number
+  completed: number
+  pending: number
+}
+
+interface ServiceItem {
+  id: string
+  patient_name: string
+  service_name: string
+  status: string
+  priority: boolean
+  visit_id: string
+}
 
 export default function AttendantDashboard() {
+  const [stats, setStats] = useState<AttendantStats | null>(null)
+  const [services, setServices] = useState<ServiceItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
+  const supabase = createClient()
+  const { user } = useUser()
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData()
+    }
+  }, [user])
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      if (!user) {
+        setError('User not authenticated')
+        return
+      }
+
+      // Fetch services assigned to this attendant today
+      const servicesResult = await supabase
+        .from('visit_services')
+        .select(`
+          id,
+          status,
+          visits!inner(
+            id,
+            priority,
+            visit_date,
+            patients!inner(name)
+          ),
+          services!inner(name)
+        `)
+        .eq('attendant_id', user.id)
+        .eq('visits.visit_date', new Date().toISOString().split('T')[0])
+        .order('created_at', { ascending: true })
+
+      if (servicesResult.error) throw servicesResult.error
+
+      const serviceData = servicesResult.data || []
+      
+      // Calculate stats
+      const assignedCount = serviceData.filter(s => s.status === 'assigned').length
+      const inProgressCount = serviceData.filter(s => s.status === 'in_progress').length
+      const completedCount = serviceData.filter(s => s.status === 'completed').length
+      const pendingCount = serviceData.length - completedCount // All non-completed are pending
+
+      setStats({
+        assignedServices: serviceData.length,
+        inProgress: inProgressCount,
+        completed: completedCount,
+        pending: pendingCount
+      })
+
+      // Process service queue (show only non-completed services)
+      const serviceItems: ServiceItem[] = serviceData
+        .filter(service => service.status !== 'completed')
+        .map(service => ({
+          id: service.id,
+          patient_name: service.visits?.patients?.name || 'Unknown',
+          service_name: service.services?.name || 'Unknown Service',
+          status: service.status,
+          priority: service.visits?.priority || false,
+          visit_id: service.visits?.id || ''
+        }))
+
+      setServices(serviceItems.slice(0, 3))
+
+    } catch (error) {
+      console.error('Error fetching attendant dashboard data:', error)
+      setError('Failed to load dashboard data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const getStatusColor = (status: string) => {
+    switch (status) {
+      case 'in_progress':
+        return 'bg-blue-100 text-blue-800'
+      case 'completed':
+        return 'bg-green-100 text-green-800'
+      case 'assigned':
+        return 'bg-gray-100 text-gray-800'
+      default:
+        return 'bg-gray-100 text-gray-800'
+    }
+  }
+
+  const formatStatus = (status: string) => {
+    return status.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase())
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+          <p className="text-sm text-gray-600">{error}</p>
+        </div>
+      </div>
+    )
+  }
   return (
     <div className="space-y-6">
       <div>
@@ -19,7 +149,11 @@ export default function AttendantDashboard() {
             <Activity className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
+            {loading ? (
+              <Skeleton className="h-8 w-12" />
+            ) : (
+              <div className="text-2xl font-bold">{stats?.assignedServices || 0}</div>
+            )}
             <p className="text-xs text-muted-foreground">
               Today&apos;s assignments
             </p>
@@ -32,7 +166,11 @@ export default function AttendantDashboard() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2</div>
+            {loading ? (
+              <Skeleton className="h-8 w-12" />
+            ) : (
+              <div className="text-2xl font-bold">{stats?.inProgress || 0}</div>
+            )}
             <p className="text-xs text-muted-foreground">
               Currently working
             </p>
@@ -45,7 +183,11 @@ export default function AttendantDashboard() {
             <CheckCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">5</div>
+            {loading ? (
+              <Skeleton className="h-8 w-12" />
+            ) : (
+              <div className="text-2xl font-bold">{stats?.completed || 0}</div>
+            )}
             <p className="text-xs text-muted-foreground">
               Services completed
             </p>
@@ -58,7 +200,11 @@ export default function AttendantDashboard() {
             <AlertCircle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1</div>
+            {loading ? (
+              <Skeleton className="h-8 w-12" />
+            ) : (
+              <div className="text-2xl font-bold">{stats?.pending || 0}</div>
+            )}
             <p className="text-xs text-muted-foreground">
               Awaiting completion
             </p>
@@ -75,36 +221,46 @@ export default function AttendantDashboard() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-3">
-              {[
-                { patient: 'Rajesh Kumar', service: 'Ear Cleaning', status: 'assigned', priority: false },
-                { patient: 'Priya Sharma', service: 'Nasal Endoscopy', status: 'in_progress', priority: true },
-                { patient: 'Amit Patel', service: 'Hearing Test', status: 'assigned', priority: false },
-              ].map((item, index) => (
-                <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
-                  <div>
-                    <div className="font-medium flex items-center gap-2">
-                      {item.patient}
-                      {item.priority && (
-                        <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded-full text-xs">
-                          Priority
-                        </span>
-                      )}
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                    <div className="flex-1">
+                      <Skeleton className="h-4 w-32 mb-1" />
+                      <Skeleton className="h-3 w-24" />
                     </div>
-                    <div className="text-sm text-muted-foreground">{item.service}</div>
+                    <Skeleton className="h-6 w-16 rounded-full" />
                   </div>
-                  <div className="text-right">
-                    <span className={`px-2 py-1 rounded-full text-xs ${
-                      item.status === 'in_progress' 
-                        ? 'bg-blue-100 text-blue-800' 
-                        : 'bg-gray-100 text-gray-800'
-                    }`}>
-                      {item.status.replace('_', ' ')}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {services.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No services assigned</p>
+                ) : (
+                  services.map((item) => (
+                    <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+                      <div>
+                        <div className="font-medium flex items-center gap-2">
+                          {item.patient_name}
+                          {item.priority && (
+                            <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded-full text-xs">
+                              Priority
+                            </span>
+                          )}
+                        </div>
+                        <div className="text-sm text-muted-foreground">{item.service_name}</div>
+                      </div>
+                      <div className="text-right">
+                        <span className={`px-2 py-1 rounded-full text-xs ${getStatusColor(item.status)}`}>
+                          {formatStatus(item.status)}
+                        </span>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            )}
           </CardContent>
         </Card>
 

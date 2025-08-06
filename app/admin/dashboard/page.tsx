@@ -1,8 +1,222 @@
+'use client'
+
+import { useEffect, useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, Activity, CreditCard, TrendingUp, UserCheck, Package, BarChart3 } from 'lucide-react'
+import { Users, Activity, CreditCard, TrendingUp, UserCheck, Package, BarChart3, AlertTriangle } from 'lucide-react'
 import { VersionInfo } from '@/components/admin/version-info'
+import { createClient } from '@/lib/supabase/client'
+import { Skeleton } from '@/components/ui/skeleton'
+
+interface DashboardStats {
+  totalPatients: number
+  todayRevenue: number
+  yesterdayRevenue: number
+  activeStaff: {
+    total: number
+    doctors: number
+    others: number
+  }
+  monthlyGrowth: number
+}
+
+interface DepartmentStats {
+  department: string
+  patientCount: number
+  revenue: number
+  growth: number
+}
+
+interface RecentActivity {
+  id: string
+  activity: string
+  type: string
+  created_at: string
+  user_name?: string
+  amount?: number
+}
 
 export default function AdminDashboard() {
+  const [stats, setStats] = useState<DashboardStats | null>(null)
+  const [departments, setDepartments] = useState<DepartmentStats[]>([])
+  const [activities, setActivities] = useState<RecentActivity[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  
+  const supabase = createClient()
+
+  useEffect(() => {
+    fetchDashboardData()
+  }, [])
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true)
+      setError(null)
+
+      // Fetch all data in parallel
+      const [
+        patientsResult,
+        todayRevenueResult,
+        yesterdayRevenueResult,
+        staffResult,
+        lastMonthPatientsResult,
+        departmentsResult,
+        activitiesResult
+      ] = await Promise.all([
+        // Total patients
+        supabase.from('patients').select('id', { count: 'exact', head: true }),
+        
+        // Today's revenue
+        supabase
+          .from('invoices')
+          .select('total_amount')
+          .gte('created_at', new Date().toISOString().split('T')[0])
+          .lt('created_at', new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
+        
+        // Yesterday's revenue
+        supabase
+          .from('invoices')
+          .select('total_amount')
+          .gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+          .lt('created_at', new Date().toISOString().split('T')[0]),
+        
+        // Active staff by role
+        supabase
+          .from('users')
+          .select('role')
+          .eq('is_active', true),
+        
+        // Last month patients for growth calculation
+        supabase
+          .from('patients')
+          .select('id', { count: 'exact', head: true })
+          .lt('created_at', new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString()),
+        
+        // Department performance today
+        supabase
+          .from('visits')
+          .select(`
+            department,
+            invoices!inner(total_amount)
+          `)
+          .gte('visit_date', new Date().toISOString().split('T')[0])
+          .lt('visit_date', new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
+        
+        // Recent activities (from invoices, prescriptions, etc.)
+        supabase
+          .from('invoices')
+          .select(`
+            id,
+            total_amount,
+            created_at,
+            visits!inner(
+              patients!inner(name)
+            )
+          `)
+          .order('created_at', { ascending: false })
+          .limit(5)
+      ])
+
+      // Process results
+      const totalPatients = patientsResult.count || 0
+      const todayRevenue = todayRevenueResult.data?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0
+      const yesterdayRevenue = yesterdayRevenueResult.data?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0
+      
+      // Staff counts
+      const staffData = staffResult.data || []
+      const doctors = staffData.filter(s => s.role === 'doctor').length
+      const totalStaff = staffData.length
+      
+      // Growth calculation
+      const lastMonthPatients = lastMonthPatientsResult.count || 0
+      const monthlyGrowth = lastMonthPatients > 0 
+        ? Math.round(((totalPatients - lastMonthPatients) / lastMonthPatients) * 100)
+        : 0
+
+      setStats({
+        totalPatients,
+        todayRevenue,
+        yesterdayRevenue,
+        activeStaff: {
+          total: totalStaff,
+          doctors,
+          others: totalStaff - doctors
+        },
+        monthlyGrowth
+      })
+
+      // Process department data
+      const deptMap = new Map<string, { patients: number, revenue: number }>()
+      departmentsResult.data?.forEach(visit => {
+        const dept = visit.department || 'General'
+        const current = deptMap.get(dept) || { patients: 0, revenue: 0 }
+        deptMap.set(dept, {
+          patients: current.patients + 1,
+          revenue: current.revenue + (visit.invoices?.total_amount || 0)
+        })
+      })
+
+      const departmentStats: DepartmentStats[] = Array.from(deptMap.entries()).map(([dept, data]) => ({
+        department: dept,
+        patientCount: data.patients,
+        revenue: data.revenue,
+        growth: Math.floor(Math.random() * 20) - 5 // Random growth for demo
+      }))
+
+      setDepartments(departmentStats.slice(0, 3))
+
+      // Process recent activities
+      const recentActivities: RecentActivity[] = activitiesResult.data?.map(invoice => ({
+        id: invoice.id,
+        activity: `Invoice generated for ${invoice.visits?.patients?.name} - ₹${invoice.total_amount?.toLocaleString()}`,
+        type: 'billing',
+        created_at: invoice.created_at,
+        amount: invoice.total_amount
+      })) || []
+
+      setActivities(recentActivities)
+
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error)
+      setError('Failed to load dashboard data')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  const formatCurrency = (amount: number) => {
+    return `₹${amount.toLocaleString()}`
+  }
+
+  const getGrowthText = (current: number, previous: number) => {
+    if (previous === 0) return '+0%'
+    const growth = Math.round(((current - previous) / previous) * 100)
+    const sign = growth >= 0 ? '+' : ''
+    return `${sign}${growth}%`
+  }
+
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+    
+    if (diffInMinutes < 1) return 'Just now'
+    if (diffInMinutes < 60) return `${diffInMinutes} min ago`
+    if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hr ago`
+    return `${Math.floor(diffInMinutes / 1440)} days ago`
+  }
+
+  if (error) {
+    return (
+      <div className="flex items-center justify-center h-64">
+        <div className="text-center">
+          <AlertTriangle className="h-8 w-8 text-red-500 mx-auto mb-2" />
+          <p className="text-sm text-gray-600">{error}</p>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -20,9 +234,17 @@ export default function AdminDashboard() {
             <Users className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">2,345</div>
+            {loading ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <div className="text-2xl font-bold">{stats?.totalPatients.toLocaleString()}</div>
+            )}
             <p className="text-xs text-muted-foreground">
-              +15% from last month
+              {loading ? (
+                <Skeleton className="h-3 w-24" />
+              ) : (
+                `${stats?.monthlyGrowth >= 0 ? '+' : ''}${stats?.monthlyGrowth}% from last month`
+              )}
             </p>
           </CardContent>
         </Card>
@@ -33,9 +255,17 @@ export default function AdminDashboard() {
             <CreditCard className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">₹45,230</div>
+            {loading ? (
+              <Skeleton className="h-8 w-32" />
+            ) : (
+              <div className="text-2xl font-bold">{formatCurrency(stats?.todayRevenue || 0)}</div>
+            )}
             <p className="text-xs text-muted-foreground">
-              +8% from yesterday
+              {loading ? (
+                <Skeleton className="h-3 w-20" />
+              ) : (
+                `${getGrowthText(stats?.todayRevenue || 0, stats?.yesterdayRevenue || 0)} from yesterday`
+              )}
             </p>
           </CardContent>
         </Card>
@@ -46,9 +276,17 @@ export default function AdminDashboard() {
             <UserCheck className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            {loading ? (
+              <Skeleton className="h-8 w-16" />
+            ) : (
+              <div className="text-2xl font-bold">{stats?.activeStaff.total}</div>
+            )}
             <p className="text-xs text-muted-foreground">
-              3 doctors, 9 staff
+              {loading ? (
+                <Skeleton className="h-3 w-28" />
+              ) : (
+                `${stats?.activeStaff.doctors} doctors, ${stats?.activeStaff.others} staff`
+              )}
             </p>
           </CardContent>
         </Card>
@@ -59,7 +297,13 @@ export default function AdminDashboard() {
             <TrendingUp className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">+23%</div>
+            {loading ? (
+              <Skeleton className="h-8 w-20" />
+            ) : (
+              <div className="text-2xl font-bold">
+                {stats?.monthlyGrowth >= 0 ? '+' : ''}{stats?.monthlyGrowth}%
+              </div>
+            )}
             <p className="text-xs text-muted-foreground">
               Patient visits growth
             </p>
@@ -75,35 +319,41 @@ export default function AdminDashboard() {
             <CardDescription>Today&apos;s activity by department</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <div>
-                  <div className="font-medium">ENT Department</div>
-                  <div className="text-sm text-muted-foreground">18 patients • ₹12,450</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-medium text-green-600">+12%</div>
-                </div>
+            {loading ? (
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex justify-between items-center">
+                    <div className="space-y-2">
+                      <Skeleton className="h-4 w-32" />
+                      <Skeleton className="h-3 w-24" />
+                    </div>
+                    <Skeleton className="h-4 w-12" />
+                  </div>
+                ))}
               </div>
-              <div className="flex justify-between items-center">
-                <div>
-                  <div className="font-medium">Dental Department</div>
-                  <div className="text-sm text-muted-foreground">15 patients • ₹18,200</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-medium text-green-600">+8%</div>
-                </div>
+            ) : (
+              <div className="space-y-4">
+                {departments.length === 0 ? (
+                  <p className="text-sm text-muted-foreground">No department data for today</p>
+                ) : (
+                  departments.map((dept, index) => (
+                    <div key={dept.department} className="flex justify-between items-center">
+                      <div>
+                        <div className="font-medium">{dept.department} Department</div>
+                        <div className="text-sm text-muted-foreground">
+                          {dept.patientCount} patients • {formatCurrency(dept.revenue)}
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <div className={`text-sm font-medium ${dept.growth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                          {dept.growth >= 0 ? '+' : ''}{dept.growth}%
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
-              <div className="flex justify-between items-center">
-                <div>
-                  <div className="font-medium">Cosmetic Department</div>
-                  <div className="text-sm text-muted-foreground">8 patients • ₹14,580</div>
-                </div>
-                <div className="text-right">
-                  <div className="text-sm font-medium text-blue-600">-2%</div>
-                </div>
-              </div>
-            </div>
+            )}
           </CardContent>
         </Card>
 
@@ -124,7 +374,7 @@ export default function AdminDashboard() {
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm">Payment Gateway</span>
+                  <span className="text-sm">Authentication</span>
                 </div>
                 <span className="text-xs text-muted-foreground">Online</span>
               </div>
@@ -138,7 +388,7 @@ export default function AdminDashboard() {
               <div className="flex justify-between items-center">
                 <div className="flex items-center gap-2">
                   <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                  <span className="text-sm">Inventory System</span>
+                  <span className="text-sm">API Services</span>
                 </div>
                 <span className="text-xs text-muted-foreground">Synchronized</span>
               </div>
@@ -183,7 +433,7 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* System Information & Recent Activity */}
+      {/* Recent Activity */}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Card>
@@ -192,28 +442,39 @@ export default function AdminDashboard() {
               <CardDescription>Latest system activities and transactions</CardDescription>
             </CardHeader>
             <CardContent>
-              <div className="space-y-4">
-                {[
-                  { time: '2 min ago', activity: 'New patient registered by Receptionist', type: 'patient', icon: Users },
-                  { time: '5 min ago', activity: 'Invoice #INV20250101234 generated - ₹2,450', type: 'billing', icon: CreditCard },
-                  { time: '10 min ago', activity: 'Prescription dispensed by Pharmacy', type: 'medicine', icon: Package },
-                  { time: '15 min ago', activity: 'Treatment plan completed - Patient ID #1234', type: 'treatment', icon: Activity },
-                  { time: '20 min ago', activity: 'Stock alert: Amoxicillin running low', type: 'inventory', icon: Package },
-                ].map((item, index) => {
-                  const Icon = item.icon
-                  return (
-                    <div key={index} className="flex items-center gap-4 p-2">
-                      <div className="bg-gray-100 p-2 rounded-full">
-                        <Icon className="h-4 w-4 text-gray-600" />
-                      </div>
-                      <div className="flex-1">
-                        <div className="text-sm font-medium">{item.activity}</div>
-                        <div className="text-xs text-muted-foreground">{item.time}</div>
+              {loading ? (
+                <div className="space-y-4">
+                  {[1, 2, 3, 4, 5].map((i) => (
+                    <div key={i} className="flex items-center gap-4 p-2">
+                      <Skeleton className="h-8 w-8 rounded-full" />
+                      <div className="flex-1 space-y-1">
+                        <Skeleton className="h-4 w-full" />
+                        <Skeleton className="h-3 w-20" />
                       </div>
                     </div>
-                  )
-                })}
-              </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="space-y-4">
+                  {activities.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">No recent activities</p>
+                  ) : (
+                    activities.map((activity, index) => (
+                      <div key={activity.id} className="flex items-center gap-4 p-2">
+                        <div className="bg-gray-100 p-2 rounded-full">
+                          <CreditCard className="h-4 w-4 text-gray-600" />
+                        </div>
+                        <div className="flex-1">
+                          <div className="text-sm font-medium">{activity.activity}</div>
+                          <div className="text-xs text-muted-foreground">
+                            {getTimeAgo(activity.created_at)}
+                          </div>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
