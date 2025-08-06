@@ -7,20 +7,50 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import UsersPage from '@/app/admin/users/page'
 import { createClient } from '@/lib/supabase/client'
+import { createMockSupabaseClient } from '@/lib/test/supabase-mock'
 
 // Mock Supabase client
 vi.mock('@/lib/supabase/client', () => ({
   createClient: vi.fn()
 }))
 
-const mockSupabaseClient = {
-  from: vi.fn()
+// Mock useUser hook
+vi.mock('@/hooks/use-user', () => ({
+  useUser: () => ({
+    user: {
+      id: 'test-user-id',
+      email: 'admin@test.com'
+    },
+    loading: false
+  })
+}))
+
+type MockRoleData = {
+  name: string
+  label: string
+  color: string
 }
+
+type MockUserData = {
+  id: string
+  email: string
+  full_name: string
+  role: string
+  is_active: boolean
+  department: string
+  created_at: string
+}
+
+type MockDepartmentData = {
+  department: string
+}
+
+const mockSupabaseClient = createMockSupabaseClient() as any
 
 describe('Admin User Management Dynamic Data Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    ;(createClient as any).mockReturnValue(mockSupabaseClient)
+    ;(createClient as vi.Mock).mockReturnValue(mockSupabaseClient)
   })
 
   afterEach(() => {
@@ -29,14 +59,14 @@ describe('Admin User Management Dynamic Data Tests', () => {
 
   describe('Dynamic Roles Fetching', () => {
     it('should fetch and display dynamic roles from user_roles table', async () => {
-      const mockRolesData = [
+      const mockRolesData: MockRoleData[] = [
         { name: 'admin', label: 'Administrator', color: 'bg-purple-100 text-purple-800' },
         { name: 'doctor', label: 'Doctor', color: 'bg-blue-100 text-blue-800' },
         { name: 'nurse', label: 'Nurse', color: 'bg-pink-100 text-pink-800' },
         { name: 'technician', label: 'Lab Technician', color: 'bg-teal-100 text-teal-800' }
       ]
 
-      const mockUsersData = [
+      const mockUsersData: MockUserData[] = [
         {
           id: 'user1',
           email: 'admin@swamicare.com',
@@ -48,12 +78,12 @@ describe('Admin User Management Dynamic Data Tests', () => {
         }
       ]
 
-      const mockDepartmentsData = [
+      const mockDepartmentsData: MockDepartmentData[] = [
         { department: 'Administration' },
         { department: 'Medical' }
       ]
 
-      mockSupabaseClient.from.mockImplementation((table) => {
+      mockSupabaseClient.from.mockImplementation((table: string) => {
         if (table === 'user_roles') {
           return {
             ...mockSupabaseClient,
@@ -124,10 +154,10 @@ describe('Admin User Management Dynamic Data Tests', () => {
     })
 
     it('should fall back to default roles when user_roles table does not exist', async () => {
-      const mockUsersData = []
-      const mockDepartmentsData = []
+      const mockUsersData: MockUserData[] = []
+      const mockDepartmentsData: MockDepartmentData[] = []
 
-      mockSupabaseClient.from.mockImplementation((table) => {
+      mockSupabaseClient.from.mockImplementation((table: string) => {
         if (table === 'user_roles') {
           return {
             ...mockSupabaseClient,
@@ -223,7 +253,7 @@ describe('Admin User Management Dynamic Data Tests', () => {
         { department: 'Emergency' }
       ]
 
-      mockSupabaseClient.from.mockImplementation((table) => {
+      mockSupabaseClient.from.mockImplementation((table: string) => {
         if (table === 'user_roles') {
           return {
             ...mockSupabaseClient,
@@ -292,14 +322,14 @@ describe('Admin User Management Dynamic Data Tests', () => {
     })
 
     it('should fall back to default departments when no departments found', async () => {
-      const mockRolesData = [
+      const mockRolesData: MockRoleData[] = [
         { name: 'admin', label: 'Administrator', color: 'bg-purple-100 text-purple-800' }
       ]
 
-      const mockUsersData = []
-      const mockDepartmentsData = [] // Empty departments
+      const mockUsersData: MockUserData[] = []
+      const mockDepartmentsData: MockDepartmentData[] = [] // Empty departments
 
-      mockSupabaseClient.from.mockImplementation((table) => {
+      mockSupabaseClient.from.mockImplementation((table: string) => {
         if (table === 'user_roles') {
           return {
             ...mockSupabaseClient,
@@ -405,7 +435,7 @@ describe('Admin User Management Dynamic Data Tests', () => {
         { department: 'Cardiology' }
       ]
 
-      mockSupabaseClient.from.mockImplementation((table) => {
+      mockSupabaseClient.from.mockImplementation((table: string) => {
         if (table === 'user_roles') {
           return {
             ...mockSupabaseClient,
@@ -513,7 +543,7 @@ describe('Admin User Management Dynamic Data Tests', () => {
         { department: 'Administration' }
       ]
 
-      mockSupabaseClient.from.mockImplementation((table) => {
+      mockSupabaseClient.from.mockImplementation((table: string) => {
         if (table === 'user_roles') {
           return {
             ...mockSupabaseClient,
@@ -613,7 +643,7 @@ describe('Admin User Management Dynamic Data Tests', () => {
         { department: 'Administration' }
       ]
 
-      mockSupabaseClient.from.mockImplementation((table) => {
+      mockSupabaseClient.from.mockImplementation((table: string) => {
         if (table === 'user_roles') {
           return {
             ...mockSupabaseClient,
@@ -678,7 +708,7 @@ describe('Admin User Management Dynamic Data Tests', () => {
 
   describe('Error Handling', () => {
     it('should handle errors when fetching users', async () => {
-      mockSupabaseClient.from.mockImplementation((table) => {
+      mockSupabaseClient.from.mockImplementation((table: string) => {
         if (table === 'users') {
           return {
             ...mockSupabaseClient,
@@ -737,7 +767,7 @@ describe('Admin User Management Dynamic Data Tests', () => {
         { name: 'admin', label: 'Administrator', color: 'bg-purple-100 text-purple-800' }
       ]
 
-      mockSupabaseClient.from.mockImplementation((table) => {
+      mockSupabaseClient.from.mockImplementation((table: string) => {
         if (table === 'user_roles') {
           return {
             ...mockSupabaseClient,

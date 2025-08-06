@@ -11,10 +11,24 @@ export function useUser() {
   const supabase = createClient()
 
   useEffect(() => {
-    const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser()
-      setUser(user)
+    if (!supabase || !supabase.auth) {
       setLoading(false)
+      return
+    }
+
+    const getUser = async () => {
+      try {
+        const { data: { user }, error } = await supabase.auth.getUser()
+        if (error) {
+          console.error('Error fetching user:', error)
+        }
+        setUser(user)
+      } catch (error) {
+        console.error('Error in getUser:', error)
+        setUser(null)
+      } finally {
+        setLoading(false)
+      }
     }
 
     getUser()

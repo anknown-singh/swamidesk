@@ -9,29 +9,30 @@ import DoctorDashboard from '@/app/doctor/dashboard/page'
 import ReceptionistDashboard from '@/app/receptionist/dashboard/page'
 import AttendantDashboard from '@/app/attendant/dashboard/page'
 import { createClient } from '@/lib/supabase/client'
+import { createMockSupabaseClient, mockUsers } from '@/lib/test/supabase-mock'
 
 // Mock Supabase client
 vi.mock('@/lib/supabase/client', () => ({
   createClient: vi.fn()
 }))
 
-const mockSupabaseClient = {
-  from: vi.fn().mockReturnThis(),
-  select: vi.fn().mockReturnThis(),
-  eq: vi.fn().mockReturnThis(),
-  gt: vi.fn().mockReturnThis(),
-  lt: vi.fn().mockReturnThis(),
-  filter: vi.fn().mockReturnThis(),
-  order: vi.fn().mockReturnThis(),
-  limit: vi.fn().mockReturnThis(),
-  count: vi.fn().mockReturnThis(),
-  in: vi.fn().mockReturnThis(),
-}
+// Mock useUser hook
+vi.mock('@/hooks/use-user', () => ({
+  useUser: () => ({
+    user: {
+      id: 'test-user-id',
+      email: 'test@example.com'
+    },
+    loading: false
+  })
+}))
+
+const mockSupabaseClient = createMockSupabaseClient()
 
 describe('Dashboard Metrics Dynamic Data Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
-    ;(createClient as any).mockReturnValue(mockSupabaseClient)
+    ;(createClient as vi.Mock).mockReturnValue(mockSupabaseClient)
   })
 
   afterEach(() => {
