@@ -5,6 +5,16 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.2](https://github.com/anknown-singh/swamidesk/compare/v1.5.1...v1.5.2) (2025-08-06)
+
+
+### Bug Fixes
+
+* resolve 90% of eslint errors and warnings for production deployment ([cff7b25](https://github.com/anknown-singh/swamidesk/commit/cff7b256c8c3f72978a336c57a1f88b717344eb7))
+* resolve duplicate function declaration breaking build ([c16d546](https://github.com/anknown-singh/swamidesk/commit/c16d546f237bdd2e52bce961bd1f7f9e2d7dd8b2))
+* resolve environment validation failing in vercel ci/cd pipeline ([e2d6c5a](https://github.com/anknown-singh/swamidesk/commit/e2d6c5ac01ac91cdedebbc6b9b10de62b3073d8f))
+* resolve supabase prerendering errors during static generation ([9294e3f](https://github.com/anknown-singh/swamidesk/commit/9294e3f3be45f753ed8c98b0f55d1ecde3af40a4))
+
 ## [1.5.1](https://github.com/anknown-singh/swamidesk/compare/v1.5.0...v1.5.1) (2025-08-06)
 
 
