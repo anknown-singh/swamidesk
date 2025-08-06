@@ -222,7 +222,7 @@ export default function AdminDashboard() {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Admin Dashboard</h1>
         <p className="text-muted-foreground">
-          Complete clinic management and analytics overview - Live Data
+          Complete clinic management and analytics overview - Dynamic Data
         </p>
       </div>
 
