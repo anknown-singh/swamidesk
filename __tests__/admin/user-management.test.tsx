@@ -45,7 +45,52 @@ type MockDepartmentData = {
   department: string
 }
 
-const mockSupabaseClient = createMockSupabaseClient() as any
+// Create a comprehensive mock that matches all component expectations
+const mockSupabaseClient = {
+  from: vi.fn(() => ({
+    select: vi.fn(() => ({
+      eq: vi.fn(() => ({
+        order: vi.fn(() => Promise.resolve({
+          data: [],
+          error: null
+        }))
+      })),
+      not: vi.fn(() => Promise.resolve({
+        data: [],
+        error: null
+      })),
+      order: vi.fn(() => Promise.resolve({
+        data: [],
+        error: null
+      }))
+    })),
+    insert: vi.fn(() => Promise.resolve({
+      data: [],
+      error: null
+    })),
+    update: vi.fn(() => ({
+      eq: vi.fn(() => Promise.resolve({
+        data: [],
+        error: null
+      }))
+    })),
+    delete: vi.fn(() => ({
+      eq: vi.fn(() => Promise.resolve({
+        data: [],
+        error: null
+      }))
+    }))
+  })),
+  auth: {
+    getUser: vi.fn(() => Promise.resolve({
+      data: { user: { id: 'test-user', email: 'admin@test.com' } },
+      error: null
+    })),
+    onAuthStateChange: vi.fn(() => ({
+      data: { subscription: { unsubscribe: vi.fn() } }
+    }))
+  }
+}
 
 describe('Admin User Management Dynamic Data Tests', () => {
   beforeEach(() => {
@@ -135,7 +180,7 @@ describe('Admin User Management Dynamic Data Tests', () => {
       })
 
       // Click add user to show form
-      const addButton = screen.getByText('Add New User')
+      const addButton = screen.getByText('Add User')
       fireEvent.click(addButton)
 
       // Check if dynamic roles are loaded
@@ -211,7 +256,7 @@ describe('Admin User Management Dynamic Data Tests', () => {
       })
 
       // Click add user to show form
-      const addButton = screen.getByText('Add New User')
+      const addButton = screen.getByText('Add User')
       fireEvent.click(addButton)
 
       // Check if default fallback roles are displayed
@@ -305,7 +350,7 @@ describe('Admin User Management Dynamic Data Tests', () => {
       })
 
       // Click add user to show form
-      const addButton = screen.getByText('Add New User')
+      const addButton = screen.getByText('Add User')
       fireEvent.click(addButton)
 
       // Check if dynamic departments are available
@@ -381,7 +426,7 @@ describe('Admin User Management Dynamic Data Tests', () => {
       })
 
       // Click add user to show form
-      const addButton = screen.getByText('Add New User')
+      const addButton = screen.getByText('Add User')
       fireEvent.click(addButton)
 
       // Check if default fallback departments are displayed
