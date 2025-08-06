@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -12,11 +12,14 @@ import {
   UserIcon,
   StethoscopeIcon,
   PlusIcon,
-  FilterIcon
+  FilterIcon,
+  RefreshCwIcon,
+  WifiIcon
 } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { createClient } from '@/lib/supabase/client'
 import type { Appointment, AppointmentStatus, AppointmentType, UserProfile } from '@/lib/types'
+import type { RealtimeChannel } from '@supabase/supabase-js'
 
 interface AppointmentCalendarProps {
   appointments?: Appointment[]
@@ -221,40 +224,103 @@ export function AppointmentCalendar({
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [doctors, setDoctors] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
+  const [isConnected, setIsConnected] = useState(true)
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  const [realtimeChannel, setRealtimeChannel] = useState<RealtimeChannel | null>(null)
+
+  // Callback to load appointment data
+  const loadData = useCallback(async () => {
+    setLoading(true)
+    try {
+      // If props are provided, use them; otherwise fetch from API
+      if (propAppointments && propDoctors) {
+        setAppointments(propAppointments)
+        setDoctors(propDoctors)
+      } else {
+        // Calculate date range for fetching appointments (current week/month)
+        const startDate = new Date(currentDate)
+        startDate.setDate(currentDate.getDate() - 7) // One week before
+        const endDate = new Date(currentDate)
+        endDate.setDate(currentDate.getDate() + 14) // Two weeks after
+
+        const [fetchedAppointments, fetchedDoctors] = await Promise.all([
+          fetchAppointments(startDate, endDate),
+          fetchDoctors()
+        ])
+
+        setAppointments(fetchedAppointments)
+        setDoctors(fetchedDoctors)
+        setLastUpdated(new Date())
+      }
+    } catch (error) {
+      console.error('Error loading calendar data:', error)
+      setIsConnected(false)
+    } finally {
+      setLoading(false)
+    }
+  }, [currentDate, propAppointments, propDoctors])
 
   // Load data on component mount and when date range changes
   useEffect(() => {
-    const loadData = async () => {
-      setLoading(true)
-      try {
-        // If props are provided, use them; otherwise fetch from API
-        if (propAppointments && propDoctors) {
-          setAppointments(propAppointments)
-          setDoctors(propDoctors)
-        } else {
-          // Calculate date range for fetching appointments (current week/month)
-          const startDate = new Date(currentDate)
-          startDate.setDate(currentDate.getDate() - 7) // One week before
-          const endDate = new Date(currentDate)
-          endDate.setDate(currentDate.getDate() + 14) // Two weeks after
+    loadData()
+  }, [loadData])
 
-          const [fetchedAppointments, fetchedDoctors] = await Promise.all([
-            fetchAppointments(startDate, endDate),
-            fetchDoctors()
-          ])
+  // Set up real-time subscriptions
+  useEffect(() => {
+    const supabase = createClient()
+    
+    // Only set up subscriptions if we're not using prop data (real-time mode)
+    if (!propAppointments) {
+      const channel = supabase
+        .channel('appointment-changes')
+        .on('postgres_changes', 
+          { 
+            event: '*', 
+            schema: 'public', 
+            table: 'appointments' 
+          }, 
+          (payload) => {
+            console.log('Real-time appointment change:', payload.eventType, payload.new)
+            
+            // Reload data when appointments change
+            loadData()
+            
+            // Show connection status
+            setIsConnected(true)
+            setLastUpdated(new Date())
+          }
+        )
+        .on('postgres_changes',
+          {
+            event: '*',
+            schema: 'public',
+            table: 'doctor_availability'
+          },
+          (payload) => {
+            console.log('Doctor availability changed:', payload.eventType)
+            loadData()
+          }
+        )
+        .subscribe((status) => {
+          console.log('Realtime subscription status:', status)
+          setIsConnected(status === 'SUBSCRIBED')
+        })
 
-          setAppointments(fetchedAppointments)
-          setDoctors(fetchedDoctors)
+      setRealtimeChannel(channel)
+
+      // Cleanup subscription on unmount
+      return () => {
+        if (channel) {
+          supabase.removeChannel(channel)
         }
-      } catch (error) {
-        console.error('Error loading calendar data:', error)
-      } finally {
-        setLoading(false)
       }
     }
+  }, [propAppointments, loadData])
 
+  // Manual refresh function
+  const handleRefresh = useCallback(() => {
     loadData()
-  }, [currentDate, propAppointments, propDoctors])
+  }, [loadData])
 
   if (loading) {
     return (
@@ -402,17 +468,42 @@ export function AppointmentCalendar({
             <CardTitle className="flex items-center gap-2">
               <CalendarIcon className="h-5 w-5" />
               Appointment Calendar
+              <div className="flex items-center gap-2 ml-4">
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span className="text-xs text-muted-foreground">
+                  {isConnected ? 'Live' : 'Offline'}
+                </span>
+              </div>
             </CardTitle>
-            <CardDescription>
-              {view === 'week' ? getWeekRange() : currentDate.toLocaleDateString('en-US', { 
-                weekday: 'long',
-                year: 'numeric', 
-                month: 'long', 
-                day: 'numeric' 
-              })}
+            <CardDescription className="flex items-center gap-4">
+              <span>
+                {view === 'week' ? getWeekRange() : currentDate.toLocaleDateString('en-US', { 
+                  weekday: 'long',
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
+              </span>
+              {!propAppointments && (
+                <span className="text-xs">
+                  Last updated: {lastUpdated.toLocaleTimeString()}
+                </span>
+              )}
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
+            {!propAppointments && (
+              <Button 
+                variant="outline" 
+                size="sm"
+                onClick={handleRefresh}
+                disabled={loading}
+              >
+                <RefreshCwIcon className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            )}
+            
             <Select value={filterDoctorId} onValueChange={setFilterDoctorId}>
               <SelectTrigger className="w-48">
                 <FilterIcon className="h-4 w-4 mr-2" />

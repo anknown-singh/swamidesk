@@ -1,16 +1,145 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CalendarIcon, PlusIcon, FilterIcon, SearchIcon } from 'lucide-react'
+import { CalendarIcon, PlusIcon, FilterIcon, SearchIcon, TrendingUpIcon, ClockIcon } from 'lucide-react'
 import { AppointmentCalendar } from '@/components/appointments/appointment-calendar'
 import { AppointmentBookingForm } from '@/components/appointments/appointment-booking-form'
+import { createClient } from '@/lib/supabase/client'
 import type { Appointment, AppointmentBookingForm as AppointmentBookingFormData } from '@/lib/types'
+
+interface AppointmentStats {
+  todayTotal: number
+  confirmed: number
+  pending: number
+  cancelled: number
+  completionRate: number
+  avgDuration: number
+}
 
 export default function AppointmentsPage() {
   const [showBookingForm, setShowBookingForm] = useState(false)
   const [selectedSlot, setSelectedSlot] = useState<{ date: string, time: string, doctorId?: string } | null>(null)
+  const [stats, setStats] = useState<AppointmentStats>({
+    todayTotal: 0,
+    confirmed: 0,
+    pending: 0,
+    cancelled: 0,
+    completionRate: 0,
+    avgDuration: 30
+  })
+  const [upcomingAppointments, setUpcomingAppointments] = useState<Appointment[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Fetch appointment statistics
+  useEffect(() => {
+    const fetchStats = async () => {
+      const supabase = createClient()
+      try {
+        // Get today's appointments
+        const { data: todayAppointments, error } = await supabase
+          .from('appointments')
+          .select('id, status, duration')
+          .eq('scheduled_date', new Date().toISOString().split('T')[0])
+
+        if (error) throw error
+
+        const todayTotal = todayAppointments?.length || 0
+        const confirmed = todayAppointments?.filter(apt => apt.status === 'confirmed').length || 0
+        const pending = todayAppointments?.filter(apt => apt.status === 'scheduled').length || 0
+        const cancelled = todayAppointments?.filter(apt => apt.status === 'cancelled').length || 0
+        const completed = todayAppointments?.filter(apt => apt.status === 'completed').length || 0
+        const completionRate = todayTotal > 0 ? Math.round((completed / todayTotal) * 100) : 0
+        const avgDuration = todayAppointments?.reduce((sum, apt) => sum + (apt.duration || 30), 0) / Math.max(todayTotal, 1)
+
+        setStats({
+          todayTotal,
+          confirmed,
+          pending,
+          cancelled,
+          completionRate,
+          avgDuration: Math.round(avgDuration)
+        })
+
+        // Get upcoming appointments (next 3)
+        const { data: upcoming, error: upcomingError } = await supabase
+          .from('appointments')
+          .select(`
+            *,
+            patients!inner(id, first_name, last_name, phone),
+            users!inner(id, full_name, department)
+          `)
+          .gte('scheduled_date', new Date().toISOString().split('T')[0])
+          .in('status', ['scheduled', 'confirmed'])
+          .order('scheduled_date', { ascending: true })
+          .order('scheduled_time', { ascending: true })
+          .limit(3)
+
+        if (!upcomingError && upcoming) {
+          const mappedUpcoming = upcoming.map(apt => ({
+            id: apt.id,
+            patient_id: apt.patient_id,
+            doctor_id: apt.doctor_id,
+            department: apt.department,
+            appointment_type: apt.appointment_type,
+            status: apt.status,
+            scheduled_date: apt.scheduled_date,
+            scheduled_time: apt.scheduled_time,
+            duration: apt.duration || 30,
+            title: apt.title,
+            description: apt.description,
+            notes: apt.notes,
+            patient_notes: apt.patient_notes,
+            priority: apt.priority || false,
+            is_recurring: apt.is_recurring || false,
+            reminder_sent: apt.reminder_sent || false,
+            confirmation_sent: apt.confirmation_sent || false,
+            created_by: apt.created_by,
+            created_at: apt.created_at,
+            updated_at: apt.updated_at,
+            patient: apt.patients ? {
+              id: apt.patients.id,
+              name: `${apt.patients.first_name} ${apt.patients.last_name}`,
+              mobile: apt.patients.phone,
+              dob: null,
+              gender: null,
+              address: null,
+              email: null,
+              emergency_contact: null,
+              created_by: apt.created_by,
+              created_at: apt.patients.created_at || apt.created_at,
+              updated_at: apt.patients.updated_at || apt.updated_at
+            } : undefined,
+            doctor: apt.users ? {
+              id: apt.users.id,
+              role: 'doctor' as const,
+              full_name: apt.users.full_name,
+              email: '',
+              phone: null,
+              department: apt.users.department,
+              specialization: null,
+              password_hash: '',
+              is_active: true,
+              created_at: apt.users.created_at || apt.created_at,
+              updated_at: apt.users.updated_at || apt.updated_at
+            } : undefined
+          }))
+          setUpcomingAppointments(mappedUpcoming)
+        }
+      } catch (error) {
+        console.error('Error fetching appointment stats:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    fetchStats()
+    
+    // Refresh stats every 30 seconds
+    const interval = setInterval(fetchStats, 30000)
+    return () => clearInterval(interval)
+  }, [])
 
   const handleBookAppointment = () => {
     setShowBookingForm(true)
@@ -80,9 +209,9 @@ export default function AppointmentsPage() {
             <CalendarIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">{loading ? '...' : stats.todayTotal}</div>
             <p className="text-xs text-muted-foreground">
-              +2 from yesterday
+              {loading ? 'Loading...' : `${stats.completionRate}% completion rate`}
             </p>
           </CardContent>
         </Card>
@@ -93,9 +222,9 @@ export default function AppointmentsPage() {
             <div className="h-4 w-4 rounded-full bg-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
+            <div className="text-2xl font-bold text-green-600">{loading ? '...' : stats.confirmed}</div>
             <p className="text-xs text-muted-foreground">
-              67% confirmation rate
+              {loading ? 'Loading...' : `${stats.todayTotal > 0 ? Math.round((stats.confirmed / stats.todayTotal) * 100) : 0}% confirmed`}
             </p>
           </CardContent>
         </Card>
@@ -106,22 +235,22 @@ export default function AppointmentsPage() {
             <div className="h-4 w-4 rounded-full bg-yellow-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
+            <div className="text-2xl font-bold text-yellow-600">{loading ? '...' : stats.pending}</div>
             <p className="text-xs text-muted-foreground">
-              Awaiting confirmation
+              {loading ? 'Loading...' : 'Awaiting confirmation'}
             </p>
           </CardContent>
         </Card>
         
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Cancelled</CardTitle>
-            <div className="h-4 w-4 rounded-full bg-red-500" />
+            <CardTitle className="text-sm font-medium">Average Duration</CardTitle>
+            <ClockIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">1</div>
+            <div className="text-2xl font-bold text-blue-600">{loading ? '...' : stats.avgDuration}m</div>
             <p className="text-xs text-muted-foreground">
-              8% cancellation rate
+              {loading ? 'Loading...' : 'Average appointment time'}
             </p>
           </CardContent>
         </Card>
@@ -174,32 +303,48 @@ export default function AppointmentsPage() {
           <Card>
             <CardHeader>
               <CardTitle>Upcoming Appointments</CardTitle>
-              <CardDescription>Next 3 appointments</CardDescription>
+              <CardDescription>Next {upcomingAppointments.length} appointments</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <div className="text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Tomorrow, 9:00 AM</span>
-                  <span className="text-muted-foreground">Dr. Smith</span>
+              {loading ? (
+                <div className="space-y-3">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="animate-pulse">
+                      <div className="h-4 bg-gray-200 rounded mb-1"></div>
+                      <div className="h-3 bg-gray-100 rounded"></div>
+                    </div>
+                  ))}
                 </div>
-                <div className="text-muted-foreground">Emma Davis - Consultation</div>
-              </div>
-              
-              <div className="text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Tomorrow, 11:30 AM</span>
-                  <span className="text-muted-foreground">Dr. Brown</span>
+              ) : upcomingAppointments.length > 0 ? (
+                upcomingAppointments.map((appointment) => (
+                  <div key={appointment.id} className="text-sm border-l-2 border-blue-200 pl-3">
+                    <div className="flex justify-between items-center">
+                      <span className="font-medium">
+                        {appointment.scheduled_date === new Date().toISOString().split('T')[0] ? 'Today' : 
+                         new Date(appointment.scheduled_date).toLocaleDateString('en-US', { 
+                           weekday: 'short', 
+                           month: 'short', 
+                           day: 'numeric' 
+                         })}, {appointment.scheduled_time}
+                      </span>
+                      <div className={`w-2 h-2 rounded-full ${
+                        appointment.status === 'confirmed' ? 'bg-green-500' : 
+                        appointment.status === 'scheduled' ? 'bg-yellow-500' : 'bg-gray-500'
+                      }`} />
+                    </div>
+                    <div className="text-muted-foreground">
+                      {appointment.patient?.name} - {appointment.doctor?.full_name}
+                    </div>
+                    <div className="text-xs text-muted-foreground capitalize">
+                      {appointment.appointment_type} • {appointment.duration}min
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="text-sm text-muted-foreground text-center py-4">
+                  No upcoming appointments scheduled
                 </div>
-                <div className="text-muted-foreground">Robert Chen - Follow-up</div>
-              </div>
-              
-              <div className="text-sm">
-                <div className="flex justify-between items-center">
-                  <span className="font-medium">Wed, 10:00 AM</span>
-                  <span className="text-muted-foreground">Dr. Davis</span>
-                </div>
-                <div className="text-muted-foreground">Lisa Park - Procedure</div>
-              </div>
+              )}
             </CardContent>
           </Card>
 

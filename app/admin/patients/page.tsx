@@ -213,93 +213,152 @@ export default function AdminPatientsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="grid gap-6 md:grid-cols-1 lg:grid-cols-1">
             {filteredPatients.map((patient) => (
-              <div key={patient.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-2 flex-1">
+              <Card key={patient.id} className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-blue-500">
+                <CardContent className="p-6">
+                  {/* Header Section */}
+                  <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-4">
-                      <div>
-                        <h3 className="font-semibold text-lg">{patient.full_name}</h3>
-                        <p className="text-sm text-gray-600">ID: {patient.patient_id}</p>
+                      <div className="bg-blue-100 rounded-full p-3">
+                        <Users className="h-6 w-6 text-blue-600" />
                       </div>
-                      <div className={`px-3 py-1 rounded-full text-sm font-medium ${
+                      <div>
+                        <h3 className="text-xl font-semibold text-gray-900">{patient.full_name}</h3>
+                        <p className="text-sm font-mono text-gray-500 bg-gray-100 px-2 py-1 rounded inline-block">
+                          ID: {patient.patient_id}
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2">
+                      <div className={`px-3 py-1 rounded-full text-xs font-semibold uppercase ${
                         patient.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
                       }`}>
-                        {patient.is_active ? 'ACTIVE' : 'INACTIVE'}
+                        {patient.is_active ? 'Active' : 'Inactive'}
                       </div>
-                      <div className="px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 capitalize">
-                        {patient.gender}
-                      </div>
-                    </div>
-
-                    <div className="grid grid-cols-1 md:grid-cols-4 gap-4 text-sm">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4 text-gray-400" />
-                        <div>
-                          <span className="font-medium text-gray-700">DOB:</span>
-                          <p>{patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'Not set'}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4 text-gray-400" />
-                        <div>
-                          <span className="font-medium text-gray-700">Phone:</span>
-                          <p>{patient.phone || 'Not provided'}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <Mail className="h-4 w-4 text-gray-400" />
-                        <div>
-                          <span className="font-medium text-gray-700">Email:</span>
-                          <p>{patient.email || 'Not provided'}</p>
-                        </div>
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4 text-gray-400" />
-                        <div>
-                          <span className="font-medium text-gray-700">Address:</span>
-                          <p className="truncate">{patient.address || 'Not provided'}</p>
-                        </div>
+                      <div className="px-3 py-1 rounded-full text-xs font-semibold bg-blue-100 text-blue-800 capitalize">
+                        {patient.gender || 'N/A'}
                       </div>
                     </div>
+                  </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="font-medium text-gray-700">Emergency Contact:</span>
-                        <p>{patient.emergency_contact_name || 'Not provided'} 
-                           {patient.emergency_contact_phone && ` - ${patient.emergency_contact_phone}`}</p>
+                  {/* Personal Information Grid */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-4">
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Calendar className="h-4 w-4 text-blue-600" />
+                        <span className="text-xs font-medium text-gray-600 uppercase">Date of Birth</span>
                       </div>
-                      <div>
-                        <span className="font-medium text-gray-700">Registered:</span>
-                        <p>{new Date(patient.created_at).toLocaleDateString()}</p>
-                      </div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'Not provided'}
+                      </p>
+                      {patient.date_of_birth && (
+                        <p className="text-xs text-gray-500">
+                          Age: {Math.floor((new Date().getTime() - new Date(patient.date_of_birth).getTime()) / (1000 * 3600 * 24 * 365))} years
+                        </p>
+                      )}
                     </div>
 
-                    {(patient.allergies || patient.medical_history) && (
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Phone className="h-4 w-4 text-green-600" />
+                        <span className="text-xs font-medium text-gray-600 uppercase">Phone</span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {patient.phone || 'Not provided'}
+                      </p>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Mail className="h-4 w-4 text-purple-600" />
+                        <span className="text-xs font-medium text-gray-600 uppercase">Email</span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-900 truncate">
+                        {patient.email || 'Not provided'}
+                      </p>
+                    </div>
+
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <MapPin className="h-4 w-4 text-red-600" />
+                        <span className="text-xs font-medium text-gray-600 uppercase">Address</span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-900 line-clamp-2">
+                        {patient.address || 'Not provided'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Emergency Contact & Registration */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+                    <div className="bg-yellow-50 border-l-4 border-yellow-400 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Phone className="h-4 w-4 text-yellow-600" />
+                        <span className="text-xs font-medium text-yellow-800 uppercase">Emergency Contact</span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {patient.emergency_contact_name || 'Not provided'}
+                      </p>
+                      {patient.emergency_contact_phone && (
+                        <p className="text-sm text-gray-600">{patient.emergency_contact_phone}</p>
+                      )}
+                    </div>
+
+                    <div className="bg-blue-50 border-l-4 border-blue-400 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Calendar className="h-4 w-4 text-blue-600" />
+                        <span className="text-xs font-medium text-blue-800 uppercase">Registration</span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {new Date(patient.created_at).toLocaleDateString()}
+                      </p>
+                      <p className="text-xs text-gray-500">
+                        {Math.floor((new Date().getTime() - new Date(patient.created_at).getTime()) / (1000 * 3600 * 24))} days ago
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Medical Information */}
+                  {(patient.allergies || patient.medical_history) && (
+                    <div className="border-t pt-4">
+                      <h4 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-2">
+                        <Activity className="h-4 w-4 text-red-500" />
+                        Medical Information
+                      </h4>
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {patient.allergies && (
-                          <div>
-                            <span className="font-medium text-gray-700">Allergies:</span>
-                            <p className="text-red-600">{patient.allergies}</p>
+                          <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-medium text-red-800 uppercase">Allergies</span>
+                            </div>
+                            <p className="text-sm text-red-900">{patient.allergies}</p>
                           </div>
                         )}
                         {patient.medical_history && (
-                          <div>
-                            <span className="font-medium text-gray-700">Medical History:</span>
-                            <p className="truncate">{patient.medical_history}</p>
+                          <div className="bg-orange-50 border border-orange-200 rounded-lg p-3">
+                            <div className="flex items-center gap-2 mb-1">
+                              <span className="text-xs font-medium text-orange-800 uppercase">Medical History</span>
+                            </div>
+                            <p className="text-sm text-orange-900 line-clamp-3">{patient.medical_history}</p>
                           </div>
                         )}
                       </div>
-                    )}
-                  </div>
-                </div>
-              </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             ))}
 
             {filteredPatients.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                {searchTerm ? 'No patients found matching your search' : 'No patients registered yet'}
+              <div className="text-center py-12">
+                <Users className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {searchTerm ? 'No patients found' : 'No patients registered yet'}
+                </h3>
+                <p className="text-gray-500">
+                  {searchTerm ? 'Try adjusting your search terms or filters' : 'Start by registering your first patient'}
+                </p>
               </div>
             )}
           </div>

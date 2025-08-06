@@ -323,53 +323,106 @@ export default function PatientsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="space-y-4">
+          <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
             {filteredPatients.map((patient) => (
-              <div key={patient.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-4">
-                      <h3 className="font-semibold text-lg">
-                        {patient.first_name} {patient.last_name}
-                      </h3>
-                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-mono">
-                        {patient.patient_number}
-                      </span>
-                    </div>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
-                      <div className="flex items-center gap-2">
-                        <Calendar className="h-4 w-4" />
-                        {patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'N/A'}
+              <Card key={patient.id} className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-green-500">
+                <CardContent className="p-4">
+                  {/* Header */}
+                  <div className="flex items-center justify-between mb-3">
+                    <div className="flex items-center gap-3">
+                      <div className="bg-green-100 rounded-full p-2">
+                        <User className="h-5 w-5 text-green-600" />
                       </div>
-                      <div className="flex items-center gap-2">
-                        <Phone className="h-4 w-4" />
-                        {patient.phone}
-                      </div>
-                      <div className="flex items-center gap-2">
-                        <MapPin className="h-4 w-4" />
-                        {patient.address || 'No address'}
+                      <div>
+                        <h3 className="font-semibold text-lg text-gray-900">
+                          {patient.first_name} {patient.last_name}
+                        </h3>
+                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-mono">
+                          {patient.patient_number}
+                        </span>
                       </div>
                     </div>
-
-                    {(patient.medical_history || patient.allergies) && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <FileText className="h-4 w-4 text-orange-500" />
-                        <span className="text-orange-600">Has medical history/allergies</span>
-                      </div>
-                    )}
+                    <div className="text-xs text-gray-500">
+                      {Math.floor((new Date().getTime() - new Date(patient.created_at).getTime()) / (1000 * 3600 * 24))} days ago
+                    </div>
                   </div>
                   
-                  <div className="text-xs text-gray-500">
-                    Registered: {new Date(patient.created_at).toLocaleDateString()}
+                  {/* Contact Info Grid */}
+                  <div className="grid grid-cols-1 gap-3 mb-3">
+                    <div className="bg-gray-50 rounded-lg p-3">
+                      <div className="flex items-center gap-2 mb-1">
+                        <Calendar className="h-4 w-4 text-blue-600" />
+                        <span className="text-xs font-medium text-gray-600 uppercase">Date of Birth</span>
+                      </div>
+                      <p className="text-sm font-medium text-gray-900">
+                        {patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'Not provided'}
+                      </p>
+                      {patient.date_of_birth && (
+                        <p className="text-xs text-gray-500">
+                          Age: {Math.floor((new Date().getTime() - new Date(patient.date_of_birth).getTime()) / (1000 * 3600 * 24 * 365))} years
+                        </p>
+                      )}
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Phone className="h-4 w-4 text-green-600" />
+                          <span className="text-xs font-medium text-gray-600 uppercase">Phone</span>
+                        </div>
+                        <p className="text-sm font-medium text-gray-900">
+                          {patient.phone || 'Not provided'}
+                        </p>
+                      </div>
+
+                      <div className="bg-gray-50 rounded-lg p-3">
+                        <div className="flex items-center gap-2 mb-1">
+                          <MapPin className="h-4 w-4 text-red-600" />
+                          <span className="text-xs font-medium text-gray-600 uppercase">Address</span>
+                        </div>
+                        <p className="text-sm font-medium text-gray-900 line-clamp-2">
+                          {patient.address || 'Not provided'}
+                        </p>
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+
+                  {/* Medical Alerts */}
+                  {(patient.medical_history || patient.allergies) && (
+                    <div className="border-t pt-3">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileText className="h-4 w-4 text-orange-500" />
+                        <span className="text-xs font-semibold text-orange-800 uppercase">Medical Information</span>
+                      </div>
+                      <div className="space-y-2">
+                        {patient.allergies && (
+                          <div className="bg-red-50 border border-red-200 rounded p-2">
+                            <p className="text-xs font-medium text-red-800">Allergies:</p>
+                            <p className="text-sm text-red-900">{patient.allergies}</p>
+                          </div>
+                        )}
+                        {patient.medical_history && (
+                          <div className="bg-orange-50 border border-orange-200 rounded p-2">
+                            <p className="text-xs font-medium text-orange-800">Medical History:</p>
+                            <p className="text-sm text-orange-900 line-clamp-2">{patient.medical_history}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
             ))}
 
             {filteredPatients.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                {searchTerm ? 'No patients found matching your search' : 'No patients registered yet'}
+              <div className="col-span-full text-center py-12">
+                <User className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+                <h3 className="text-lg font-medium text-gray-900 mb-2">
+                  {searchTerm ? 'No patients found' : 'No patients registered yet'}
+                </h3>
+                <p className="text-gray-500">
+                  {searchTerm ? 'Try adjusting your search terms' : 'Click "New Patient" to register your first patient'}
+                </p>
               </div>
             )}
           </div>
