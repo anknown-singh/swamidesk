@@ -71,8 +71,8 @@ export default function ProceduresPage() {
   const [procedureCategories, setProcedureCategories] = useState<string[]>([])
   const [procedureTypes, setProcedureTypes] = useState<string[]>([])
 
-  const fetchProcedures = useCallback(async () => {
-
+  const fetchProcedureConfiguration = useCallback(async () => {
+    const supabase = createClient()
     try {
       // Try to fetch procedure categories from configuration
       const { data: categoriesData, error: categoriesError } = await supabase
@@ -233,15 +233,6 @@ export default function ProceduresPage() {
     }
   }, [])
 
-  const fetchProcedureConfiguration = useCallback(async () => {
-    // Fetch procedure configuration
-    try {
-      // Configuration logic here
-      console.log('Fetch procedure configuration')
-    } catch (error) {
-      console.error('Error fetching procedure configuration:', error)
-    }
-  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
     const supabase = createClient()
