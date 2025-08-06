@@ -6,51 +6,61 @@ export const TEST_USERS: Record<string, UserProfile> = {
     id: 'admin-test-id',
     email: 'admin@test.com',
     role: 'admin',
-    first_name: 'Test',
-    last_name: 'Admin',
+    name: 'Test Admin',
     phone: '+91-9999999999',
+    department: null,
+    specialization: null,
     is_active: true,
-    created_at: '2025-01-01T00:00:00.000Z'
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z'
   },
   doctor: {
     id: 'doctor-test-id',
     email: 'doctor@test.com',
     role: 'doctor',
-    first_name: 'Dr. Test',
-    last_name: 'Physician',
+    name: 'Dr. Test Physician',
     phone: '+91-8888888888',
+    department: 'cardiology',
+    specialization: 'Cardiology',
     is_active: true,
-    created_at: '2025-01-01T00:00:00.000Z'
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z'
   },
   receptionist: {
     id: 'receptionist-test-id',
     email: 'receptionist@test.com',
     role: 'receptionist',
-    first_name: 'Test',
-    last_name: 'Receptionist',
+    name: 'Test Receptionist',
     phone: '+91-7777777777',
+    department: null,
+    specialization: null,
     is_active: true,
-    created_at: '2025-01-01T00:00:00.000Z'
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z'
   },
   attendant: {
     id: 'attendant-test-id',
     email: 'attendant@test.com',
     role: 'attendant',
-    first_name: 'Test',
-    last_name: 'Attendant',
+    name: 'Test Attendant',
     phone: '+91-6666666666',
+    department: null,
+    specialization: null,
     is_active: true,
-    created_at: '2025-01-01T00:00:00.000Z'
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z'
   },
   pharmacist: {
     id: 'pharmacist-test-id',
     email: 'pharmacist@test.com',
     role: 'pharmacist',
-    first_name: 'Test',
-    last_name: 'Pharmacist',
+    name: 'Test Pharmacist',
     phone: '+91-5555555555',
+    department: 'pharmacy',
+    specialization: null,
     is_active: true,
-    created_at: '2025-01-01T00:00:00.000Z'
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z'
   }
 }
 
@@ -129,8 +139,7 @@ export const createMockSession = (role: keyof typeof TEST_USERS) => {
       updated_at: user.created_at,
       user_metadata: {
         role: user.role,
-        first_name: user.first_name,
-        last_name: user.last_name
+        full_name: user.name
       },
       app_metadata: {},
       identities: [],

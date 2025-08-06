@@ -15,6 +15,7 @@ import {
   FilterIcon
 } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { createClient } from '@/lib/supabase/client'
 import type { Appointment, AppointmentStatus, UserProfile } from '@/lib/types'
 
 interface AppointmentCalendarProps {
@@ -47,83 +48,110 @@ const timeSlots = [
   '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30'
 ]
 
-const mockDoctors = [
-  { id: 'doc1', name: 'Dr. Sarah Smith', role: 'doctor' as const, department: 'general', specialization: 'Internal Medicine' },
-  { id: 'doc2', name: 'Dr. John Brown', role: 'doctor' as const, department: 'cardiology', specialization: 'Cardiology' },
-  { id: 'doc3', name: 'Dr. Emily Davis', role: 'doctor' as const, department: 'dermatology', specialization: 'Dermatology' },
-  { id: 'doc4', name: 'Dr. Michael Wilson', role: 'doctor' as const, department: 'orthopedics', specialization: 'Orthopedics' },
-]
-
-const mockAppointments: Appointment[] = [
-  {
-    id: 'apt1',
-    patient_id: 'pat1',
-    doctor_id: 'doc1',
-    department: 'general',
-    appointment_type: 'consultation',
-    status: 'confirmed',
-    scheduled_date: new Date().toISOString().split('T')[0],
-    scheduled_time: '09:30',
-    duration: 30,
-    title: 'Routine Check-up',
-    priority: false,
-    is_recurring: false,
-    reminder_sent: false,
-    confirmation_sent: true,
-    created_by: 'rec1',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    patient: {
-      id: 'pat1',
-      name: 'John Doe',
-      mobile: '+91-9876543210',
-      dob: '1985-06-15',
-      gender: 'male',
-      address: '123 Main St',
-      email: 'john.doe@email.com',
-      emergency_contact: '+91-9876543211',
-      created_by: 'rec1',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
-  },
-  {
-    id: 'apt2',
-    patient_id: 'pat2',
-    doctor_id: 'doc1',
-    department: 'general',
-    appointment_type: 'follow_up',
-    status: 'scheduled',
-    scheduled_date: new Date().toISOString().split('T')[0],
-    scheduled_time: '11:00',
-    duration: 30,
-    title: 'Follow-up Visit',
-    priority: true,
-    is_recurring: false,
-    reminder_sent: false,
-    confirmation_sent: false,
-    created_by: 'rec1',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    patient: {
-      id: 'pat2',
-      name: 'Sarah Johnson',
-      mobile: '+91-9876543211',
-      dob: '1992-03-20',
-      gender: 'female',
-      address: '456 Oak Ave',
-      email: 'sarah.johnson@email.com',
-      emergency_contact: '+91-9876543212',
-      created_by: 'rec1',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    }
+// Dynamic data fetching functions
+const fetchDoctors = async (): Promise<UserProfile[]> => {
+  const supabase = createClient()
+  const { data, error } = await supabase
+    .from('users')
+    .select('*')
+    .eq('role', 'doctor')
+    .eq('is_active', true)
+    .order('full_name')
+  
+  if (error) {
+    console.error('Error fetching doctors:', error)
+    return []
   }
-]
+  
+  return (data as any[]).map((doctor: any) => ({
+    id: doctor.id,
+    name: doctor.full_name,
+    role: doctor.role as const,
+    department: doctor.department || 'general',
+    specialization: doctor.specialization || 'General Practice',
+    email: doctor.email,
+    phone: doctor.phone,
+    is_active: doctor.is_active,
+    created_at: doctor.created_at,
+    updated_at: doctor.updated_at
+  }))
+}
+
+const fetchAppointments = async (startDate?: Date, endDate?: Date): Promise<Appointment[]> => {
+  const supabase = createClient()
+  
+  let query = supabase
+    .from('appointments')
+    .select(`
+      *,
+      patients(id, full_name, phone, email, date_of_birth, gender, address, emergency_contact_phone, created_at, updated_at),
+      users(id, full_name, email, phone, department, specialization, created_at, updated_at)
+    `)
+    .order('scheduled_date', { ascending: true })
+    .order('scheduled_time', { ascending: true })
+  
+  if (startDate && endDate) {
+    query = query
+      .gte('scheduled_date', startDate.toISOString().split('T')[0])
+      .lte('scheduled_date', endDate.toISOString().split('T')[0])
+  }
+  
+  const { data, error } = await query
+  
+  if (error) {
+    console.error('Error fetching appointments:', error)
+    return []
+  }
+  
+  return (data as any[]).map((apt: any) => ({
+    id: apt.id,
+    patient_id: apt.patient_id,
+    doctor_id: apt.doctor_id,
+    department: apt.department,
+    appointment_type: apt.appointment_type,
+    status: apt.status,
+    scheduled_date: apt.scheduled_date,
+    scheduled_time: apt.scheduled_time,
+    duration: apt.duration || 30,
+    title: apt.title || 'Appointment',
+    priority: apt.priority || false,
+    is_recurring: apt.is_recurring || false,
+    reminder_sent: apt.reminder_sent || false,
+    confirmation_sent: apt.confirmation_sent || false,
+    created_by: apt.created_by,
+    created_at: apt.created_at,
+    updated_at: apt.updated_at,
+    patient: apt.patients ? {
+      id: apt.patients.id,
+      name: apt.patients.full_name,
+      mobile: apt.patients.phone,
+      dob: apt.patients.date_of_birth,
+      gender: apt.patients.gender,
+      address: apt.patients.address,
+      email: apt.patients.email,
+      emergency_contact: apt.patients.emergency_contact_phone,
+      created_by: apt.created_by,
+      created_at: apt.patients.created_at,
+      updated_at: apt.patients.updated_at,
+    } : undefined,
+    doctor: apt.users ? {
+      id: apt.users.id,
+      role: 'doctor' as const,
+      name: apt.users.full_name,
+      email: apt.users.email,
+      phone: apt.users.phone,
+      department: apt.users.department,
+      specialization: apt.users.specialization,
+      is_active: true,
+      created_at: apt.users.created_at,
+      updated_at: apt.users.updated_at
+    } : undefined
+  }))
+}
 
 export function AppointmentCalendar({
-  appointments = mockAppointments,
-  doctors = mockDoctors,
+  appointments: propAppointments,
+  doctors: propDoctors,
   onAppointmentSelect,
   onSlotSelect,
   onBookAppointment,
@@ -134,6 +162,58 @@ export function AppointmentCalendar({
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [filterDoctorId, setFilterDoctorId] = useState(selectedDoctorId || 'all')
   const [view, setView] = useState<'week' | 'day'>(viewMode)
+  const [appointments, setAppointments] = useState<Appointment[]>([])
+  const [doctors, setDoctors] = useState<UserProfile[]>([])
+  const [loading, setLoading] = useState(true)
+
+  // Load data on component mount and when date range changes
+  useEffect(() => {
+    const loadData = async () => {
+      setLoading(true)
+      try {
+        // If props are provided, use them; otherwise fetch from API
+        if (propAppointments && propDoctors) {
+          setAppointments(propAppointments)
+          setDoctors(propDoctors)
+        } else {
+          // Calculate date range for fetching appointments (current week/month)
+          const startDate = new Date(currentDate)
+          startDate.setDate(currentDate.getDate() - 7) // One week before
+          const endDate = new Date(currentDate)
+          endDate.setDate(currentDate.getDate() + 14) // Two weeks after
+
+          const [fetchedAppointments, fetchedDoctors] = await Promise.all([
+            fetchAppointments(startDate, endDate),
+            fetchDoctors()
+          ])
+
+          setAppointments(fetchedAppointments)
+          setDoctors(fetchedDoctors)
+        }
+      } catch (error) {
+        console.error('Error loading calendar data:', error)
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    loadData()
+  }, [currentDate, propAppointments, propDoctors])
+
+  if (loading) {
+    return (
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle>Loading Calendar...</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center justify-center p-8">
+            <div className="text-muted-foreground">Loading appointments and doctors...</div>
+          </div>
+        </CardContent>
+      </Card>
+    )
+  }
 
   const getStatusColor = (status: AppointmentStatus) => {
     switch (status) {

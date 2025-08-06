@@ -1,7 +1,161 @@
+'use client'
+
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Pill, Package, AlertTriangle, TrendingDown } from 'lucide-react'
+import { createClient } from '@/lib/supabase/client'
+
+interface PharmacyStats {
+  pendingPrescriptions: number
+  totalInventoryItems: number
+  lowStockAlerts: number
+  expiringSoon: number
+}
+
+interface PrescriptionQueueItem {
+  id: string
+  patient_name: string
+  medicine_count: number
+  doctor_name: string
+  priority: boolean
+  created_at: string
+}
+
+interface LowStockItem {
+  id: string
+  medicine_name: string
+  current_stock: number
+  min_level: number
+  is_critical: boolean
+}
 
 export default function PharmacyDashboard() {
+  const [stats, setStats] = useState<PharmacyStats>({
+    pendingPrescriptions: 0,
+    totalInventoryItems: 0,
+    lowStockAlerts: 0,
+    expiringSoon: 0
+  })
+  const [prescriptionQueue, setPrescriptionQueue] = useState<PrescriptionQueueItem[]>([])
+  const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([])
+  const [loading, setLoading] = useState(true)
+
+  const supabase = createClient()
+
+  useEffect(() => {
+    fetchPharmacyData()
+  }, [])
+
+  const fetchPharmacyData = async () => {
+    try {
+      setLoading(true)
+      
+      // Fetch pharmacy statistics
+      const [prescriptionsResult, inventoryResult, lowStockResult, expiringResult] = await Promise.all([
+        // Pending prescriptions
+        supabase
+          .from('prescriptions')
+          .select('id', { count: 'exact' })
+          .eq('status', 'pending'),
+        
+        // Total inventory items
+        supabase
+          .from('inventory')
+          .select('id', { count: 'exact' })
+          .gt('quantity', 0),
+        
+        // Low stock alerts
+        supabase
+          .from('inventory')
+          .select('id', { count: 'exact' })
+          .filter('quantity', 'lt', 'min_level'),
+        
+        // Expiring soon (30 days)
+        supabase
+          .from('inventory')
+          .select('id', { count: 'exact' })
+          .lt('expiry_date', new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0])
+      ])
+
+      setStats({
+        pendingPrescriptions: prescriptionsResult.count || 0,
+        totalInventoryItems: inventoryResult.count || 0,
+        lowStockAlerts: lowStockResult.count || 0,
+        expiringSoon: expiringResult.count || 0
+      })
+
+      // Fetch prescription queue data
+      const { data: queueData } = await supabase
+        .from('prescriptions')
+        .select(`
+          id,
+          priority,
+          created_at,
+          patients(full_name),
+          users(full_name),
+          prescription_items(id)
+        `)
+        .eq('status', 'pending')
+        .order('priority', { ascending: false })
+        .order('created_at', { ascending: true })
+        .limit(4)
+
+      if (queueData) {
+        const mappedQueue = (queueData as any[]).map((item: any) => ({
+          id: item.id,
+          patient_name: item.patients?.full_name || 'Unknown Patient',
+          medicine_count: item.prescription_items?.length || 0,
+          doctor_name: item.users?.full_name || 'Unknown Doctor',
+          priority: item.priority || false,
+          created_at: item.created_at
+        }))
+        setPrescriptionQueue(mappedQueue)
+      }
+
+      // Fetch low stock items
+      const { data: stockData } = await supabase
+        .from('inventory')
+        .select(`
+          id,
+          medicines(name),
+          quantity,
+          min_level
+        `)
+        .filter('quantity', 'lt', 'min_level')
+        .order('quantity', { ascending: true })
+        .limit(4)
+
+      if (stockData) {
+        const mappedStock = (stockData as any[]).map((item: any) => ({
+          id: item.id,
+          medicine_name: item.medicines?.name || 'Unknown Medicine',
+          current_stock: item.quantity || 0,
+          min_level: item.min_level || 0,
+          is_critical: item.quantity <= (item.min_level * 0.3)
+        }))
+        setLowStockItems(mappedStock)
+      }
+    } catch (error) {
+      console.error('Error fetching pharmacy data:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div>
+          <h1 className="text-3xl font-bold tracking-tight">Pharmacy Dashboard</h1>
+          <p className="text-muted-foreground">Loading pharmacy data...</p>
+        </div>
+        <div className="flex items-center justify-center p-8">
+          <div className="text-muted-foreground">Loading...</div>
+        </div>
+      </div>
+    )
+  }
+
   return (
     <div className="space-y-6">
       <div>
@@ -19,7 +173,7 @@ export default function PharmacyDashboard() {
             <Pill className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">12</div>
+            <div className="text-2xl font-bold">{stats.pendingPrescriptions}</div>
             <p className="text-xs text-muted-foreground">
               Pending dispensing
             </p>
@@ -32,7 +186,7 @@ export default function PharmacyDashboard() {
             <Package className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">485</div>
+            <div className="text-2xl font-bold">{stats.totalInventoryItems}</div>
             <p className="text-xs text-muted-foreground">
               Total medicines in stock
             </p>
@@ -45,7 +199,7 @@ export default function PharmacyDashboard() {
             <AlertTriangle className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">8</div>
+            <div className="text-2xl font-bold">{stats.lowStockAlerts}</div>
             <p className="text-xs text-muted-foreground">
               Items need reordering
             </p>
@@ -58,7 +212,7 @@ export default function PharmacyDashboard() {
             <TrendingDown className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">3</div>
+            <div className="text-2xl font-bold">{stats.expiringSoon}</div>
             <p className="text-xs text-muted-foreground">
               Expiring in 30 days
             </p>
@@ -76,16 +230,11 @@ export default function PharmacyDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {[
-                { patient: 'Rajesh Kumar', medicines: 3, doctor: 'Dr. Sharma', priority: false },
-                { patient: 'Priya Patel', medicines: 2, doctor: 'Dr. Kumar', priority: true },
-                { patient: 'Amit Singh', medicines: 1, doctor: 'Dr. Sharma', priority: false },
-                { patient: 'Sunita Devi', medicines: 4, doctor: 'Dr. Patel', priority: false },
-              ].map((item, index) => (
-                <div key={index} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
+              {prescriptionQueue.map((item) => (
+                <div key={item.id} className="flex justify-between items-center p-3 bg-gray-50 rounded-lg">
                   <div>
                     <div className="font-medium flex items-center gap-2">
-                      {item.patient}
+                      {item.patient_name}
                       {item.priority && (
                         <span className="bg-red-100 text-red-800 px-2 py-0.5 rounded-full text-xs">
                           Urgent
@@ -93,7 +242,7 @@ export default function PharmacyDashboard() {
                       )}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {item.medicines} medicines • {item.doctor}
+                      {item.medicine_count} medicines • {item.doctor_name}
                     </div>
                   </div>
                   <button className="text-blue-600 hover:text-blue-800 text-sm font-medium">
@@ -101,6 +250,11 @@ export default function PharmacyDashboard() {
                   </button>
                 </div>
               ))}
+              {prescriptionQueue.length === 0 && (
+                <div className="text-center text-muted-foreground py-4">
+                  No pending prescriptions
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
@@ -114,30 +268,30 @@ export default function PharmacyDashboard() {
           </CardHeader>
           <CardContent>
             <div className="space-y-3">
-              {[
-                { medicine: 'Paracetamol 500mg', stock: 15, minLevel: 50, urgent: true },
-                { medicine: 'Amoxicillin 250mg', stock: 8, minLevel: 20, urgent: true },
-                { medicine: 'Cetirizine 10mg', stock: 25, minLevel: 40, urgent: false },
-                { medicine: 'Omeprazole 20mg', stock: 12, minLevel: 25, urgent: true },
-              ].map((item, index) => (
-                <div key={index} className="flex justify-between items-center p-3 border rounded-lg">
+              {lowStockItems.map((item) => (
+                <div key={item.id} className="flex justify-between items-center p-3 border rounded-lg">
                   <div>
-                    <div className="font-medium">{item.medicine}</div>
+                    <div className="font-medium">{item.medicine_name}</div>
                     <div className="text-sm text-muted-foreground">
-                      Stock: {item.stock} / Min: {item.minLevel}
+                      Stock: {item.current_stock} / Min: {item.min_level}
                     </div>
                   </div>
                   <div className="text-right">
                     <span className={`px-2 py-1 rounded-full text-xs ${
-                      item.urgent 
+                      item.is_critical 
                         ? 'bg-red-100 text-red-800' 
                         : 'bg-yellow-100 text-yellow-800'
                     }`}>
-                      {item.urgent ? 'Critical' : 'Low'}
+                      {item.is_critical ? 'Critical' : 'Low'}
                     </span>
                   </div>
                 </div>
               ))}
+              {lowStockItems.length === 0 && (
+                <div className="text-center text-muted-foreground py-4">
+                  All medicines adequately stocked
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

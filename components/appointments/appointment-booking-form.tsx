@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -9,7 +9,8 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { CalendarIcon, ClockIcon, UserIcon, StethoscopeIcon, AlertTriangleIcon } from 'lucide-react'
-import type { AppointmentBookingForm, AppointmentType } from '@/lib/types'
+import type { AppointmentBookingForm, AppointmentType, UserProfile } from '@/lib/types'
+import { createClient } from '@/lib/supabase/client'
 
 interface AppointmentBookingFormProps {
   onSubmit: (data: AppointmentBookingForm) => void
@@ -27,21 +28,17 @@ const appointmentTypes: { value: AppointmentType; label: string; description: st
   { value: 'vaccination', label: 'Vaccination', description: 'Immunization appointment' },
 ]
 
-const departments = [
-  { value: 'general', label: 'General Medicine' },
-  { value: 'cardiology', label: 'Cardiology' },
-  { value: 'dermatology', label: 'Dermatology' },
-  { value: 'orthopedics', label: 'Orthopedics' },
-  { value: 'pediatrics', label: 'Pediatrics' },
-  { value: 'neurology', label: 'Neurology' },
-]
+interface Department {
+  value: string
+  label: string
+}
 
-const doctors = [
-  { id: 'doc1', name: 'Dr. Sarah Smith', department: 'general', specialization: 'Internal Medicine' },
-  { id: 'doc2', name: 'Dr. John Brown', department: 'cardiology', specialization: 'Cardiology' },
-  { id: 'doc3', name: 'Dr. Emily Davis', department: 'dermatology', specialization: 'Dermatology' },
-  { id: 'doc4', name: 'Dr. Michael Wilson', department: 'orthopedics', specialization: 'Orthopedics' },
-]
+interface Doctor {
+  id: string
+  name: string
+  department: string
+  specialization: string
+}
 
 const timeSlots = [
   '09:00', '09:30', '10:00', '10:30', '11:00', '11:30',
@@ -73,6 +70,61 @@ export function AppointmentBookingForm({
 
   const [selectedPatient, setSelectedPatient] = useState('')
   const [availableSlots, setAvailableSlots] = useState<string[]>(timeSlots)
+  const [doctors, setDoctors] = useState<Doctor[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [loadingData, setLoadingData] = useState(true)
+  
+  const supabase = createClient()
+
+  useEffect(() => {
+    fetchDoctorsAndDepartments()
+  }, [])
+
+  const fetchDoctorsAndDepartments = async () => {
+    try {
+      setLoadingData(true)
+      
+      // Fetch doctors
+      const { data: doctorsData, error: doctorsError } = await supabase
+        .from('users')
+        .select('id, full_name, department, specialization')
+        .eq('role', 'doctor')
+        .eq('is_active', true)
+        .order('full_name')
+      
+      if (doctorsError) throw doctorsError
+      
+      const mappedDoctors = (doctorsData as any[]).map(doc => ({
+        id: doc.id,
+        name: doc.full_name,
+        department: doc.department || 'general',
+        specialization: doc.specialization || 'General Practice'
+      }))
+      
+      setDoctors(mappedDoctors)
+      
+      // Extract unique departments from doctors
+      const uniqueDepartments = Array.from(
+        new Set(mappedDoctors.map(doc => doc.department))
+      ).map(dept => ({
+        value: dept,
+        label: dept.charAt(0).toUpperCase() + dept.slice(1).replace(/_/g, ' ')
+      }))
+      
+      setDepartments(uniqueDepartments)
+    } catch (error) {
+      console.error('Error fetching doctors and departments:', error)
+      // Fallback to default values
+      setDepartments([
+        { value: 'general', label: 'General Medicine' },
+        { value: 'cardiology', label: 'Cardiology' },
+        { value: 'dermatology', label: 'Dermatology' },
+        { value: 'orthopedics', label: 'Orthopedics' }
+      ])
+    } finally {
+      setLoadingData(false)
+    }
+  }
 
   const handleInputChange = (field: keyof AppointmentBookingForm, value: any) => {
     setFormData(prev => ({ ...prev, [field]: value }))
@@ -97,6 +149,24 @@ export function AppointmentBookingForm({
       handleInputChange('doctor_id', doctorId)
       handleInputChange('department', doctor.department)
     }
+  }
+
+  if (loadingData) {
+    return (
+      <Card className="w-full max-w-2xl mx-auto">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <CalendarIcon className="h-5 w-5" />
+            Book Appointment
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="text-muted-foreground">Loading doctors and departments...</div>
+          </div>
+        </CardContent>
+      </Card>
+    )
   }
 
   const filteredDoctors = formData.department 

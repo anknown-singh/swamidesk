@@ -23,19 +23,30 @@ export async function getCurrentUser() {
     return null
   }
 
-  const { data: profile } = await supabase
-    .from('user_profiles')
+  const { data: profile, error } = await supabase
+    .from('users')
     .select('*')
     .eq('id', user.id)
     .single()
 
-  if (!profile) {
+  if (error || !profile) {
     return null
   }
 
   return {
     user,
-    profile: profile as UserProfile
+    profile: {
+      id: profile.id,
+      role: profile.role as UserRole,
+      name: profile.full_name || '',
+      email: profile.email,
+      phone: profile.phone,
+      department: profile.department,
+      specialization: profile.specialization,
+      is_active: profile.is_active,
+      created_at: profile.created_at || '',
+      updated_at: profile.updated_at || ''
+    }
   }
 }
 

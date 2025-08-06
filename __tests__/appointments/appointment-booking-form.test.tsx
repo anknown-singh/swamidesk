@@ -1,9 +1,27 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest'
+/**
+ * Test cases for Appointment Booking Form Dynamic Data
+ * Tests all dynamic data fetching in appointment booking
+ */
+
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
 import { AppointmentBookingForm } from '@/components/appointments/appointment-booking-form'
+import { createClient } from '@/lib/supabase/client'
 import { createMockAppointmentBookingForm } from '../utils/test-helpers'
 import type { AppointmentBookingForm as FormData } from '@/lib/types'
+
+// Mock Supabase client
+vi.mock('@/lib/supabase/client', () => ({
+  createClient: vi.fn()
+}))
+
+const mockSupabaseClient = {
+  from: vi.fn().mockReturnThis(),
+  select: vi.fn().mockReturnThis(),
+  eq: vi.fn().mockReturnThis(),
+  order: vi.fn().mockReturnThis(),
+}
 
 describe('AppointmentBookingForm', () => {
   const mockOnSubmit = vi.fn()
@@ -12,6 +30,314 @@ describe('AppointmentBookingForm', () => {
 
   beforeEach(() => {
     vi.clearAllMocks()
+    ;(createClient as any).mockReturnValue(mockSupabaseClient)
+  })
+
+  afterEach(() => {
+    vi.restoreAllMocks()
+  })
+
+  describe('Dynamic Data Fetching', () => {
+    it('should fetch and display dynamic doctors from users table', async () => {
+      const mockDoctorsData = [
+        {
+          id: 'doc1',
+          full_name: 'Dr. John Smith',
+          department: 'cardiology',
+          specialization: 'Cardiologist'
+        },
+        {
+          id: 'doc2', 
+          full_name: 'Dr. Sarah Johnson',
+          department: 'dermatology',
+          specialization: 'Dermatologist'
+        },
+        {
+          id: 'doc3',
+          full_name: 'Dr. Mike Wilson',
+          department: 'orthopedics', 
+          specialization: 'Orthopedic Surgeon'
+        }
+      ]
+
+      mockSupabaseClient.from.mockImplementation((table) => {
+        if (table === 'users') {
+          return {
+            ...mockSupabaseClient,
+            select: vi.fn().mockReturnValue({
+              ...mockSupabaseClient,
+              eq: vi.fn().mockReturnValue({
+                ...mockSupabaseClient,
+                order: vi.fn().mockResolvedValue({
+                  data: mockDoctorsData,
+                  error: null
+                })
+              })
+            })
+          }
+        }
+        return mockSupabaseClient
+      })
+
+      render(
+        <AppointmentBookingForm 
+          onSubmit={mockOnSubmit} 
+          onCancel={mockOnCancel} 
+        />
+      )
+
+      // Wait for loading to complete
+      await waitFor(() => {
+        expect(screen.queryByText('Loading doctors and departments...')).not.toBeInTheDocument()
+      })
+
+      // Check if dynamic doctors are loaded
+      await waitFor(() => {
+        expect(screen.getByText('Dr. John Smith')).toBeInTheDocument()
+        expect(screen.getByText('Dr. Sarah Johnson')).toBeInTheDocument()
+        expect(screen.getByText('Dr. Mike Wilson')).toBeInTheDocument()
+      })
+
+      // Verify Supabase was called correctly
+      expect(mockSupabaseClient.from).toHaveBeenCalledWith('users')
+      expect(mockSupabaseClient.select).toHaveBeenCalledWith('id, full_name, department, specialization')
+      expect(mockSupabaseClient.eq).toHaveBeenCalledWith('role', 'doctor')
+      expect(mockSupabaseClient.eq).toHaveBeenCalledWith('is_active', true)
+      expect(mockSupabaseClient.order).toHaveBeenCalledWith('full_name')
+    })
+
+    it('should extract and display dynamic departments from doctor data', async () => {
+      const mockDoctorsData = [
+        {
+          id: 'doc1',
+          full_name: 'Dr. ENT Specialist',
+          department: 'ent',
+          specialization: 'ENT Specialist'
+        },
+        {
+          id: 'doc2',
+          full_name: 'Dr. Dental Expert',
+          department: 'dental',
+          specialization: 'Dentist'
+        }
+      ]
+
+      mockSupabaseClient.from.mockImplementation((table) => {
+        if (table === 'users') {
+          return {
+            ...mockSupabaseClient,
+            select: vi.fn().mockReturnValue({
+              ...mockSupabaseClient,
+              eq: vi.fn().mockReturnValue({
+                ...mockSupabaseClient,
+                order: vi.fn().mockResolvedValue({
+                  data: mockDoctorsData,
+                  error: null
+                })
+              })
+            })
+          }
+        }
+        return mockSupabaseClient
+      })
+
+      render(
+        <AppointmentBookingForm 
+          onSubmit={mockOnSubmit} 
+          onCancel={mockOnCancel} 
+        />
+      )
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading doctors and departments...')).not.toBeInTheDocument()
+      })
+
+      // Check if departments are dynamically extracted and formatted
+      await waitFor(() => {
+        expect(screen.getByText('Ent')).toBeInTheDocument()
+        expect(screen.getByText('Dental')).toBeInTheDocument()
+      })
+    })
+
+    it('should handle doctors with null/undefined department and specialization', async () => {
+      const mockDoctorsData = [
+        {
+          id: 'doc1',
+          full_name: 'Dr. No Dept',
+          department: null,
+          specialization: null
+        },
+        {
+          id: 'doc2',
+          full_name: 'Dr. Undefined Dept',
+          department: undefined,
+          specialization: undefined
+        }
+      ]
+
+      mockSupabaseClient.from.mockImplementation((table) => {
+        if (table === 'users') {
+          return {
+            ...mockSupabaseClient,
+            select: vi.fn().mockReturnValue({
+              ...mockSupabaseClient,
+              eq: vi.fn().mockReturnValue({
+                ...mockSupabaseClient,
+                order: vi.fn().mockResolvedValue({
+                  data: mockDoctorsData,
+                  error: null
+                })
+              })
+            })
+          }
+        }
+        return mockSupabaseClient
+      })
+
+      render(
+        <AppointmentBookingForm 
+          onSubmit={mockOnSubmit} 
+          onCancel={mockOnCancel} 
+        />
+      )
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading doctors and departments...')).not.toBeInTheDocument()
+      })
+
+      // Check fallback values are used
+      await waitFor(() => {
+        expect(screen.getByText('General Practice')).toBeInTheDocument()
+        expect(screen.getByText('General')).toBeInTheDocument()
+      })
+    })
+
+    it('should display loading state while fetching doctors and departments', async () => {
+      // Make the promise never resolve to test loading state
+      mockSupabaseClient.from.mockImplementation((table) => {
+        if (table === 'users') {
+          return {
+            ...mockSupabaseClient,
+            select: vi.fn().mockReturnValue({
+              ...mockSupabaseClient,
+              eq: vi.fn().mockReturnValue({
+                ...mockSupabaseClient,
+                order: vi.fn().mockReturnValue(new Promise(() => {})) // Never resolves
+              })
+            })
+          }
+        }
+        return mockSupabaseClient
+      })
+
+      render(
+        <AppointmentBookingForm 
+          onSubmit={mockOnSubmit} 
+          onCancel={mockOnCancel} 
+        />
+      )
+
+      expect(screen.getByText('Loading doctors and departments...')).toBeInTheDocument()
+      expect(screen.getByText('Book Appointment')).toBeInTheDocument()
+    })
+
+    it('should handle database errors gracefully with fallback departments', async () => {
+      const consoleSpy = vi.spyOn(console, 'error').mockImplementation(() => {})
+
+      mockSupabaseClient.from.mockImplementation((table) => {
+        if (table === 'users') {
+          return {
+            ...mockSupabaseClient,
+            select: vi.fn().mockReturnValue({
+              ...mockSupabaseClient,
+              eq: vi.fn().mockReturnValue({
+                ...mockSupabaseClient,
+                order: vi.fn().mockResolvedValue({
+                  data: null,
+                  error: { message: 'Database connection failed' }
+                })
+              })
+            })
+          }
+        }
+        return mockSupabaseClient
+      })
+
+      render(
+        <AppointmentBookingForm 
+          onSubmit={mockOnSubmit} 
+          onCancel={mockOnCancel} 
+        />
+      )
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading doctors and departments...')).not.toBeInTheDocument()
+      })
+
+      // Check if fallback departments are displayed
+      await waitFor(() => {
+        expect(screen.getByText('General Medicine')).toBeInTheDocument()
+        expect(screen.getByText('Cardiology')).toBeInTheDocument()
+        expect(screen.getByText('Dermatology')).toBeInTheDocument()
+        expect(screen.getByText('Orthopedics')).toBeInTheDocument()
+      })
+
+      expect(consoleSpy).toHaveBeenCalledWith('Error fetching doctors and departments:', expect.any(Error))
+      consoleSpy.mockRestore()
+    })
+
+    it('should auto-populate department when dynamic doctor is selected', async () => {
+      const mockDoctorsData = [
+        {
+          id: 'doc1',
+          full_name: 'Dr. Heart Specialist',
+          department: 'cardiology',
+          specialization: 'Cardiologist'
+        }
+      ]
+
+      mockSupabaseClient.from.mockImplementation((table) => {
+        if (table === 'users') {
+          return {
+            ...mockSupabaseClient,
+            select: vi.fn().mockReturnValue({
+              ...mockSupabaseClient,
+              eq: vi.fn().mockReturnValue({
+                ...mockSupabaseClient,
+                order: vi.fn().mockResolvedValue({
+                  data: mockDoctorsData,
+                  error: null
+                })
+              })
+            })
+          }
+        }
+        return mockSupabaseClient
+      })
+
+      render(
+        <AppointmentBookingForm 
+          onSubmit={mockOnSubmit} 
+          onCancel={mockOnCancel} 
+        />
+      )
+
+      await waitFor(() => {
+        expect(screen.queryByText('Loading doctors and departments...')).not.toBeInTheDocument()
+      })
+
+      // Select doctor
+      const doctorSelect = screen.getByLabelText('Doctor *')
+      fireEvent.click(doctorSelect)
+      
+      await waitFor(() => {
+        fireEvent.click(screen.getByText('Dr. Heart Specialist'))
+      })
+
+      // Check if department is auto-populated
+      const departmentSelect = screen.getByLabelText('Department *')
+      expect(departmentSelect).toHaveValue('cardiology')
+    })
   })
 
   describe('Form Rendering', () => {

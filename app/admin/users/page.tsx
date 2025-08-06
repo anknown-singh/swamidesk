@@ -44,34 +44,97 @@ export default function UsersPage() {
   })
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [roles, setRoles] = useState<{ value: string; label: string; color: string }[]>([])
+  const [departments, setDepartments] = useState<string[]>([])
 
   const supabase = createClient()
   // const router = useRouter()
 
-  const roles = [
-    { value: 'admin', label: 'Administrator', color: 'bg-purple-100 text-purple-800' },
-    { value: 'doctor', label: 'Doctor', color: 'bg-blue-100 text-blue-800' },
-    { value: 'receptionist', label: 'Receptionist', color: 'bg-green-100 text-green-800' },
-    { value: 'pharmacist', label: 'Pharmacist', color: 'bg-orange-100 text-orange-800' },
-    { value: 'attendant', label: 'Attendant', color: 'bg-yellow-100 text-yellow-800' }
-  ]
-
-  const departments = [
-    'Administration',
-    'General Medicine',
-    'Pediatrics',
-    'Cardiology',
-    'Dermatology',
-    'Orthopedics',
-    'Pharmacy',
-    'Reception',
-    'Laboratory',
-    'Radiology'
-  ]
-
   useEffect(() => {
     fetchUsers()
+    fetchRolesAndDepartments()
   }, [])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchRolesAndDepartments = async () => {
+    try {
+      // Try to fetch roles from configuration
+      const { data: rolesData, error: rolesError } = await supabase
+        .from('user_roles')
+        .select('name, label, color')
+        .eq('is_active', true)
+        .order('name')
+
+      if (rolesError) {
+        console.log('User roles table not found, using default values')
+        setRoles([
+          { value: 'admin', label: 'Administrator', color: 'bg-purple-100 text-purple-800' },
+          { value: 'doctor', label: 'Doctor', color: 'bg-blue-100 text-blue-800' },
+          { value: 'receptionist', label: 'Receptionist', color: 'bg-green-100 text-green-800' },
+          { value: 'pharmacist', label: 'Pharmacist', color: 'bg-orange-100 text-orange-800' },
+          { value: 'attendant', label: 'Attendant', color: 'bg-yellow-100 text-yellow-800' }
+        ])
+      } else {
+        setRoles(rolesData.map(role => ({
+          value: role.name,
+          label: role.label || role.name,
+          color: role.color || 'bg-gray-100 text-gray-800'
+        })))
+      }
+
+      // Extract unique departments from existing users
+      const { data: usersData } = await supabase
+        .from('users')
+        .select('department')
+        .not('department', 'is', null)
+
+      if (usersData) {
+        const uniqueDepartments = Array.from(new Set(
+          usersData.map(user => user.department).filter(Boolean)
+        ))
+        
+        if (uniqueDepartments.length > 0) {
+          setDepartments(uniqueDepartments)
+        } else {
+          // Fallback to default departments
+          setDepartments([
+            'Administration',
+            'General Medicine',
+            'Pediatrics',
+            'Cardiology',
+            'Dermatology',
+            'Orthopedics',
+            'Pharmacy',
+            'Reception',
+            'Laboratory',
+            'Radiology'
+          ])
+        }
+      } else {
+        // Fallback to default departments
+        setDepartments([
+          'Administration',
+          'General Medicine',
+          'Pediatrics',
+          'Cardiology',
+          'Dermatology',
+          'Orthopedics',
+          'Pharmacy',
+          'Reception',
+          'Laboratory',
+          'Radiology'
+        ])
+      }
+    } catch (error) {
+      console.error('Error fetching roles and departments:', error)
+      // Fallback to default values
+      setRoles([
+        { value: 'admin', label: 'Administrator', color: 'bg-purple-100 text-purple-800' },
+        { value: 'doctor', label: 'Doctor', color: 'bg-blue-100 text-blue-800' },
+        { value: 'receptionist', label: 'Receptionist', color: 'bg-green-100 text-green-800' }
+      ])
+      setDepartments(['Administration', 'General Medicine', 'Pharmacy'])
+    }
+  }
 
   const fetchUsers = async () => {
     try {

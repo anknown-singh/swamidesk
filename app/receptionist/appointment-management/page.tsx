@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -17,152 +17,93 @@ import {
 import { AppointmentStatusManager } from '@/components/appointments/appointment-status-manager'
 import { AppointmentConfirmation } from '@/components/appointments/appointment-confirmation'
 import type { Appointment, AppointmentStatus } from '@/lib/types'
+import { createClient } from '@/lib/supabase/client'
 
-// Mock data - same as in other components for consistency
-const mockAppointments: Appointment[] = [
-  {
-    id: 'apt1',
-    patient_id: 'pat1',
-    doctor_id: 'doc1',
-    department: 'general',
-    appointment_type: 'consultation',
-    status: 'scheduled',
-    scheduled_date: new Date().toISOString().split('T')[0],
-    scheduled_time: '10:00',
-    duration: 30,
-    title: 'Routine Check-up',
-    priority: false,
-    is_recurring: false,
-    reminder_sent: false,
-    confirmation_sent: false,
-    created_by: 'rec1',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    patient: {
-      id: 'pat1',
-      name: 'John Doe',
-      mobile: '+91-9876543210',
-      dob: '1985-06-15',
-      gender: 'male',
-      address: '123 Main St',
-      email: 'john.doe@email.com',
-      emergency_contact: '+91-9876543211',
-      created_by: 'rec1',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    doctor: {
-      id: 'doc1',
-      role: 'doctor',
-      name: 'Dr. Sarah Smith',
-      email: 'sarah.smith@swamidesk.com',
-      phone: '+91-9876543220',
-      department: 'general',
-      specialization: 'Internal Medicine',
-      is_active: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-  },
-  {
-    id: 'apt2',
-    patient_id: 'pat2',
-    doctor_id: 'doc2',
-    department: 'cardiology',
-    appointment_type: 'follow_up',
-    status: 'confirmed',
-    scheduled_date: new Date().toISOString().split('T')[0],
-    scheduled_time: '14:30',
-    duration: 45,
-    title: 'Cardiology Follow-up',
-    priority: true,
-    is_recurring: false,
-    reminder_sent: false,
-    confirmation_sent: true,
-    confirmed_at: new Date().toISOString(),
-    created_by: 'rec1',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    patient: {
-      id: 'pat2',
-      name: 'Sarah Johnson',
-      mobile: '+91-9876543211',
-      dob: '1978-09-12',
-      gender: 'female',
-      address: '456 Oak Ave',
-      email: 'sarah.johnson@email.com',
-      emergency_contact: '+91-9876543212',
-      created_by: 'rec1',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    doctor: {
-      id: 'doc2',
-      role: 'doctor',
-      name: 'Dr. John Brown',
-      email: 'john.brown@swamidesk.com',
-      phone: '+91-9876543221',
-      department: 'cardiology',
-      specialization: 'Cardiology',
-      is_active: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-  },
-  {
-    id: 'apt3',
-    patient_id: 'pat3',
-    doctor_id: 'doc1',
-    department: 'general',
-    appointment_type: 'procedure',
-    status: 'arrived',
-    scheduled_date: new Date().toISOString().split('T')[0],
-    scheduled_time: '16:00',
-    duration: 60,
-    title: 'Medical Procedure',
-    priority: false,
-    is_recurring: false,
-    reminder_sent: true,
-    confirmation_sent: true,
-    confirmed_at: new Date(Date.now() - 3600000).toISOString(),
-    arrived_at: new Date(Date.now() - 900000).toISOString(),
-    created_by: 'rec1',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
-    patient: {
-      id: 'pat3',
-      name: 'Mike Wilson',
-      mobile: '+91-9876543212',
-      dob: '1990-12-05',
-      gender: 'male',
-      address: '789 Pine St',
-      email: 'mike.wilson@email.com',
-      emergency_contact: '+91-9876543213',
-      created_by: 'rec1',
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString(),
-    },
-    doctor: {
-      id: 'doc1',
-      role: 'doctor',
-      name: 'Dr. Sarah Smith',
-      email: 'sarah.smith@swamidesk.com',
-      phone: '+91-9876543220',
-      department: 'general',
-      specialization: 'Internal Medicine',
-      is_active: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-  }
-]
+// Dynamic data fetching - no more mock data needed
 
 export default function AppointmentManagementPage() {
-  const [appointments, setAppointments] = useState<Appointment[]>(mockAppointments)
+  const [appointments, setAppointments] = useState<Appointment[]>([])
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | 'all'>('all')
   const [activeView, setActiveView] = useState<'status' | 'confirmations'>('status')
+  const [loading, setLoading] = useState(true)
+  
+  const supabase = createClient()
+
+  // Fetch appointments from database
+  useEffect(() => {
+    fetchAppointments()
+  }, [])
+
+  const fetchAppointments = async () => {
+    try {
+      setLoading(true)
+      const { data, error } = await supabase
+        .from('appointments')
+        .select(`
+          *,
+          patients(id, full_name, phone, email, date_of_birth, gender, address, emergency_contact_phone, created_at, updated_at),
+          users(id, full_name, email, phone, department, specialization, created_at, updated_at)
+        `)
+        .order('scheduled_date', { ascending: true })
+        .order('scheduled_time', { ascending: true })
+
+      if (error) throw error
+
+      const mappedAppointments = (data as any[]).map((apt: any) => ({
+        id: apt.id,
+        patient_id: apt.patient_id,
+        doctor_id: apt.doctor_id,
+        department: apt.department,
+        appointment_type: apt.appointment_type,
+        status: apt.status,
+        scheduled_date: apt.scheduled_date,
+        scheduled_time: apt.scheduled_time,
+        duration: apt.duration || 30,
+        title: apt.title || 'Appointment',
+        priority: apt.priority || false,
+        is_recurring: apt.is_recurring || false,
+        reminder_sent: apt.reminder_sent || false,
+        confirmation_sent: apt.confirmation_sent || false,
+        confirmed_at: apt.confirmed_at,
+        created_by: apt.created_by,
+        created_at: apt.created_at,
+        updated_at: apt.updated_at,
+        patient: apt.patients ? {
+          id: apt.patients.id,
+          name: apt.patients.full_name,
+          mobile: apt.patients.phone,
+          dob: apt.patients.date_of_birth,
+          gender: apt.patients.gender,
+          address: apt.patients.address,
+          email: apt.patients.email,
+          emergency_contact: apt.patients.emergency_contact_phone,
+          created_by: apt.created_by,
+          created_at: apt.patients.created_at,
+          updated_at: apt.patients.updated_at,
+        } : undefined,
+        doctor: apt.users ? {
+          id: apt.users.id,
+          role: 'doctor' as const,
+          name: apt.users.full_name,
+          email: apt.users.email,
+          phone: apt.users.phone,
+          department: apt.users.department,
+          specialization: apt.users.specialization,
+          is_active: true,
+          created_at: apt.users.created_at,
+          updated_at: apt.users.updated_at
+        } : undefined
+      }))
+
+      setAppointments(mappedAppointments)
+    } catch (error) {
+      console.error('Error fetching appointments:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
 
   // Filter appointments based on search and status
   const filteredAppointments = appointments.filter(appointment => {
@@ -176,40 +117,99 @@ export default function AppointmentManagementPage() {
     return matchesSearch && matchesStatus
   })
 
-  const handleStatusUpdate = (appointmentId: string, status: AppointmentStatus, data?: any) => {
-    setAppointments(prev => prev.map(apt => 
-      apt.id === appointmentId 
-        ? { ...apt, status, ...data, updated_at: new Date().toISOString() }
-        : apt
-    ))
-    console.log('Status updated:', { appointmentId, status, data })
+  const handleStatusUpdate = async (appointmentId: string, status: AppointmentStatus, data?: any) => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ 
+          status, 
+          ...data, 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', appointmentId)
+
+      if (error) throw error
+
+      setAppointments(prev => prev.map(apt => 
+        apt.id === appointmentId 
+          ? { ...apt, status, ...data, updated_at: new Date().toISOString() }
+          : apt
+      ))
+    } catch (error) {
+      console.error('Error updating appointment status:', error)
+    }
   }
 
-  const handleSendReminder = (appointmentId: string, type: 'sms' | 'email' | 'call') => {
-    setAppointments(prev => prev.map(apt => 
-      apt.id === appointmentId 
-        ? { ...apt, reminder_sent: true, updated_at: new Date().toISOString() }
-        : apt
-    ))
-    console.log('Reminder sent:', { appointmentId, type })
+  const handleSendReminder = async (appointmentId: string, type: 'sms' | 'email' | 'call') => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ 
+          reminder_sent: true, 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', appointmentId)
+
+      if (error) throw error
+
+      setAppointments(prev => prev.map(apt => 
+        apt.id === appointmentId 
+          ? { ...apt, reminder_sent: true, updated_at: new Date().toISOString() }
+          : apt
+      ))
+      
+      console.log('Reminder sent:', { appointmentId, type })
+    } catch (error) {
+      console.error('Error sending reminder:', error)
+    }
   }
 
-  const handleSendConfirmation = (appointmentId: string, method: 'sms' | 'email' | 'call', message?: string) => {
-    setAppointments(prev => prev.map(apt => 
-      apt.id === appointmentId 
-        ? { ...apt, confirmation_sent: true, updated_at: new Date().toISOString() }
-        : apt
-    ))
-    console.log('Confirmation sent:', { appointmentId, method, message })
+  const handleSendConfirmation = async (appointmentId: string, method: 'sms' | 'email' | 'call', message?: string) => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ 
+          confirmation_sent: true, 
+          updated_at: new Date().toISOString() 
+        })
+        .eq('id', appointmentId)
+
+      if (error) throw error
+
+      setAppointments(prev => prev.map(apt => 
+        apt.id === appointmentId 
+          ? { ...apt, confirmation_sent: true, updated_at: new Date().toISOString() }
+          : apt
+      ))
+      
+      console.log('Confirmation sent:', { appointmentId, method, message })
+    } catch (error) {
+      console.error('Error sending confirmation:', error)
+    }
   }
 
-  const handleBulkConfirmation = (appointmentIds: string[], method: 'sms' | 'email', message?: string) => {
-    setAppointments(prev => prev.map(apt => 
-      appointmentIds.includes(apt.id)
-        ? { ...apt, confirmation_sent: true, updated_at: new Date().toISOString() }
-        : apt
-    ))
-    console.log('Bulk confirmation sent:', { appointmentIds, method, message })
+  const handleBulkConfirmation = async (appointmentIds: string[], method: 'sms' | 'email', message?: string) => {
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ 
+          confirmation_sent: true, 
+          updated_at: new Date().toISOString() 
+        })
+        .in('id', appointmentIds)
+
+      if (error) throw error
+
+      setAppointments(prev => prev.map(apt => 
+        appointmentIds.includes(apt.id)
+          ? { ...apt, confirmation_sent: true, updated_at: new Date().toISOString() }
+          : apt
+      ))
+      
+      console.log('Bulk confirmation sent:', { appointmentIds, method, message })
+    } catch (error) {
+      console.error('Error sending bulk confirmations:', error)
+    }
   }
 
   const handleScheduleReminder = (appointmentId: string, scheduledAt: string, method: 'sms' | 'email', message?: string) => {
@@ -247,6 +247,22 @@ export default function AppointmentManagementPage() {
     arrived: appointments.filter(apt => apt.status === 'arrived').length,
     in_progress: appointments.filter(apt => apt.status === 'in_progress').length,
     unconfirmed: appointments.filter(apt => !apt.confirmation_sent && ['scheduled', 'confirmed'].includes(apt.status)).length
+  }
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold tracking-tight">Appointment Management</h1>
+            <p className="text-muted-foreground">Loading appointment data...</p>
+          </div>
+        </div>
+        <div className="flex items-center justify-center p-8">
+          <div className="text-muted-foreground">Loading appointments...</div>
+        </div>
+      </div>
+    )
   }
 
   return (

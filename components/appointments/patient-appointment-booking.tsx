@@ -24,6 +24,7 @@ import {
   CreditCardIcon
 } from 'lucide-react'
 import type { AppointmentBookingForm, AppointmentType, UserProfile } from '@/lib/types'
+import { createClient } from '@/lib/supabase/client'
 
 interface PatientAppointmentBookingProps {
   patientId?: string
@@ -73,67 +74,18 @@ const appointmentTypes: { value: AppointmentType; label: string; description: st
   },
 ]
 
-const departments = [
-  { value: 'general', label: 'General Medicine', description: 'Primary healthcare and routine medical care' },
-  { value: 'cardiology', label: 'Cardiology', description: 'Heart and cardiovascular conditions' },
-  { value: 'dermatology', label: 'Dermatology', description: 'Skin, hair, and nail conditions' },
-  { value: 'orthopedics', label: 'Orthopedics', description: 'Bone, joint, and muscle problems' },
-  { value: 'pediatrics', label: 'Pediatrics', description: 'Medical care for children' },
-  { value: 'neurology', label: 'Neurology', description: 'Brain and nervous system conditions' },
-  { value: 'gynecology', label: 'Gynecology', description: 'Women\'s reproductive health' },
-  { value: 'ophthalmology', label: 'Ophthalmology', description: 'Eye and vision care' },
-]
+interface Department {
+  value: string
+  label: string
+  description: string
+}
 
-const mockDoctors: UserProfile[] = [
-  { 
-    id: 'doc1', 
-    role: 'doctor',
-    name: 'Dr. Sarah Smith', 
-    email: 'sarah.smith@swamidesk.com', 
-    phone: '+91-9876543220',
-    department: 'general',
-    specialization: 'Internal Medicine, Family Practice',
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  { 
-    id: 'doc2', 
-    role: 'doctor',
-    name: 'Dr. John Brown', 
-    email: 'john.brown@swamidesk.com', 
-    phone: '+91-9876543221',
-    department: 'cardiology',
-    specialization: 'Interventional Cardiology',
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  { 
-    id: 'doc3', 
-    role: 'doctor',
-    name: 'Dr. Emily Davis', 
-    email: 'emily.davis@swamidesk.com', 
-    phone: '+91-9876543222',
-    department: 'dermatology',
-    specialization: 'Medical & Cosmetic Dermatology',
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-  { 
-    id: 'doc4', 
-    role: 'doctor',
-    name: 'Dr. Michael Wilson', 
-    email: 'michael.wilson@swamidesk.com', 
-    phone: '+91-9876543223',
-    department: 'orthopedics',
-    specialization: 'Sports Medicine & Joint Replacement',
-    is_active: true,
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
-  },
-]
+interface Doctor {
+  id: string
+  name: string
+  department: string
+  specialization: string
+}
 
 const mockAvailableSlots: { [key: string]: string[] } = {
   [new Date(Date.now() + 86400000).toISOString().split('T')[0]]: ['09:00', '10:30', '14:00', '15:30'],
@@ -146,8 +98,8 @@ export function PatientAppointmentBooking({
   onSubmit,
   onCancel,
   isLoading = false,
-  availableDoctors = mockDoctors,
-  availableSlots = mockAvailableSlots
+  availableDoctors,
+  availableSlots
 }: PatientAppointmentBookingProps) {
   const [step, setStep] = useState<'type' | 'department' | 'doctor' | 'datetime' | 'details' | 'confirmation'>('type')
   const [formData, setFormData] = useState<AppointmentBookingForm>({
@@ -176,10 +128,75 @@ export function PatientAppointmentBooking({
   })
   const [agreedToTerms, setAgreedToTerms] = useState(false)
   const [notification, setNotification] = useState<{ type: 'success' | 'error', message: string } | null>(null)
+  const [doctors, setDoctors] = useState<UserProfile[]>([])
+  const [departments, setDepartments] = useState<Department[]>([])
+  const [loadingData, setLoadingData] = useState(true)
+  
+  const supabase = createClient()
+
+  useEffect(() => {
+    if (availableDoctors && !loadingData) {
+      setDoctors(availableDoctors)
+    } else {
+      fetchDoctorsAndDepartments()
+    }
+  }, [availableDoctors])
+
+  const fetchDoctorsAndDepartments = async () => {
+    try {
+      setLoadingData(true)
+      
+      // Fetch doctors
+      const { data: doctorsData, error: doctorsError } = await supabase
+        .from('users')
+        .select('id, full_name, email, phone, department, specialization, is_active, created_at, updated_at')
+        .eq('role', 'doctor')
+        .eq('is_active', true)
+        .order('full_name')
+      
+      if (doctorsError) throw doctorsError
+      
+      const mappedDoctors = (doctorsData as any[]).map(doc => ({
+        id: doc.id,
+        role: 'doctor' as const,
+        name: doc.full_name,
+        email: doc.email,
+        phone: doc.phone,
+        department: doc.department || 'general',
+        specialization: doc.specialization || 'General Practice',
+        is_active: doc.is_active,
+        created_at: doc.created_at,
+        updated_at: doc.updated_at
+      }))
+      
+      setDoctors(mappedDoctors)
+      
+      // Extract unique departments from doctors
+      const uniqueDepartments = Array.from(
+        new Set(mappedDoctors.map(doc => doc.department))
+      ).map(dept => ({
+        value: dept,
+        label: dept.charAt(0).toUpperCase() + dept.slice(1).replace(/_/g, ' '),
+        description: `Medical care specializing in ${dept}`
+      }))
+      
+      setDepartments(uniqueDepartments)
+    } catch (error) {
+      console.error('Error fetching doctors and departments:', error)
+      // Fallback to default values
+      setDepartments([
+        { value: 'general', label: 'General Medicine', description: 'Primary healthcare and routine medical care' },
+        { value: 'cardiology', label: 'Cardiology', description: 'Heart and cardiovascular conditions' },
+        { value: 'dermatology', label: 'Dermatology', description: 'Skin, hair, and nail conditions' }
+      ])
+    } finally {
+      setLoadingData(false)
+    }
+  }
 
   const filteredDoctors = selectedDepartment 
-    ? availableDoctors.filter(doc => doc.department === selectedDepartment)
-    : availableDoctors
+    ? doctors.filter(doc => doc.department === selectedDepartment)
+    : doctors
 
   const availableDates = Object.keys(availableSlots).sort()
   const availableTimesForDate = formData.scheduled_date 

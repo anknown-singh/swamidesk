@@ -69,46 +69,82 @@ export default function ProceduresPage() {
   })
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [procedureCategories, setProcedureCategories] = useState<string[]>([])
+  const [procedureTypes, setProcedureTypes] = useState<string[]>([])
 
   const supabase = createClient()
   const router = useRouter()
 
-  const procedureCategories = [
-    'Diagnostic',
-    'Therapeutic',
-    'Surgical',
-    'Laboratory',
-    'Imaging',
-    'Cardiology',
-    'Dermatology',
-    'Orthopedic',
-    'Gynecology',
-    'Pediatric',
-    'Emergency',
-    'Other'
-  ]
-
-  const procedureTypes = [
-    'Blood Test',
-    'X-Ray',
-    'Ultrasound',
-    'CT Scan',
-    'MRI',
-    'ECG/EKG',
-    'Endoscopy',
-    'Biopsy',
-    'Minor Surgery',
-    'Vaccination',
-    'Injection',
-    'Wound Care',
-    'Physical Therapy',
-    'Other'
-  ]
-
   useEffect(() => {
     fetchProcedures()
     fetchPatients()
+    fetchVisits()
+    fetchProcedureConfiguration()
   }, [])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchProcedureConfiguration = async () => {
+    try {
+      // Try to fetch procedure categories from configuration
+      const { data: categoriesData, error: categoriesError } = await supabase
+        .from('procedure_categories')
+        .select('name')
+        .eq('is_active', true)
+        .order('name')
+
+      if (categoriesError) {
+        console.log('Procedure categories table not found, using default values')
+        setProcedureCategories([
+          'Diagnostic',
+          'Therapeutic',
+          'Surgical',
+          'Laboratory',
+          'Imaging',
+          'Cardiology',
+          'Dermatology',
+          'Orthopedic',
+          'Gynecology',
+          'Pediatric',
+          'Emergency',
+          'Other'
+        ])
+      } else {
+        setProcedureCategories(categoriesData.map(item => item.name))
+      }
+
+      // Try to fetch procedure types from configuration  
+      const { data: typesData, error: typesError } = await supabase
+        .from('procedure_types')
+        .select('name')
+        .eq('is_active', true)
+        .order('name')
+
+      if (typesError) {
+        console.log('Procedure types table not found, using default values')
+        setProcedureTypes([
+          'Blood Test',
+          'X-Ray',
+          'Ultrasound',
+          'CT Scan',
+          'MRI',
+          'ECG/EKG',
+          'Endoscopy',
+          'Biopsy',
+          'Vaccination',
+          'Injection',
+          'Wound Care',
+          'Physical Therapy',
+          'Other'
+        ])
+      } else {
+        setProcedureTypes(typesData.map(item => item.name))
+      }
+    } catch (error) {
+      console.error('Error fetching procedure configuration:', error)
+      // Fallback to default values
+      setProcedureCategories(['Diagnostic', 'Therapeutic', 'Surgical', 'Laboratory', 'Other'])
+      setProcedureTypes(['Blood Test', 'X-Ray', 'Ultrasound', 'Minor Surgery', 'Other'])
+    }
+  }
 
   useEffect(() => {
     if (selectedPatient) {

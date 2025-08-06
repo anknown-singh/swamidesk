@@ -24,10 +24,10 @@ export default function LoginPage() {
     setError(null)
 
     try {
-      // Use custom authentication against user_profiles table
+      // Use custom authentication against users table
       const { data: userProfile, error } = await supabase
-        .from('user_profiles')
-        .select('id, email, role, first_name, last_name, password_hash, is_active')
+        .from('users')
+        .select('id, email, role, full_name, password_hash, is_active')
         .eq('email', email)
         .eq('is_active', true)
         .single()
@@ -42,8 +42,7 @@ export default function LoginPage() {
         id: string
         email: string
         role: string
-        first_name: string
-        last_name: string
+        full_name: string
         password_hash: string
         is_active: boolean
       }
@@ -60,7 +59,7 @@ export default function LoginPage() {
         id: user.id,
         email: user.email,
         role: user.role,
-        name: `${user.first_name} ${user.last_name}`
+        name: user.full_name || 'Unknown User'
       }))
 
       // Redirect to appropriate dashboard with window.location as fallback
@@ -68,7 +67,7 @@ export default function LoginPage() {
         admin: '/admin/dashboard',
         doctor: '/doctor/dashboard',
         receptionist: '/receptionist/dashboard',
-        service_attendant: '/attendant/dashboard',
+        attendant: '/attendant/dashboard',
         pharmacist: '/pharmacy/dashboard'
       }
       

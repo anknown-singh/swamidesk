@@ -53,29 +53,66 @@ export default function ServiceQueuePage() {
   })
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [serviceTypes, setServiceTypes] = useState<string[]>([])
 
   const supabase = createClient()
   const router = useRouter()
 
-  const serviceTypes = [
-    'Laboratory Test',
-    'Diagnostic Imaging',
-    'Physical Therapy',
-    'Vaccination',
-    'Health Screening',
-    'Wound Care',
-    'Injection',
-    'Blood Collection',
-    'ECG',
-    'X-Ray',
-    'Ultrasound',
-    'Other'
-  ]
-
   useEffect(() => {
     fetchServiceRequests()
     fetchPatients()
+    fetchServiceTypes()
   }, [])  // eslint-disable-line react-hooks/exhaustive-deps
+
+  const fetchServiceTypes = async () => {
+    try {
+      // Try to fetch service types from a configuration table
+      const { data, error } = await supabase
+        .from('service_types')
+        .select('name')
+        .eq('is_active', true)
+        .order('name')
+
+      if (error) {
+        console.log('Service types table not found, using default values')
+        // Fallback to default service types
+        setServiceTypes([
+          'Laboratory Test',
+          'Diagnostic Imaging',
+          'Physical Therapy',
+          'Vaccination',
+          'Health Screening',
+          'Wound Care',
+          'Injection',
+          'Blood Collection',
+          'ECG',
+          'X-Ray',
+          'Ultrasound',
+          'Other'
+        ])
+      } else {
+        setServiceTypes(data.map(item => item.name))
+      }
+    } catch (error) {
+      console.error('Error fetching service types:', error)
+      // Fallback to default service types
+      setServiceTypes([
+        'Laboratory Test',
+        'Diagnostic Imaging', 
+        'Physical Therapy',
+        'Vaccination',
+        'Health Screening',
+        'Wound Care',
+        'Injection',
+        'Blood Collection',
+        'ECG',
+        'X-Ray',
+        'Ultrasound',
+        'Other'
+      ])
+    }
+  }
+
 
   const fetchServiceRequests = async () => {
     try {
