@@ -115,10 +115,10 @@ export default function PatientsPage() {
   }
 
   const filteredPatients = patients.filter(patient =>
-    patient.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.patient_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.phone.includes(searchTerm)
+    (patient.first_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (patient.last_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (patient.patient_number?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (patient.phone || '').includes(searchTerm)
   )
 
   if (loading) {

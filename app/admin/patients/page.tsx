@@ -58,10 +58,10 @@ export default function AdminPatientsPage() {
   }
 
   const filteredPatients = patients.filter(patient => {
-    const matchesSearch = patient.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         patient.patient_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         patient.phone?.includes(searchTerm) ||
-                         patient.email?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = (patient.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (patient.patient_id?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (patient.phone || '').includes(searchTerm) ||
+                         (patient.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     
     const matchesGender = filterGender === 'all' || patient.gender === filterGender
     const matchesStatus = filterStatus === 'all' || 

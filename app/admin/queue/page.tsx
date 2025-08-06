@@ -107,8 +107,8 @@ export default function AdminQueuePage() {
   }
 
   const filteredQueue = queueItems.filter(item => {
-    const matchesSearch = item.patients.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         item.patients.patient_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = (item.patients?.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (item.patients?.patient_id?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
                          item.queue_number.toString().includes(searchTerm)
     
     const matchesStatus = filterStatus === 'all' || item.status === filterStatus

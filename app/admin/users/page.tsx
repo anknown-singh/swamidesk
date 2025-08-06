@@ -230,9 +230,9 @@ export default function UsersPage() {
   }
 
   const filteredUsers = users.filter(user => {
-    const matchesSearch = user.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         user.employee_id?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = (user.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (user.email?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         (user.employee_id?.toLowerCase() || '').includes(searchTerm.toLowerCase())
     
     const matchesRole = filterRole === 'all' || user.role === filterRole
     const matchesStatus = filterStatus === 'all' || 
