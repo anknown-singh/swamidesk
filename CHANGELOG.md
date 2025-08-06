@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.4.0](https://github.com/anknown-singh/swamidesk/compare/v1.3.2...v1.4.0) (2025-08-06)
+
+
+### Features
+
+* add critical database schema cleanup script ([8fddb2c](https://github.com/anknown-singh/swamidesk/commit/8fddb2cfd38bb55621b3d55434911ea762673690))
+* add simplified users table setup script ([5fb25f4](https://github.com/anknown-singh/swamidesk/commit/5fb25f4c8f18a457869db255d5e5667d3d794b64))
+* complete production hosting setup with dynamic dashboards ([fa3f55a](https://github.com/anknown-singh/swamidesk/commit/fa3f55a27d66c652fcf945c1756edcb8e9132f1f))
+
+
+### Bug Fixes
+
+* allow eslint warnings to pass in ci/cd pipeline ([21096a6](https://github.com/anknown-singh/swamidesk/commit/21096a6a6abe2ac8472b562a75944cec086b49f3))
+* allow typescript warnings to pass in ci/cd pipeline ([402f1d4](https://github.com/anknown-singh/swamidesk/commit/402f1d4e52c62ed2c8f7911487ed63446b1f4b41))
+* allow warnings in ci/cd workflow as well ([b0a2088](https://github.com/anknown-singh/swamidesk/commit/b0a20888adf9ac53b4c357187d9b7d2e4ea53cbf))
+* correct sql syntax in critical database cleanup script ([e4b102d](https://github.com/anknown-singh/swamidesk/commit/e4b102df218beb622792e4425ae9b529344ec6f1))
+
 ## [1.3.2](https://github.com/anknown-singh/swamidesk/compare/v1.3.1...v1.3.2) (2025-08-06)
 
 
