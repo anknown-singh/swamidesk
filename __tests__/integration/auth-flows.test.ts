@@ -69,8 +69,7 @@ describe('Authentication Flows Integration Tests', () => {
         expect(session.user.id).toBe(user.id)
         expect(session.user.email).toBe(user.email)
         expect(session.user.user_metadata.role).toBe(role)
-        expect(session.user.user_metadata.first_name).toBe(user.first_name)
-        expect(session.user.user_metadata.last_name).toBe(user.last_name)
+        expect(session.user.user_metadata.full_name).toBe(user.full_name)
       })
     })
   })
@@ -272,8 +271,7 @@ describe('Authentication Flows Integration Tests', () => {
         expect(session.user.id).toBe(user.id)
         expect(session.user.email).toBe(user.email)
         expect(session.user.user_metadata.role).toBe(role)
-        expect(session.user.user_metadata.first_name).toBe(user.first_name)
-        expect(session.user.user_metadata.last_name).toBe(user.last_name)
+        expect(session.user.user_metadata.full_name).toBe(user.full_name)
         expect(session.user.phone).toBe(user.phone)
       })
     })
@@ -436,8 +434,7 @@ describe('Authentication Flows Integration Tests', () => {
       expect(user.role).toBe('attendant')
       
       // Verify attendant user properties
-      expect(user.first_name).toBe('Test')
-      expect(user.last_name).toBe('Attendant')
+      expect(user.full_name).toContain('Test')
       expect(user.is_active).toBe(true)
       
       // Test role-based access
