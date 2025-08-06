@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.3](https://github.com/anknown-singh/swamidesk/compare/v1.5.2...v1.5.3) (2025-08-06)
+
+
+### Bug Fixes
+
+* resolve pgrst116 errors by replacing .single() with proper array handling ([e389f86](https://github.com/anknown-singh/swamidesk/commit/e389f86d4b3bf36ea83c1122cf8cb1758cfab8e8))
+
 ## [1.5.2](https://github.com/anknown-singh/swamidesk/compare/v1.5.1...v1.5.2) (2025-08-06)
 
 
