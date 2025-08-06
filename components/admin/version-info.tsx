@@ -4,10 +4,13 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { GitBranch, Calendar, ExternalLink } from 'lucide-react'
 
+// Import package.json at the top level
+const packageJson = require('../../package.json')
+
 export function VersionInfo() {
   // In a real app, this would come from an API or environment variables
   const versionInfo = {
-    version: require('../../package.json').version,
+    version: packageJson.version,
     environment: process.env.NODE_ENV || 'development',
     buildDate: new Date().toLocaleDateString(),
     repository: 'https://github.com/yourusername/swamidesk',
