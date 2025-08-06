@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.2.1](https://github.com/anknown-singh/swamidesk/compare/v1.2.0...v1.2.1) (2025-08-06)
+
+
+### Bug Fixes
+
+* resolve null pointer errors in patient registration search filters ([077b3a7](https://github.com/anknown-singh/swamidesk/commit/077b3a79660d04ff05dff4037ecab6b3b3d1d340))
+* update release please workflow to v4 configuration format ([3ddfd43](https://github.com/anknown-singh/swamidesk/commit/3ddfd43e557d3fff8e81d822bd903d9274ea7fa8))
+
 ## [1.2.0](https://github.com/anknown-singh/swamidesk/compare/v1.1.0...v1.2.0) (2025-08-06)
 
 
