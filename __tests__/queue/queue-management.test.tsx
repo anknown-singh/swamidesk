@@ -40,12 +40,12 @@ const QueueManagement = ({ onVisitUpdate, realTimeEnabled = false }: {
   return (
     <div>
       <h1>Queue Management</h1>
-      <div data-testid="queue-stats">
+      <div data-testid="queue-stats" aria-live="polite">
         <div>Total: {visits.length}</div>
         <div>Waiting: {visits.filter(v => v.status === 'waiting').length}</div>
         <div>In Consultation: {visits.filter(v => v.status === 'in_consultation').length}</div>
       </div>
-      <div data-testid="queue-list">
+      <div data-testid="queue-list" role="list">
         {visits.map(visit => (
           <div key={visit.id} data-testid={`visit-${visit.id}`}>
             <span>#{visit.token_number}</span>
@@ -317,7 +317,7 @@ describe('Queue Management System', () => {
   describe('Error Handling', () => {
     it('should handle API failures gracefully', async () => {
       // Mock API failure
-      vi.mocked(global.fetch).mockRejectedValueOnce(new Error('API Error'))
+      const fetchMock = vi.spyOn(global, 'fetch').mockRejectedValueOnce(new Error('API Error'))
 
       render(<QueueManagement onVisitUpdate={mockOnVisitUpdate} />)
 
@@ -325,6 +325,8 @@ describe('Queue Management System', () => {
         // Should show error state or retry option
         expect(screen.getByText('Queue Management')).toBeInTheDocument()
       })
+      
+      fetchMock.mockRestore()
     })
 
     it('should handle network connectivity issues', async () => {

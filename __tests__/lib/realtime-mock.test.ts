@@ -66,7 +66,7 @@ describe('Real-time Mocking Infrastructure', () => {
     test('handles subscription callback', async () => {
       const channel = new MockRealtimeChannel('test-topic')
       
-      return new Promise<void>((resolve) => {
+      await new Promise<void>((resolve) => {
         channel.subscribe((status, error) => {
           expect(status).toBe('SUBSCRIBED')
           expect(error).toBeNull()

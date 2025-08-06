@@ -36,7 +36,7 @@ export class MockRealtimeChannel {
     
     if (callback) {
       // Simulate successful subscription
-      setTimeout(() => callback('SUBSCRIBED', null), 0)
+      Promise.resolve().then(() => callback('SUBSCRIBED', null))
     }
     
     return {

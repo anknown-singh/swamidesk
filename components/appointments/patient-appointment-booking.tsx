@@ -341,7 +341,7 @@ export function PatientAppointmentBooking({
 
   const getStepProgress = () => {
     const steps = ['type', 'department', 'doctor', 'datetime', 'details', 'confirmation']
-    return ((steps.indexOf(step) + 1) / steps.length) * 100
+    return Math.round(((steps.indexOf(step) + 1) / steps.length) * 100 * 100) / 100
   }
 
   const formatDate = (dateString: string) => {
