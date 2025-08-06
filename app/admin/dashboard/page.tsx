@@ -1,5 +1,6 @@
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, Activity, CreditCard, TrendingUp, UserCheck, Package, BarChart3 } from 'lucide-react'
+import { VersionInfo } from '@/components/admin/version-info'
 
 export default function AdminDashboard() {
   return (
@@ -182,37 +183,45 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
-      {/* Recent Activity */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Recent Activity</CardTitle>
-          <CardDescription>Latest system activities and transactions</CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            {[
-              { time: '2 min ago', activity: 'New patient registered by Receptionist', type: 'patient', icon: Users },
-              { time: '5 min ago', activity: 'Invoice #INV20250101234 generated - ₹2,450', type: 'billing', icon: CreditCard },
-              { time: '10 min ago', activity: 'Prescription dispensed by Pharmacy', type: 'medicine', icon: Package },
-              { time: '15 min ago', activity: 'Treatment plan completed - Patient ID #1234', type: 'treatment', icon: Activity },
-              { time: '20 min ago', activity: 'Stock alert: Amoxicillin running low', type: 'inventory', icon: Package },
-            ].map((item, index) => {
-              const Icon = item.icon
-              return (
-                <div key={index} className="flex items-center gap-4 p-2">
-                  <div className="bg-gray-100 p-2 rounded-full">
-                    <Icon className="h-4 w-4 text-gray-600" />
-                  </div>
-                  <div className="flex-1">
-                    <div className="text-sm font-medium">{item.activity}</div>
-                    <div className="text-xs text-muted-foreground">{item.time}</div>
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-        </CardContent>
-      </Card>
+      {/* System Information & Recent Activity */}
+      <div className="grid gap-6 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Activity</CardTitle>
+              <CardDescription>Latest system activities and transactions</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                {[
+                  { time: '2 min ago', activity: 'New patient registered by Receptionist', type: 'patient', icon: Users },
+                  { time: '5 min ago', activity: 'Invoice #INV20250101234 generated - ₹2,450', type: 'billing', icon: CreditCard },
+                  { time: '10 min ago', activity: 'Prescription dispensed by Pharmacy', type: 'medicine', icon: Package },
+                  { time: '15 min ago', activity: 'Treatment plan completed - Patient ID #1234', type: 'treatment', icon: Activity },
+                  { time: '20 min ago', activity: 'Stock alert: Amoxicillin running low', type: 'inventory', icon: Package },
+                ].map((item, index) => {
+                  const Icon = item.icon
+                  return (
+                    <div key={index} className="flex items-center gap-4 p-2">
+                      <div className="bg-gray-100 p-2 rounded-full">
+                        <Icon className="h-4 w-4 text-gray-600" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="text-sm font-medium">{item.activity}</div>
+                        <div className="text-xs text-muted-foreground">{item.time}</div>
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </div>
+        
+        <div>
+          <VersionInfo />
+        </div>
+      </div>
     </div>
   )
 }

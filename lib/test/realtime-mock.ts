@@ -186,12 +186,18 @@ export const realtimeTestUtils = {
       const start = Date.now()
       
       const check = () => {
+        const elapsed = Date.now() - start
         if (channel._isSubscribed()) {
           resolve()
-        } else if (Date.now() - start > timeout) {
+          return
+        } 
+        if (elapsed >= timeout) {
           reject(new Error('Subscription timeout'))
-        } else {
-          setTimeout(check, 10)
+          return
+        }
+        // Use shorter interval and ensure we don't continue checking after timeout
+        if (elapsed < timeout) {
+          setTimeout(check, Math.min(10, timeout - elapsed))
         }
       }
       

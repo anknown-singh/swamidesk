@@ -1,0 +1,102 @@
+name: Manual Release Trigger
+
+on:
+  workflow_dispatch:
+    inputs:
+      release_type:
+        description: 'Type of release to create'
+        required: true
+        default: 'patch'
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+      reason:
+        description: 'Reason for manual release (optional)'
+        required: false
+        type: string
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+
+jobs:
+  manual-release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run tests
+        run: |
+          npm run lint
+          npm run type-check
+          npm run build
+
+      - name: Create manual release commit
+        run: |
+          # Configure git
+          git config --global user.name "Release Please Bot"
+          git config --global user.email "release-please@google.com"
+          
+          # Create a manual release commit based on type
+          case "${{ inputs.release_type }}" in
+            "patch")
+              git commit --allow-empty -m "fix: manual patch release trigger"
+              ;;
+            "minor")
+              git commit --allow-empty -m "feat: manual minor release trigger"
+              ;;
+            "major")
+              git commit --allow-empty -m "feat!: manual major release trigger"
+              ;;
+          esac
+          
+          git push origin main
+
+      - name: Trigger Release Please
+        uses: googleapis/release-please-action@v4
+        with:
+          release-type: node
+          package-name: swamidesk
+          include-component-in-tag: false
+          changelog-types: '[
+            {"type":"feat","section":"Features","hidden":false},
+            {"type":"fix","section":"Bug Fixes","hidden":false},
+            {"type":"docs","section":"Documentation","hidden":false},
+            {"type":"style","section":"Styles","hidden":false},
+            {"type":"refactor","section":"Code Refactoring","hidden":false},
+            {"type":"perf","section":"Performance Improvements","hidden":false},
+            {"type":"test","section":"Tests","hidden":false},
+            {"type":"build","section":"Build System","hidden":false},
+            {"type":"ci","section":"CI/CD","hidden":false},
+            {"type":"chore","section":"Chores","hidden":true}
+          ]'
+
+      - name: Create workflow summary
+        run: |
+          echo "## 🚀 Manual Release Triggered" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Release Type**: ${{ inputs.release_type }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Reason**: ${{ inputs.reason || 'No reason provided' }}" >> $GITHUB_STEP_SUMMARY
+          echo "**Triggered by**: @${{ github.actor }}" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "Release Please will now analyze the changes and create a release PR if appropriate." >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "### Next Steps:" >> $GITHUB_STEP_SUMMARY
+          echo "1. Check for a new Release Please PR" >> $GITHUB_STEP_SUMMARY
+          echo "2. Review and merge the PR to create the release" >> $GITHUB_STEP_SUMMARY
+          echo "3. Automatic deployment to Vercel will follow" >> $GITHUB_STEP_SUMMARY

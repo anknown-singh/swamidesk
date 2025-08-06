@@ -47,6 +47,18 @@ const sidebarItems: SidebarItem[] = [
     roles: ['admin', 'receptionist'],
   },
   {
+    href: '/appointments',
+    label: 'Appointments',
+    icon: Calendar,
+    roles: ['admin', 'receptionist'],
+  },
+  {
+    href: '/appointment-management',
+    label: 'Appointment Status',
+    icon: ClipboardList,
+    roles: ['admin', 'receptionist'],
+  },
+  {
     href: '/queue',
     label: 'Queue Management',
     icon: Clock,
@@ -68,8 +80,14 @@ const sidebarItems: SidebarItem[] = [
   {
     href: '/treatment-plans',
     label: 'Treatment Plans',
-    icon: Calendar,
+    icon: ClipboardList,
     roles: ['admin', 'doctor'],
+  },
+  {
+    href: '/availability',
+    label: 'My Availability',
+    icon: Calendar,
+    roles: ['doctor'],
   },
   // Service Attendant specific
   {
@@ -126,6 +144,12 @@ const sidebarItems: SidebarItem[] = [
     href: '/users',
     label: 'User Management',
     icon: UserCheck,
+    roles: ['admin'],
+  },
+  {
+    href: '/doctor-availability',
+    label: 'Doctor Availability',
+    icon: Calendar,
     roles: ['admin'],
   },
   {

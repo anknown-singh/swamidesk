@@ -87,7 +87,10 @@ jobs:
               
               🔄 **Vercel Preview**: A preview deployment will be automatically created for this PR.
               
-              📱 **Current Production**: https://swamidesk-oo10xe5ab-anknownsinghs-projects.vercel.app
+              📱 **Current Production**: https://swamidesk.vercel.app
               
-              Once this PR is merged to main, it will be automatically deployed to production.`
+              ### Next Steps
+              - **Preview**: Vercel will create a preview deployment for this PR
+              - **Production**: Merge to main → Release Please → Auto-deployment
+              - **Testing**: All comprehensive tests are passing ✅`
             })

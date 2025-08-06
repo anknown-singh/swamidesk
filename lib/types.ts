@@ -11,6 +11,15 @@ export type PaymentStatus = 'pending' | 'partial' | 'completed' | 'refunded'
 
 export type PaymentMethod = 'cash' | 'card' | 'upi' | 'insurance' | 'bank_transfer'
 
+// Appointment Management Types
+export type AppointmentStatus = 'scheduled' | 'confirmed' | 'arrived' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'rescheduled'
+
+export type AppointmentType = 'consultation' | 'follow_up' | 'procedure' | 'checkup' | 'emergency' | 'vaccination'
+
+export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'bi_weekly' | 'monthly' | 'custom'
+
+export type AvailabilityStatus = 'available' | 'busy' | 'break' | 'off' | 'blocked'
+
 // Core Entity Types
 export interface UserProfile {
   id: string
@@ -209,6 +218,154 @@ export interface Invoice {
   created_by_user?: UserProfile
 }
 
+// Appointment Management Entities
+export interface Appointment {
+  id: string
+  patient_id: string
+  doctor_id: string
+  department: string
+  appointment_type: AppointmentType
+  status: AppointmentStatus
+  scheduled_date: string
+  scheduled_time: string
+  duration: number // in minutes
+  title?: string
+  description?: string
+  notes?: string
+  patient_notes?: string // notes from patient during booking
+  priority: boolean
+  is_recurring: boolean
+  recurrence_type?: RecurrenceType
+  recurrence_end_date?: string
+  parent_appointment_id?: string // for recurring appointments
+  reminder_sent: boolean
+  confirmation_sent: boolean
+  estimated_cost?: number
+  actual_cost?: number
+  created_by: string
+  confirmed_at?: string
+  arrived_at?: string
+  started_at?: string
+  completed_at?: string
+  cancelled_at?: string
+  cancellation_reason?: string
+  no_show_at?: string
+  rescheduled_from?: string
+  rescheduled_to?: string
+  rescheduled_reason?: string
+  created_at: string
+  updated_at: string
+  // Relations
+  patient?: Patient
+  doctor?: UserProfile
+  created_by_user?: UserProfile
+  visit?: Visit // linked when appointment converts to visit
+  services?: AppointmentService[]
+  reminders?: AppointmentReminder[]
+}
+
+export interface DoctorAvailability {
+  id: string
+  doctor_id: string
+  day_of_week: number // 0 = Sunday, 1 = Monday, etc.
+  start_time: string // HH:MM format
+  end_time: string // HH:MM format
+  break_start_time?: string
+  break_end_time?: string
+  is_available: boolean
+  max_appointments?: number
+  appointment_duration: number // default duration in minutes
+  buffer_time: number // buffer between appointments in minutes
+  created_at: string
+  updated_at: string
+  // Relations
+  doctor?: UserProfile
+}
+
+export interface DoctorLeave {
+  id: string
+  doctor_id: string
+  leave_type: 'vacation' | 'sick' | 'conference' | 'emergency' | 'other'
+  start_date: string
+  end_date: string
+  start_time?: string // for partial day leaves
+  end_time?: string // for partial day leaves
+  reason?: string
+  is_recurring: boolean
+  approved: boolean
+  approved_by?: string
+  approved_at?: string
+  created_at: string
+  updated_at: string
+  // Relations
+  doctor?: UserProfile
+  approved_by_user?: UserProfile
+}
+
+export interface AppointmentSlot {
+  id: string
+  doctor_id: string
+  date: string
+  start_time: string
+  end_time: string
+  status: AvailabilityStatus
+  appointment_id?: string // if slot is booked
+  max_capacity: number
+  booked_count: number
+  is_emergency_slot: boolean
+  created_at: string
+  updated_at: string
+  // Relations
+  doctor?: UserProfile
+  appointment?: Appointment
+}
+
+export interface AppointmentService {
+  id: string
+  appointment_id: string
+  service_id: string
+  quantity: number
+  estimated_duration: number
+  notes?: string
+  created_at: string
+  // Relations
+  appointment?: Appointment
+  service?: Service
+}
+
+export interface AppointmentReminder {
+  id: string
+  appointment_id: string
+  reminder_type: 'sms' | 'email' | 'whatsapp' | 'call'
+  scheduled_at: string
+  sent_at?: string
+  status: 'pending' | 'sent' | 'failed' | 'cancelled'
+  message_template: string
+  error_message?: string
+  created_at: string
+  // Relations
+  appointment?: Appointment
+}
+
+export interface AppointmentWaitlist {
+  id: string
+  patient_id: string
+  doctor_id: string
+  preferred_date: string
+  preferred_time_start?: string
+  preferred_time_end?: string
+  appointment_type: AppointmentType
+  priority: number // higher number = higher priority
+  notes?: string
+  status: 'active' | 'contacted' | 'expired' | 'fulfilled'
+  expires_at: string
+  created_at: string
+  updated_at: string
+  // Relations
+  patient?: Patient
+  doctor?: UserProfile
+}
+
 // Queue Management Types
 export interface QueueItem {
   id: string
@@ -283,6 +440,72 @@ export interface InvoiceForm {
   notes?: string
 }
 
+// Appointment Form Types
+export interface AppointmentBookingForm {
+  patient_id: string
+  doctor_id: string
+  department: string
+  appointment_type: AppointmentType
+  scheduled_date: string
+  scheduled_time: string
+  duration?: number
+  title?: string
+  description?: string
+  patient_notes?: string
+  priority?: boolean
+  services?: string[] // array of service IDs
+  estimated_cost?: number
+}
+
+export interface AppointmentRescheduleForm {
+  appointment_id: string
+  new_scheduled_date: string
+  new_scheduled_time: string
+  reschedule_reason?: string
+  notify_patient: boolean
+}
+
+export interface AppointmentCancellationForm {
+  appointment_id: string
+  cancellation_reason: string
+  refund_amount?: number
+  notify_patient: boolean
+}
+
+export interface DoctorAvailabilityForm {
+  doctor_id: string
+  day_of_week: number
+  start_time: string
+  end_time: string
+  break_start_time?: string
+  break_end_time?: string
+  is_available: boolean
+  max_appointments?: number
+  appointment_duration: number
+  buffer_time: number
+}
+
+export interface DoctorLeaveForm {
+  doctor_id: string
+  leave_type: 'vacation' | 'sick' | 'conference' | 'emergency' | 'other'
+  start_date: string
+  end_date: string
+  start_time?: string
+  end_time?: string
+  reason?: string
+  is_recurring: boolean
+}
+
+export interface WaitlistEntryForm {
+  patient_id: string
+  doctor_id: string
+  preferred_date: string
+  preferred_time_start?: string
+  preferred_time_end?: string
+  appointment_type: AppointmentType
+  notes?: string
+}
+
 // API Response Types
 export interface ApiResponse<T> {
   data?: T
@@ -305,9 +528,15 @@ export interface DashboardStats {
   queue_length: number
   revenue_today: number
   appointments_today: number
+  appointments_upcoming: number
+  appointments_completed_today: number
+  appointments_cancelled_today: number
+  appointments_no_show_today: number
   pending_services: number
   low_stock_items: number
   pending_prescriptions: number
+  doctor_availability_today: number
+  waitlist_count: number
 }
 
 export interface DepartmentStats {
@@ -342,6 +571,26 @@ export interface MedicineSearchFilters {
   low_stock?: boolean
   expiring_soon?: boolean
   supplier?: string
+}
+
+export interface AppointmentSearchFilters {
+  patient_id?: string
+  doctor_id?: string
+  department?: string
+  appointment_type?: AppointmentType
+  status?: AppointmentStatus
+  scheduled_date_from?: string
+  scheduled_date_to?: string
+  priority?: boolean
+  is_recurring?: boolean
+}
+
+export interface DoctorAvailabilityFilters {
+  doctor_id?: string
+  day_of_week?: number
+  date_from?: string
+  date_to?: string
+  is_available?: boolean
 }
 
 // Notification Types
@@ -401,4 +650,39 @@ export interface PatientReport {
   last_visit_date: string
   total_spent: number
   outstanding_balance: number
+}
+
+export interface AppointmentReport {
+  date: string
+  total_appointments: number
+  completed_appointments: number
+  cancelled_appointments: number
+  no_show_appointments: number
+  revenue_from_appointments: number
+  average_appointment_duration: number
+  doctor_utilization_rate: number
+}
+
+export interface DoctorAppointmentReport {
+  doctor_id: string
+  doctor_name: string
+  total_appointments: number
+  completed_appointments: number
+  cancelled_appointments: number
+  no_show_appointments: number
+  average_rating?: number
+  revenue_generated: number
+  utilization_rate: number
+  available_hours: number
+  booked_hours: number
+}
+
+export interface AppointmentAnalytics {
+  peak_booking_hours: Array<{ hour: number, count: number }>
+  popular_appointment_types: Array<{ type: AppointmentType, count: number }>
+  cancellation_reasons: Array<{ reason: string, count: number }>
+  average_lead_time: number // days between booking and appointment
+  no_show_rate: number
+  same_day_booking_rate: number
+  recurring_appointment_rate: number
 }

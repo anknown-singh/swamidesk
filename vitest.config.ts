@@ -18,7 +18,10 @@ export default defineConfig({
       '.next',
       '.vercel',
       'coverage',
-      'dist'
+      'dist',
+      'e2e/**/*',
+      'playwright-report/**/*',
+      'test-results/**/*'
     ],
     coverage: {
       provider: 'v8',
