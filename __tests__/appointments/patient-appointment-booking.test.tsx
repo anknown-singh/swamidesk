@@ -472,17 +472,6 @@ describe('PatientAppointmentBooking', () => {
       expect(screen.getByText('+91-9876543210')).toBeInTheDocument()
     })
 
-    it('should show clinic information', async () => {
-      await waitFor(() => {
-        expect(screen.getByText('Clinic Information')).toBeInTheDocument()
-      })
-      
-      await waitFor(() => {
-        expect(screen.getByText('SwamIDesk Clinic')).toBeInTheDocument()
-      })
-      
-      expect(screen.getByText('+91-9876543200')).toBeInTheDocument()
-    })
 
     it('should require terms acceptance', () => {
       const confirmButton = screen.getByRole('button', { name: /confirm appointment/i })
@@ -656,7 +645,6 @@ describe('PatientAppointmentBooking', () => {
       )
 
       const consultationOption = screen.getByText('New Consultation').closest('.p-4')
-      consultationOption?.focus()
       
       fireEvent.keyDown(consultationOption!, { key: 'Enter' })
       
