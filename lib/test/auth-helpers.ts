@@ -6,10 +6,11 @@ export const TEST_USERS: Record<string, UserProfile> = {
     id: 'admin-test-id',
     email: 'admin@test.com',
     role: 'admin',
-    name: 'Test Admin',
+    full_name: 'Test Admin',
     phone: '+91-9999999999',
     department: null,
     specialization: null,
+    password_hash: 'test-hash',
     is_active: true,
     created_at: '2025-01-01T00:00:00.000Z',
     updated_at: '2025-01-01T00:00:00.000Z'
@@ -18,10 +19,11 @@ export const TEST_USERS: Record<string, UserProfile> = {
     id: 'doctor-test-id',
     email: 'doctor@test.com',
     role: 'doctor',
-    name: 'Dr. Test Physician',
+    full_name: 'Dr. Test Physician',
     phone: '+91-8888888888',
     department: 'cardiology',
     specialization: 'Cardiology',
+    password_hash: 'test-hash',
     is_active: true,
     created_at: '2025-01-01T00:00:00.000Z',
     updated_at: '2025-01-01T00:00:00.000Z'
@@ -30,10 +32,11 @@ export const TEST_USERS: Record<string, UserProfile> = {
     id: 'receptionist-test-id',
     email: 'receptionist@test.com',
     role: 'receptionist',
-    name: 'Test Receptionist',
+    full_name: 'Test Receptionist',
     phone: '+91-7777777777',
     department: null,
     specialization: null,
+    password_hash: 'test-hash',
     is_active: true,
     created_at: '2025-01-01T00:00:00.000Z',
     updated_at: '2025-01-01T00:00:00.000Z'
@@ -42,10 +45,11 @@ export const TEST_USERS: Record<string, UserProfile> = {
     id: 'attendant-test-id',
     email: 'attendant@test.com',
     role: 'attendant',
-    name: 'Test Attendant',
+    full_name: 'Test Attendant',
     phone: '+91-6666666666',
     department: null,
     specialization: null,
+    password_hash: 'test-hash',
     is_active: true,
     created_at: '2025-01-01T00:00:00.000Z',
     updated_at: '2025-01-01T00:00:00.000Z'
@@ -54,10 +58,11 @@ export const TEST_USERS: Record<string, UserProfile> = {
     id: 'pharmacist-test-id',
     email: 'pharmacist@test.com',
     role: 'pharmacist',
-    name: 'Test Pharmacist',
+    full_name: 'Test Pharmacist',
     phone: '+91-5555555555',
     department: 'pharmacy',
     specialization: null,
+    password_hash: 'test-hash',
     is_active: true,
     created_at: '2025-01-01T00:00:00.000Z',
     updated_at: '2025-01-01T00:00:00.000Z'
@@ -69,6 +74,7 @@ export const ROLE_DASHBOARDS = {
   doctor: '/doctor/dashboard',
   receptionist: '/receptionist/dashboard',
   attendant: '/attendant/dashboard',
+  service_attendant: '/attendant/dashboard',
   pharmacist: '/pharmacy/dashboard'
 } as const
 
@@ -80,6 +86,7 @@ export const ROLE_PERMISSIONS = {
   doctor: ['/doctor/*'],
   receptionist: ['/receptionist/*'],
   attendant: ['/attendant/*'],
+  service_attendant: ['/attendant/*'],
   pharmacist: ['/pharmacy/*']
 } as const
 
@@ -139,7 +146,7 @@ export const createMockSession = (role: keyof typeof TEST_USERS) => {
       updated_at: user.created_at,
       user_metadata: {
         role: user.role,
-        full_name: user.name
+        full_name: user.full_name
       },
       app_metadata: {},
       identities: [],

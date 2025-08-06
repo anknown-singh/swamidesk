@@ -55,7 +55,7 @@ const mockDoctors: UserProfile[] = [
   { 
     id: 'doc1', 
     role: 'doctor',
-    name: 'Dr. Sarah Smith', 
+    full_name: 'Dr. Sarah Smith', 
     email: 'sarah.smith@swamidesk.com', 
     phone: '+91-9876543210',
     department: 'general',
@@ -67,7 +67,7 @@ const mockDoctors: UserProfile[] = [
   { 
     id: 'doc2', 
     role: 'doctor',
-    name: 'Dr. John Brown', 
+    full_name: 'Dr. John Brown', 
     email: 'john.brown@swamidesk.com', 
     phone: '+91-9876543211',
     department: 'cardiology',
@@ -79,7 +79,7 @@ const mockDoctors: UserProfile[] = [
   { 
     id: 'doc3', 
     role: 'doctor',
-    name: 'Dr. Emily Davis', 
+    full_name: 'Dr. Emily Davis', 
     email: 'emily.davis@swamidesk.com', 
     phone: '+91-9876543212',
     department: 'dermatology',
@@ -334,7 +334,7 @@ export function DoctorAvailabilityManagement({
                 {doctors.map((doctor) => (
                   <SelectItem key={doctor.id} value={doctor.id}>
                     <div>
-                      <div className="font-medium">{doctor.name}</div>
+                      <div className="font-medium">{doctor.full_name}</div>
                       <div className="text-sm text-muted-foreground">{doctor.specialization}</div>
                     </div>
                   </SelectItem>
@@ -613,7 +613,7 @@ export function DoctorAvailabilityManagement({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <ClockIcon className="h-5 w-5" />
-              Weekly Schedule - {selectedDoctor?.name}
+              Weekly Schedule - {selectedDoctor?.full_name}
             </CardTitle>
             <CardDescription>
               Manage weekly availability and working hours
@@ -665,7 +665,7 @@ export function DoctorAvailabilityManagement({
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
               <CalendarOffIcon className="h-5 w-5" />
-              Leave Requests - {selectedDoctor?.name}
+              Leave Requests - {selectedDoctor?.full_name}
             </CardTitle>
             <CardDescription>
               Manage leave requests and time off

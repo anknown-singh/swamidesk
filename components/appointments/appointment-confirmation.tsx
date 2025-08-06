@@ -135,7 +135,7 @@ const mockAppointments: Appointment[] = [
     doctor: {
       id: 'doc1',
       role: 'doctor',
-      name: 'Dr. Sarah Smith',
+      full_name: 'Dr. Sarah Smith',
       email: 'sarah.smith@swamidesk.com',
       phone: '+91-9876543220',
       department: 'general',
@@ -179,7 +179,7 @@ const mockAppointments: Appointment[] = [
     doctor: {
       id: 'doc2',
       role: 'doctor',
-      name: 'Dr. John Brown',
+      full_name: 'Dr. John Brown',
       email: 'john.brown@swamidesk.com',
       phone: '+91-9876543221',
       department: 'cardiology',
@@ -267,7 +267,7 @@ export function AppointmentConfirmation({
   const interpolateTemplate = (template: string, appointment: Appointment): string => {
     return template
       .replace(/\{\{patient_name\}\}/g, appointment.patient?.name || 'Patient')
-      .replace(/\{\{doctor_name\}\}/g, appointment.doctor?.name || 'Doctor')
+      .replace(/\{\{doctor_name\}\}/g, appointment.doctor?.full_name || 'Doctor')
       .replace(/\{\{date\}\}/g, new Date(appointment.scheduled_date).toLocaleDateString())
       .replace(/\{\{time\}\}/g, appointment.scheduled_time)
       .replace(/\{\{duration\}\}/g, appointment.duration.toString())
@@ -381,7 +381,7 @@ export function AppointmentConfirmation({
                       )}
                     </div>
                     <div className="text-sm text-muted-foreground">
-                      {appointment.doctor?.name} • {new Date(appointment.scheduled_date).toLocaleDateString()} at {appointment.scheduled_time}
+                      {appointment.doctor?.full_name} • {new Date(appointment.scheduled_date).toLocaleDateString()} at {appointment.scheduled_time}
                     </div>
                     <div className="text-sm text-muted-foreground">
                       {appointment.patient?.mobile} • {appointment.patient?.email}
@@ -599,7 +599,7 @@ export function AppointmentConfirmation({
                         </Badge>
                       </div>
                       <div className="text-sm text-muted-foreground">
-                        {appointment.doctor?.name} • {new Date(appointment.scheduled_date).toLocaleDateString()} at {appointment.scheduled_time}
+                        {appointment.doctor?.full_name} • {new Date(appointment.scheduled_date).toLocaleDateString()} at {appointment.scheduled_time}
                       </div>
                     </div>
                     <Button 

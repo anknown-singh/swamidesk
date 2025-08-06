@@ -159,11 +159,12 @@ export function PatientAppointmentBooking({
       const mappedDoctors = (doctorsData as any[]).map(doc => ({
         id: doc.id,
         role: 'doctor' as const,
-        name: doc.full_name,
+        full_name: doc.full_name,
         email: doc.email,
         phone: doc.phone,
         department: doc.department || 'general',
         specialization: doc.specialization || 'General Practice',
+        password_hash: doc.password_hash,
         is_active: doc.is_active,
         created_at: doc.created_at,
         updated_at: doc.updated_at
@@ -437,7 +438,7 @@ export function PatientAppointmentBooking({
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
                             <StethoscopeIcon className="h-4 w-4 text-primary" />
-                            <h3 className="font-medium">{doctor.name}</h3>
+                            <h3 className="font-medium">{doctor.full_name}</h3>
                           </div>
                           <p className="text-sm text-muted-foreground">{doctor.specialization}</p>
                           <div className="flex items-center gap-4 text-sm text-muted-foreground">
@@ -625,7 +626,7 @@ export function PatientAppointmentBooking({
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Doctor:</span>
-                      <span>{selectedDoctor?.name}</span>
+                      <span>{selectedDoctor?.full_name}</span>
                     </div>
                     <div className="flex justify-between">
                       <span className="text-muted-foreground">Date:</span>

@@ -38,6 +38,7 @@ async function authenticateAs(page: Page, role: keyof typeof TEST_USERS) {
     doctor: '/doctor/dashboard', 
     receptionist: '/receptionist/dashboard',
     attendant: '/attendant/dashboard',
+    service_attendant: '/attendant/dashboard',
     pharmacist: '/pharmacy/dashboard'
   }
   

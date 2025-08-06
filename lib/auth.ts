@@ -7,12 +7,15 @@ export type UserRole = 'admin' | 'doctor' | 'receptionist' | 'service_attendant'
 export interface UserProfile {
   id: string
   role: UserRole
-  name: string
+  full_name: string
   email: string | null
   phone: string | null
   department: string | null
   specialization: string | null
+  password_hash: string
   is_active: boolean
+  created_at: string
+  updated_at: string
 }
 
 export async function getCurrentUser() {
@@ -38,11 +41,12 @@ export async function getCurrentUser() {
     profile: {
       id: profile.id,
       role: profile.role as UserRole,
-      name: profile.full_name || '',
+      full_name: profile.full_name || '',
       email: profile.email,
       phone: profile.phone,
       department: profile.department,
       specialization: profile.specialization,
+      password_hash: profile.password_hash,
       is_active: profile.is_active,
       created_at: profile.created_at || '',
       updated_at: profile.updated_at || ''

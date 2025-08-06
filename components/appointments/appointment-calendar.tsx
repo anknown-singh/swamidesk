@@ -65,7 +65,7 @@ const fetchDoctors = async (): Promise<UserProfile[]> => {
   
   return (data as any[]).map((doctor: any) => ({
     id: doctor.id,
-    name: doctor.full_name,
+    full_name: doctor.full_name,
     role: doctor.role as const,
     department: doctor.department || 'general',
     specialization: doctor.specialization || 'General Practice',
@@ -137,7 +137,7 @@ const fetchAppointments = async (startDate?: Date, endDate?: Date): Promise<Appo
     doctor: apt.users ? {
       id: apt.users.id,
       role: 'doctor' as const,
-      name: apt.users.full_name,
+      full_name: apt.users.full_name,
       email: apt.users.email,
       phone: apt.users.phone,
       department: apt.users.department,
@@ -366,7 +366,7 @@ export function AppointmentCalendar({
                 <SelectItem value="all">All Doctors</SelectItem>
                 {doctors.map((doctor) => (
                   <SelectItem key={doctor.id} value={doctor.id}>
-                    {doctor.name}
+                    {doctor.full_name}
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -470,7 +470,7 @@ export function AppointmentCalendar({
                         <div className="flex items-center gap-1">
                           <StethoscopeIcon className="h-3 w-3" />
                           <span className="truncate">
-                            {doctors.find(d => d.id === slot.appointment?.doctor_id)?.name}
+                            {doctors.find(d => d.id === slot.appointment?.doctor_id)?.full_name}
                           </span>
                         </div>
                         {slot.appointment.title && (
@@ -489,7 +489,7 @@ export function AppointmentCalendar({
                         Available
                         {filterDoctorId !== 'all' && (
                           <div className="text-xs mt-1">
-                            {doctors.find(d => d.id === filterDoctorId)?.name}
+                            {doctors.find(d => d.id === filterDoctorId)?.full_name}
                           </div>
                         )}
                       </div>

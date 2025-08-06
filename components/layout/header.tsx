@@ -15,6 +15,7 @@ function getRoleDisplayName(role: UserProfile['role']): string {
     doctor: 'Doctor',
     receptionist: 'Receptionist',
     attendant: 'Service Attendant',
+    service_attendant: 'Service Attendant',
     pharmacist: 'Pharmacist'
   }
   return roleNames[role]
