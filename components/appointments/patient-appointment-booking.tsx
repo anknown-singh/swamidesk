@@ -131,11 +131,10 @@ export function PatientAppointmentBooking({
   const [doctors, setDoctors] = useState<UserProfile[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [loadingData, setLoadingData] = useState(true)
-  
-  const supabase = createClient()
 
   const fetchDoctorsAndDepartments = useCallback(async () => {
     try {
+      const supabase = createClient()
       setLoadingData(true)
       
       // Fetch doctors

@@ -1,7 +1,15 @@
 'use client'
 
 import { useState } from 'react'
-import { PatientAppointmentBooking } from '@/components/appointments/patient-appointment-booking'
+import dynamic from 'next/dynamic'
+
+const PatientAppointmentBooking = dynamic(
+  () => import('@/components/appointments/patient-appointment-booking').then(mod => ({ default: mod.PatientAppointmentBooking })),
+  { 
+    ssr: false,
+    loading: () => <div className="flex items-center justify-center p-8">Loading appointment booking...</div>
+  }
+)
 import { Card, CardContent } from '@/components/ui/card'
 import { CheckCircleIcon, CalendarIcon } from 'lucide-react'
 import type { AppointmentBookingForm } from '@/lib/types'
