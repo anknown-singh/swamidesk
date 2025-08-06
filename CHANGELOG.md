@@ -5,6 +5,19 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.5.0](https://github.com/anknown-singh/swamidesk/compare/v1.4.0...v1.5.0) (2025-08-06)
+
+
+### Features
+
+* database populated with sample data for dynamic dashboards ([ba62463](https://github.com/anknown-singh/swamidesk/commit/ba62463fc5f4b81b32173002b867085b22d55c0d))
+
+
+### Bug Fixes
+
+* add verification text to admin dashboard ([da89100](https://github.com/anknown-singh/swamidesk/commit/da891003348dee5611c344715124132f0407ce4a))
+* environment variables updated in vercel for production deployment ([1d4ee0d](https://github.com/anknown-singh/swamidesk/commit/1d4ee0da151aff969bb1726fadbb9698345002ad))
+
 ## [1.4.0](https://github.com/anknown-singh/swamidesk/compare/v1.3.2...v1.4.0) (2025-08-06)
 
 
