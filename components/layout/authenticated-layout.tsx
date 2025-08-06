@@ -32,19 +32,19 @@ export function AuthenticatedLayout({ children, allowedRoles }: AuthenticatedLay
         const userData = JSON.parse(sessionData)
         
         // Verify the user still exists in the database
-        const { data: profile } = await supabase
+        const { data: profiles } = await supabase
           .from('users')
           .select('*')
           .eq('id', userData.id)
           .eq('is_active', true)
-          .single()
 
-        if (!profile) {
+        if (!profiles || profiles.length === 0) {
           localStorage.removeItem('swamicare_user')
           router.push('/login')
           return
         }
 
+        const profile = profiles[0]
         const userProfile = profile as UserProfile
         if (allowedRoles && !allowedRoles.includes(userProfile.role)) {
           router.push('/unauthorized')

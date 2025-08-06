@@ -26,15 +26,16 @@ export async function getCurrentUser() {
     return null
   }
 
-  const { data: profile, error } = await supabase
+  const { data: profiles, error } = await supabase
     .from('users')
     .select('*')
     .eq('id', user.id)
-    .single()
 
-  if (error || !profile) {
+  if (error || !profiles || profiles.length === 0) {
     return null
   }
+
+  const profile = profiles[0]
 
   return {
     user,

@@ -25,17 +25,18 @@ export default function LoginPage() {
 
     try {
       // Use custom authentication against users table
-      const { data: userProfile, error } = await supabase
+      const { data: userProfiles, error } = await supabase
         .from('users')
         .select('id, email, role, full_name, password_hash, is_active')
         .eq('email', email)
         .eq('is_active', true)
-        .single()
 
-      if (error || !userProfile) {
+      if (error || !userProfiles || userProfiles.length === 0) {
         setError('Invalid email or password')
         return
       }
+
+      const userProfile = userProfiles[0]
 
       // Type assertion for userProfile
       const user = userProfile as {

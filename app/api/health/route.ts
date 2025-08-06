@@ -29,9 +29,7 @@ export async function GET() {
     const supabase = await createClient()
     const { error: dbError } = await supabase
       .from('users')
-      .select('count')
-      .limit(1)
-      .single()
+      .select('id', { count: 'exact', head: true })
 
     const dbStatus = dbError ? 'disconnected' : 'connected'
 
