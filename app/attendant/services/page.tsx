@@ -173,7 +173,7 @@ export default function ServiceQueuePage() {
 
   const updateRequestStatus = async (requestId: string, newStatus: string) => {
     try {
-      const updateData: any = { status: newStatus }
+      const updateData: { status: string; completed_at?: string } = { status: newStatus }
       
       if (newStatus === 'completed') {
         updateData.completed_at = new Date().toISOString()

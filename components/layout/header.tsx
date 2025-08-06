@@ -10,11 +10,11 @@ interface HeaderProps {
 }
 
 function getRoleDisplayName(role: UserProfile['role']): string {
-  const roleNames = {
+  const roleNames: Record<UserProfile['role'], string> = {
     admin: 'Administrator',
     doctor: 'Doctor',
     receptionist: 'Receptionist',
-    service_attendant: 'Service Attendant',
+    attendant: 'Service Attendant',
     pharmacist: 'Pharmacist'
   }
   return roleNames[role]

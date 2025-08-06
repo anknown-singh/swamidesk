@@ -256,7 +256,7 @@ export default function ProceduresPage() {
 
   const updateProcedureStatus = async (procedureId: string, newStatus: string) => {
     try {
-      const updateData: any = { status: newStatus }
+      const updateData: { status: string; performed_date?: string } = { status: newStatus }
       
       if (newStatus === 'completed') {
         updateData.performed_date = new Date().toISOString()

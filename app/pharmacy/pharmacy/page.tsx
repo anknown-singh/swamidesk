@@ -5,10 +5,9 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Pill, Search, Clock, User, CheckCircle, Package, AlertTriangle } from 'lucide-react'
+import { Pill, Search, Clock, CheckCircle, Package, AlertTriangle } from 'lucide-react'
 
 interface Patient {
   id: string
@@ -234,7 +233,7 @@ export default function PharmacyQueuePage() {
 
   const updateQueueStatus = async (queueId: string, newStatus: string) => {
     try {
-      const updateData: any = { status: newStatus }
+      const updateData: { status: string; dispensed_at?: string; payment_status?: string } = { status: newStatus }
       
       if (newStatus === 'dispensed') {
         updateData.dispensed_at = new Date().toISOString()
@@ -267,7 +266,7 @@ export default function PharmacyQueuePage() {
 
   const updatePaymentStatus = async (queueId: string, paymentStatus: string, paidAmount?: number) => {
     try {
-      const updateData: any = { payment_status: paymentStatus }
+      const updateData: { payment_status: string; dispensed_amount?: number } = { payment_status: paymentStatus }
       
       if (paidAmount !== undefined) {
         updateData.dispensed_amount = paidAmount

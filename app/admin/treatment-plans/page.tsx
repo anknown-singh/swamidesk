@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Calendar, Search, Users, FileText, CheckCircle, AlertCircle, PlayCircle, PauseCircle, XCircle, User, Clock } from 'lucide-react'
+import { Calendar, Search, CheckCircle, AlertCircle, PlayCircle, PauseCircle, XCircle, User, Clock } from 'lucide-react'
 
 interface TreatmentPlan {
   id: string
