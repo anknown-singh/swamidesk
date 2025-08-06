@@ -72,3 +72,4 @@ setup-database.js
 # security (don't commit real credentials)
 .env.local
 .env.production
+.env*.local

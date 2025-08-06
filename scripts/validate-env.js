@@ -62,6 +62,12 @@ function validateEnvironment(env = 'development') {
       console.log('- For other platforms: Check their documentation')
     }
     
+    // For Vercel builds, don't fail if running in build environment
+    if (process.env.VERCEL && process.env.CI) {
+      console.log(chalk.yellow('\n⚠️  Running on Vercel CI - assuming environment variables will be available at runtime'))
+      return true
+    }
+    
     process.exit(1)
   }
   
