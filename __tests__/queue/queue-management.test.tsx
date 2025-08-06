@@ -51,10 +51,16 @@ const QueueManagement = ({ onVisitUpdate, realTimeEnabled = false }: {
             <span>#{visit.token_number}</span>
             <span>{visit.patient?.name}</span>
             <span>{visit.status}</span>
-            <button onClick={() => onVisitUpdate?.({ ...visit, status: 'in_consultation' })}>
+            <button 
+              onClick={() => onVisitUpdate?.({ ...visit, status: 'in_consultation' })}
+              onKeyDown={(e) => e.key === 'Enter' && onVisitUpdate?.({ ...visit, status: 'in_consultation' })}
+            >
               Call Next
             </button>
-            <button onClick={() => onVisitUpdate?.({ ...visit, status: 'completed' })}>
+            <button 
+              onClick={() => onVisitUpdate?.({ ...visit, status: 'completed' })}
+              onKeyDown={(e) => e.key === 'Enter' && onVisitUpdate?.({ ...visit, status: 'completed' })}
+            >
               Complete
             </button>
           </div>
