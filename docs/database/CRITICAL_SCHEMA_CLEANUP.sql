@@ -114,7 +114,11 @@ END $$;
 -- STEP 5: COMPLETELY DROP user_profiles TABLE
 -- =============================================================================
 DROP TABLE IF EXISTS user_profiles CASCADE;
-RAISE NOTICE 'DROPPED user_profiles table completely';
+
+DO $$
+BEGIN
+    RAISE NOTICE 'DROPPED user_profiles table completely';
+END $$;
 
 -- =============================================================================
 -- STEP 6: ENSURE users TABLE EXISTS WITH CORRECT SCHEMA
@@ -156,7 +160,10 @@ CREATE INDEX idx_users_active ON users(is_active);
 -- Disable RLS for immediate access
 ALTER TABLE users DISABLE ROW LEVEL SECURITY;
 
-RAISE NOTICE 'Created clean users table with correct schema';
+DO $$
+BEGIN
+    RAISE NOTICE 'Created clean users table with correct schema';
+END $$;
 
 -- =============================================================================
 -- STEP 7: INSERT DEMO USERS WITH CORRECT DATA
@@ -168,7 +175,10 @@ INSERT INTO users (email, role, full_name, phone, department, specialization, pa
 ('attendant@swamicare.com', 'service_attendant', 'Service Attendant', '+91-9876543213', 'Services', 'Patient Services', '$2b$10$rQZb8KvPvPvPzQzQ8vPvPuO1KvPvPvPvPvPvPvPvPvPvPvPvPvPvPu', true),
 ('pharmacist@swamicare.com', 'pharmacist', 'Pharmacy Manager', '+91-9876543214', 'Pharmacy', 'Pharmaceutical Services', '$2b$10$rQZb8KvPvPvPzQzQ8vPvPuO1KvPvPvPvPvPvPvPvPvPvPvPvPvPvPu', true);
 
-RAISE NOTICE 'Inserted 5 demo users with correct schema';
+DO $$
+BEGIN
+    RAISE NOTICE 'Inserted 5 demo users with correct schema';
+END $$;
 
 -- =============================================================================
 -- STEP 8: FINAL VERIFICATION
