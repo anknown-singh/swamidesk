@@ -54,11 +54,19 @@ export default function LoginPage() {
         return
       }
 
+      // Normalize role for consistency with UI components
+      const normalizeRole = (role: string): string => {
+        if (role === 'service_attendant') return 'attendant'
+        return role
+      }
+      
+      const normalizedRole = normalizeRole(user.role)
+
       // Store user session in localStorage (simple session management)
       localStorage.setItem('swamicare_user', JSON.stringify({
         id: user.id,
         email: user.email,
-        role: user.role,
+        role: normalizedRole, // Store normalized role for UI consistency
         name: user.full_name || 'Unknown User'
       }))
 
@@ -71,7 +79,7 @@ export default function LoginPage() {
         pharmacist: '/pharmacy/dashboard'
       }
       
-      const targetPath = dashboardPaths[user.role as keyof typeof dashboardPaths] || '/login'
+      const targetPath = dashboardPaths[normalizedRole as keyof typeof dashboardPaths] || '/login'
       
       // Try router.push first, then fallback to window.location
       try {
