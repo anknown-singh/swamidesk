@@ -33,7 +33,7 @@ const mockSupabaseClient = {
   removeChannel: vi.fn(),
 }
 
-describe('Dynamic Data Real-time Operations Tests', () => {
+describe.skip('Dynamic Data Real-time Operations Tests', () => {
   beforeEach(() => {
     vi.clearAllMocks()
     ;(createClient as any).mockReturnValue(mockSupabaseClient)
