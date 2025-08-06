@@ -18,7 +18,7 @@ export default function HomePage() {
       }
 
       const { data: profile } = await supabase
-        .from('user_profiles')
+        .from('users')
         .select('role')
         .eq('id', user.id)
         .single()

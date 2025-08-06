@@ -219,7 +219,7 @@ export function Sidebar({ userProfile }: SidebarProps) {
       <div className="border-t p-4">
         <div className="flex items-center mb-4">
           <div className="ml-2">
-            <p className="text-sm font-medium">{userProfile.name}</p>
+            <p className="text-sm font-medium">{userProfile.full_name}</p>
             <p className="text-xs text-muted-foreground capitalize">
               {userProfile.role.replace('_', ' ')}
             </p>

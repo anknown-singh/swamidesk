@@ -33,7 +33,7 @@ export function AuthenticatedLayout({ children, allowedRoles }: AuthenticatedLay
         
         // Verify the user still exists in the database
         const { data: profile } = await supabase
-          .from('user_profiles')
+          .from('users')
           .select('*')
           .eq('id', userData.id)
           .eq('is_active', true)

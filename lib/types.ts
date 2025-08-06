@@ -1,5 +1,5 @@
 // User & Authentication Types
-export type UserRole = 'admin' | 'doctor' | 'receptionist' | 'attendant' | 'pharmacist'
+export type UserRole = 'admin' | 'doctor' | 'receptionist' | 'attendant' | 'service_attendant' | 'pharmacist'
 
 export type VisitStatus = 'waiting' | 'in_consultation' | 'services_pending' | 'completed' | 'billed'
 
@@ -24,11 +24,12 @@ export type AvailabilityStatus = 'available' | 'busy' | 'break' | 'off' | 'block
 export interface UserProfile {
   id: string
   role: UserRole
-  name: string
+  full_name: string
   email: string | null
   phone: string | null
   department: string | null
   specialization: string | null
+  password_hash: string
   is_active: boolean
   created_at: string
   updated_at: string
