@@ -17,8 +17,7 @@ vi.mock('next/navigation', () => ({
 
 // Mock Next.js image component
 vi.mock('next/image', () => ({
-  default: ({ src, alt, ...props }: any) => {
-    // eslint-disable-next-line @next/next/no-img-element
+  default: ({ src, alt, ...props }: { src: string; alt: string; [key: string]: unknown }) => {
     return {
       type: 'img',
       props: { src, alt, ...props }

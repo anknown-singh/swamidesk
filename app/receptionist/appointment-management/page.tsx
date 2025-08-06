@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -29,14 +29,9 @@ export default function AppointmentManagementPage() {
   const [activeView, setActiveView] = useState<'status' | 'confirmations'>('status')
   const [loading, setLoading] = useState(true)
   
-  const supabase = createClient()
-
   // Fetch appointments from database
-  useEffect(() => {
-    fetchAppointments()
-  }, [])
-
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
+    const supabase = createClient()
     try {
       setLoading(true)
       const { data, error } = await supabase
@@ -51,7 +46,50 @@ export default function AppointmentManagementPage() {
 
       if (error) throw error
 
-      const mappedAppointments = (data as any[]).map((apt: any) => ({
+      interface DatabaseAppointment {
+        id: string
+        patient_id: string
+        doctor_id: string
+        department: string
+        appointment_type: string
+        status: string
+        scheduled_date: string
+        scheduled_time: string
+        duration?: number
+        title?: string
+        priority?: boolean
+        is_recurring?: boolean
+        reminder_sent?: boolean
+        confirmation_sent?: boolean
+        confirmed_at?: string
+        created_by: string
+        created_at: string
+        updated_at: string
+        patients?: {
+          id: string
+          full_name: string
+          phone: string
+          email: string
+          date_of_birth: string
+          gender: string
+          address: string
+          emergency_contact_phone: string
+          created_at: string
+          updated_at: string
+        }
+        users?: {
+          id: string
+          full_name: string
+          email: string
+          phone: string
+          department: string
+          specialization: string
+          created_at: string
+          updated_at: string
+        }
+      }
+
+      const mappedAppointments = (data as DatabaseAppointment[]).map((apt: DatabaseAppointment) => ({
         id: apt.id,
         patient_id: apt.patient_id,
         doctor_id: apt.doctor_id,
@@ -103,7 +141,11 @@ export default function AppointmentManagementPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchAppointments()
+  }, [fetchAppointments])
 
   // Filter appointments based on search and status
   const filteredAppointments = appointments.filter(appointment => {
@@ -117,7 +159,7 @@ export default function AppointmentManagementPage() {
     return matchesSearch && matchesStatus
   })
 
-  const handleStatusUpdate = async (appointmentId: string, status: AppointmentStatus, data?: any) => {
+  const handleStatusUpdate = async (appointmentId: string, status: AppointmentStatus, data?: Partial<Appointment>) => {
     try {
       const { error } = await supabase
         .from('appointments')
@@ -355,7 +397,7 @@ export default function AppointmentManagementPage() {
                       className="pl-9"
                     />
                   </div>
-                  <Select value={statusFilter} onValueChange={(value: any) => setStatusFilter(value)}>
+                  <Select value={statusFilter} onValueChange={(value: AppointmentStatus | 'all') => setStatusFilter(value)}>
                     <SelectTrigger className="w-48">
                       <FilterIcon className="h-4 w-4 mr-2" />
                       <SelectValue />

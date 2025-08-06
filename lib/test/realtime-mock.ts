@@ -4,15 +4,15 @@ import { vi } from 'vitest'
 export type MockRealtimeEvent = 'INSERT' | 'UPDATE' | 'DELETE'
 export type MockEventPayload = {
   eventType: MockRealtimeEvent
-  new?: Record<string, any>
-  old?: Record<string, any>
+  new?: Record<string, unknown>
+  old?: Record<string, unknown>
   table: string
   schema: string
 }
 
 // Mock channel class for real-time testing
 export class MockRealtimeChannel {
-  private callbacks: { [event: string]: Function[] } = {}
+  private callbacks: { [event: string]: ((payload: MockEventPayload) => void)[] } = {}
   private subscriptions: Set<string> = new Set()
   public topic: string
   
@@ -20,7 +20,7 @@ export class MockRealtimeChannel {
     this.topic = topic
   }
   
-  on(event: string, filter: any, callback: Function) {
+  on(event: string, filter: Record<string, unknown>, callback: (payload: MockEventPayload) => void) {
     const eventKey = `${event}:${JSON.stringify(filter)}`
     
     if (!this.callbacks[eventKey]) {
@@ -31,7 +31,7 @@ export class MockRealtimeChannel {
     return this
   }
   
-  subscribe(callback?: Function) {
+  subscribe(callback?: (status: string, error: unknown) => void) {
     this.subscriptions.add(this.topic)
     
     if (callback) {
@@ -55,7 +55,7 @@ export class MockRealtimeChannel {
   }
   
   // Test helper to trigger events
-  _trigger(eventType: MockRealtimeEvent, filter: any, payload: MockEventPayload) {
+  _trigger(eventType: MockRealtimeEvent, filter: Record<string, unknown>, payload: MockEventPayload) {
     const eventKey = `postgres_changes:${JSON.stringify(filter)}`
     
     if (this.callbacks[eventKey]) {
@@ -155,7 +155,7 @@ export const createMockRealtimeClient = () => {
 // Real-time testing utilities
 export const realtimeTestUtils = {
   // Simulate database insert
-  simulateInsert: (table: string, newRecord: Record<string, any>) => {
+  simulateInsert: (table: string, newRecord: Record<string, unknown>) => {
     mockChannelRegistry.triggerEvent(table, 'INSERT', {
       new: newRecord
     })
@@ -164,8 +164,8 @@ export const realtimeTestUtils = {
   // Simulate database update
   simulateUpdate: (
     table: string, 
-    oldRecord: Record<string, any>, 
-    newRecord: Record<string, any>
+    oldRecord: Record<string, unknown>, 
+    newRecord: Record<string, unknown>
   ) => {
     mockChannelRegistry.triggerEvent(table, 'UPDATE', {
       old: oldRecord,
@@ -174,7 +174,7 @@ export const realtimeTestUtils = {
   },
   
   // Simulate database delete
-  simulateDelete: (table: string, deletedRecord: Record<string, any>) => {
+  simulateDelete: (table: string, deletedRecord: Record<string, unknown>) => {
     mockChannelRegistry.triggerEvent(table, 'DELETE', {
       old: deletedRecord
     })
@@ -241,13 +241,13 @@ export const createRealtimeHookMock = (tableName: string) => {
       return {
         mockFetch,
         subscription,
-        triggerUpdate: (data: Record<string, any>) => {
+        triggerUpdate: (data: Record<string, unknown>) => {
           realtimeTestUtils.simulateUpdate(tableName, {}, data)
         },
-        triggerInsert: (data: Record<string, any>) => {
+        triggerInsert: (data: Record<string, unknown>) => {
           realtimeTestUtils.simulateInsert(tableName, data)
         },
-        triggerDelete: (data: Record<string, any>) => {
+        triggerDelete: (data: Record<string, unknown>) => {
           realtimeTestUtils.simulateDelete(tableName, data)
         }
       }

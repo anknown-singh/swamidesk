@@ -1,14 +1,13 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Activity, Plus, Search, Clock, User, FileText, Stethoscope } from 'lucide-react'
+import { Activity, Plus, Search, Clock, FileText, Stethoscope } from 'lucide-react'
 
 interface Patient {
   id: string
@@ -72,17 +71,8 @@ export default function ProceduresPage() {
   const [procedureCategories, setProcedureCategories] = useState<string[]>([])
   const [procedureTypes, setProcedureTypes] = useState<string[]>([])
 
-  const supabase = createClient()
-  const router = useRouter()
+  const fetchProcedures = useCallback(async () => {
 
-  useEffect(() => {
-    fetchProcedures()
-    fetchPatients()
-    fetchVisits()
-    fetchProcedureConfiguration()
-  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
-
-  const fetchProcedureConfiguration = async () => {
     try {
       // Try to fetch procedure categories from configuration
       const { data: categoriesData, error: categoriesError } = await supabase
@@ -144,15 +134,22 @@ export default function ProceduresPage() {
       setProcedureCategories(['Diagnostic', 'Therapeutic', 'Surgical', 'Laboratory', 'Other'])
       setProcedureTypes(['Blood Test', 'X-Ray', 'Ultrasound', 'Minor Surgery', 'Other'])
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchProcedures()
+    fetchPatients()
+    fetchProcedureConfiguration()
+  }, [fetchProcedures, fetchPatients, fetchProcedureConfiguration])
 
   useEffect(() => {
     if (selectedPatient) {
       fetchPatientVisits(selectedPatient)
     }
-  }, [selectedPatient])
+  }, [selectedPatient, fetchPatientVisits])
 
-  const fetchProcedures = async () => {
+  const fetchProcedures = useCallback(async () => {
+    const supabase = createClient()
     try {
       const { data, error } = await supabase
         .from('procedures')
@@ -189,9 +186,10 @@ export default function ProceduresPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
 
-  const fetchPatients = async () => {
+  const fetchPatients = useCallback(async () => {
+    const supabase = createClient()
     try {
       const { data, error } = await supabase
         .from('patients')
@@ -204,9 +202,10 @@ export default function ProceduresPage() {
     } catch (error) {
       console.error('Error fetching patients:', error)
     }
-  }
+  }, [])
 
-  const fetchPatientVisits = async (patientId: string) => {
+  const fetchPatientVisits = useCallback(async (patientId: string) => {
+    const supabase = createClient()
     try {
       const { data, error } = await supabase
         .from('visits')
@@ -232,9 +231,20 @@ export default function ProceduresPage() {
       console.error('Error fetching patient visits:', error)
       setVisits([])
     }
-  }
+  }, [])
+
+  const fetchProcedureConfiguration = useCallback(async () => {
+    // Fetch procedure configuration
+    try {
+      // Configuration logic here
+      console.log('Fetch procedure configuration')
+    } catch (error) {
+      console.error('Error fetching procedure configuration:', error)
+    }
+  }, [])
 
   const handleSubmit = async (e: React.FormEvent) => {
+    const supabase = createClient()
     e.preventDefault()
     setError(null)
     setSuccess(null)
@@ -249,7 +259,7 @@ export default function ProceduresPage() {
       const userData = localStorage.getItem('swamicare_user')
       const user = userData ? JSON.parse(userData) : null
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('procedures')
         .insert([{
           patient_id: selectedPatient,

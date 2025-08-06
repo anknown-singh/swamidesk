@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -28,11 +28,7 @@ export default function AdminAppointmentManagementPage() {
   const supabase = createClient()
 
   // Fetch appointments from database
-  useEffect(() => {
-    fetchAppointments()
-  }, [])
-
-  const fetchAppointments = async () => {
+  const fetchAppointments = useCallback(async () => {
     try {
       setLoading(true)
       const { data, error } = await supabase
@@ -47,13 +43,56 @@ export default function AdminAppointmentManagementPage() {
 
       if (error) throw error
 
-      const mappedAppointments = (data as any[]).map((apt: any) => ({
+      interface DatabaseAppointment {
+        id: string
+        patient_id: string
+        doctor_id: string
+        department: string
+        appointment_type: string
+        status: string
+        scheduled_date: string
+        scheduled_time: string
+        duration?: number
+        title?: string
+        priority?: boolean
+        is_recurring?: boolean
+        reminder_sent?: boolean
+        confirmation_sent?: boolean
+        confirmed_at?: string
+        created_by: string
+        created_at: string
+        updated_at: string
+        patients?: {
+          id: string
+          full_name: string
+          phone: string
+          email: string
+          date_of_birth: string
+          gender: string
+          address: string
+          emergency_contact_phone: string
+          created_at: string
+          updated_at: string
+        }
+        users?: {
+          id: string
+          full_name: string
+          email: string
+          phone: string
+          department: string
+          specialization: string
+          created_at: string
+          updated_at: string
+        }
+      }
+
+      const mappedAppointments = (data as DatabaseAppointment[]).map((apt: DatabaseAppointment) => ({
         id: apt.id,
         patient_id: apt.patient_id,
         doctor_id: apt.doctor_id,
         department: apt.department,
-        appointment_type: apt.appointment_type,
-        status: apt.status,
+        appointment_type: apt.appointment_type as AppointmentType,
+        status: apt.status as AppointmentStatus,
         scheduled_date: apt.scheduled_date,
         scheduled_time: apt.scheduled_time,
         duration: apt.duration || 30,
@@ -71,7 +110,7 @@ export default function AdminAppointmentManagementPage() {
           name: apt.patients.full_name,
           mobile: apt.patients.phone,
           dob: apt.patients.date_of_birth,
-          gender: apt.patients.gender,
+          gender: apt.patients.gender as 'male' | 'female' | 'other',
           address: apt.patients.address,
           email: apt.patients.email,
           emergency_contact: apt.patients.emergency_contact_phone,
@@ -99,9 +138,14 @@ export default function AdminAppointmentManagementPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase])
 
-  const handleStatusUpdate = async (appointmentId: string, status: AppointmentStatus, data?: any) => {
+  useEffect(() => {
+    fetchAppointments()
+  }, [fetchAppointments])
+
+
+  const handleStatusUpdate = async (appointmentId: string, status: AppointmentStatus, data?: Partial<Appointment>) => {
     try {
       const { error } = await supabase
         .from('appointments')
@@ -292,7 +336,7 @@ export default function AdminAppointmentManagementPage() {
                 <div className="flex items-center">
                   <div className="space-y-1">
                     <p className="text-2xl font-bold">{stats.today}</p>
-                    <p className="text-sm text-muted-foreground">Today's Appointments</p>
+                    <p className="text-sm text-muted-foreground">Today&apos;s Appointments</p>
                   </div>
                   <CalendarIcon className="h-8 w-8 text-muted-foreground ml-auto" />
                 </div>

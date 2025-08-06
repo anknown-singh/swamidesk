@@ -17,7 +17,7 @@ export default function DoctorAvailabilityPage() {
     }
   }, [])
 
-  const handleSave = (data: any) => {
+  const handleSave = (data: Record<string, unknown>) => {
     console.log('Saving doctor availability/leave data:', data)
     // Here you would typically save to your database
   }

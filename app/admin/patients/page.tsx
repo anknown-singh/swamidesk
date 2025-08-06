@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -36,11 +36,7 @@ export default function AdminPatientsPage() {
 
   const supabase = createClient()
 
-  useEffect(() => {
-    fetchPatients()
-  }, [])
-
-  const fetchPatients = async () => {
+  const fetchPatients = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('patients')
@@ -55,7 +51,11 @@ export default function AdminPatientsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase])
+
+  useEffect(() => {
+    fetchPatients()
+  }, [fetchPatients])
 
   const filteredPatients = patients.filter(patient => {
     const matchesSearch = (patient.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||

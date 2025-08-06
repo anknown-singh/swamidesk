@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -11,15 +11,12 @@ import { Badge } from '@/components/ui/badge'
 import { Checkbox } from '@/components/ui/checkbox'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { 
-  CheckCircleIcon, 
-  ClockIcon, 
   PhoneIcon,
   MessageSquareIcon,
   MailIcon,
   BellIcon,
   AlertCircleIcon,
   UserIcon,
-  CalendarIcon,
   SendIcon
 } from 'lucide-react'
 import type { Appointment, AppointmentReminder } from '@/lib/types'
@@ -342,7 +339,7 @@ export function AppointmentConfirmation({
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
             <Label>Filter:</Label>
-            <Select value={filterStatus} onValueChange={(value: any) => setFilterStatus(value)}>
+            <Select value={filterStatus} onValueChange={(value: string) => setFilterStatus(value)}>
               <SelectTrigger className="w-48">
                 <SelectValue />
               </SelectTrigger>

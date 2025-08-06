@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -75,7 +74,6 @@ export default function PharmacyQueuePage() {
   const [success, setSuccess] = useState<string | null>(null)
 
   const supabase = createClient()
-  const router = useRouter()
 
   useEffect(() => {
     fetchPharmacyQueue()
@@ -84,7 +82,7 @@ export default function PharmacyQueuePage() {
 
   const fetchPharmacyQueue = async () => {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('pharmacy_queue')
         .select(`
           *,
@@ -141,7 +139,7 @@ export default function PharmacyQueuePage() {
 
   const fetchPendingPrescriptions = async () => {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('prescriptions')
         .select(`
           *,
@@ -197,7 +195,7 @@ export default function PharmacyQueuePage() {
       const userData = localStorage.getItem('swamicare_user')
       const user = userData ? JSON.parse(userData) : null
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('pharmacy_queue')
         .insert([{
           prescription_id: prescriptionId,

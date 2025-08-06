@@ -1,8 +1,8 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, Activity, CreditCard, TrendingUp, UserCheck, Package, BarChart3, AlertTriangle } from 'lucide-react'
+import { Users, CreditCard, TrendingUp, UserCheck, Package, BarChart3, AlertTriangle } from 'lucide-react'
 import { VersionInfo } from '@/components/admin/version-info'
 import { createClient } from '@/lib/supabase/client'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -46,9 +46,9 @@ export default function AdminDashboard() {
 
   useEffect(() => {
     fetchDashboardData()
-  }, [])
+  }, [fetchDashboardData])
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true)
       setError(null)
@@ -182,7 +182,7 @@ export default function AdminDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase])
 
   const formatCurrency = (amount: number) => {
     return `₹${amount.toLocaleString()}`
@@ -336,7 +336,7 @@ export default function AdminDashboard() {
                 {departments.length === 0 ? (
                   <p className="text-sm text-muted-foreground">No department data for today</p>
                 ) : (
-                  departments.map((dept, index) => (
+                  departments.map((dept) => (
                     <div key={dept.department} className="flex justify-between items-center">
                       <div>
                         <div className="font-medium">{dept.department} Department</div>
@@ -459,7 +459,7 @@ export default function AdminDashboard() {
                   {activities.length === 0 ? (
                     <p className="text-sm text-muted-foreground">No recent activities</p>
                   ) : (
-                    activities.map((activity, index) => (
+                    activities.map((activity) => (
                       <div key={activity.id} className="flex items-center gap-4 p-2">
                         <div className="bg-gray-100 p-2 rounded-full">
                           <CreditCard className="h-4 w-4 text-gray-600" />

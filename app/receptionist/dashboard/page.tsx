@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, Clock, Calendar, CreditCard, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -25,13 +25,8 @@ export default function ReceptionistDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
-  const supabase = createClient()
-
-  useEffect(() => {
-    fetchDashboardData()
-  }, [])
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
+    const supabase = createClient()
     try {
       setLoading(true)
       setError(null)
@@ -111,7 +106,11 @@ export default function ReceptionistDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchDashboardData()
+  }, [fetchDashboardData])
 
   const formatCurrency = (amount: number) => {
     return `₹${amount.toLocaleString()}`

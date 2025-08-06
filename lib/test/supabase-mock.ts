@@ -1,6 +1,4 @@
 import { vi } from 'vitest'
-import type { SupabaseClient } from '@supabase/supabase-js'
-import type { Database } from '@/lib/supabase/database.types'
 
 // Mock data for testing
 export const mockPatients = [
@@ -73,7 +71,7 @@ export const mockQueueItems = [
 ]
 
 // Mock Supabase response structure
-export const createMockSupabaseResponse = <T>(data: T, error: any = null) => ({
+export const createMockSupabaseResponse = <T>(data: T, error: Error | null = null) => ({
   data,
   error,
   count: Array.isArray(data) ? data.length : null,
@@ -83,10 +81,10 @@ export const createMockSupabaseResponse = <T>(data: T, error: any = null) => ({
 
 // Mock Supabase channel for real-time testing
 export const createMockChannel = () => {
-  const callbacks: { [key: string]: Function[] } = {}
+  const callbacks: { [key: string]: ((payload?: unknown) => void)[] } = {}
   
   return {
-    on: vi.fn((event: string, filter: any, callback: Function) => {
+    on: vi.fn((event: string, filter: Record<string, unknown>, callback: (payload?: unknown) => void) => {
       if (!callbacks[event]) callbacks[event] = []
       callbacks[event].push(callback)
       return {
@@ -100,7 +98,7 @@ export const createMockChannel = () => {
     })),
     unsubscribe: vi.fn(),
     // Helper to trigger callbacks in tests
-    _trigger: (event: string, payload?: any) => {
+    _trigger: (event: string, payload?: unknown) => {
       if (callbacks[event]) {
         callbacks[event].forEach(callback => callback(payload))
       }
@@ -109,7 +107,7 @@ export const createMockChannel = () => {
 }
 
 // Mock Supabase client
-export const createMockSupabaseClient = (customMocks: any = {}) => {
+export const createMockSupabaseClient = (customMocks: Record<string, unknown> = {}) => {
   const mockChannel = createMockChannel()
   
   const defaultMocks = {
@@ -158,7 +156,7 @@ export const createMockSupabaseClient = (customMocks: any = {}) => {
     ...customMocks
   }
 
-  return defaultMocks as any
+  return defaultMocks as Record<string, unknown>
 }
 
 // Helper to mock successful authentication

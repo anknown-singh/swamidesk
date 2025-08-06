@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { Badge } from '@/components/ui/badge'
 import { 
-  CalendarIcon, 
+ 
   ClockIcon, 
   PlusIcon, 
   EditIcon, 
@@ -508,7 +508,7 @@ export function DoctorAvailabilityManagement({
                     <Label htmlFor="leave_type">Leave Type *</Label>
                     <Select 
                       value={leaveForm.leave_type} 
-                      onValueChange={(value: any) => setLeaveForm({...leaveForm, leave_type: value})}
+                      onValueChange={(value: string) => setLeaveForm({...leaveForm, leave_type: value})}
                     >
                       <SelectTrigger>
                         <SelectValue />

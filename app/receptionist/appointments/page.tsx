@@ -10,7 +10,6 @@ import type { Appointment, AppointmentBookingForm as AppointmentBookingFormData 
 
 export default function AppointmentsPage() {
   const [showBookingForm, setShowBookingForm] = useState(false)
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [selectedSlot, setSelectedSlot] = useState<{ date: string, time: string, doctorId?: string } | null>(null)
 
   const handleBookAppointment = () => {
@@ -24,7 +23,6 @@ export default function AppointmentsPage() {
   }
 
   const handleAppointmentSelect = (appointment: Appointment) => {
-    setSelectedAppointment(appointment)
     // Could open appointment details modal here
     console.log('Selected appointment:', appointment)
   }
@@ -78,7 +76,7 @@ export default function AppointmentsPage() {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Appointments</CardTitle>
+            <CardTitle className="text-sm font-medium">Today&apos;s Appointments</CardTitle>
             <CalendarIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>

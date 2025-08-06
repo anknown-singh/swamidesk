@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -50,13 +50,8 @@ export default function AdminTreatmentPlansPage() {
   const [dateFilter, setDateFilter] = useState<string>('all')
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
-
-  useEffect(() => {
-    fetchTreatmentPlans()
-  }, [])
-
-  const fetchTreatmentPlans = async () => {
+  const fetchTreatmentPlans = useCallback(async () => {
+    const supabase = createClient()
     try {
       const { data, error } = await supabase
         .from('treatment_plans')
@@ -92,7 +87,11 @@ export default function AdminTreatmentPlansPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchTreatmentPlans()
+  }, [fetchTreatmentPlans])
 
   const getStatusConfig = (status: string) => {
     switch (status) {

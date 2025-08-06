@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Activity, Clock, CheckCircle, AlertCircle, AlertTriangle } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -29,16 +29,10 @@ export default function AttendantDashboard() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   
-  const supabase = createClient()
   const { user } = useUser()
 
-  useEffect(() => {
-    if (user) {
-      fetchDashboardData()
-    }
-  }, [user])
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
+    const supabase = createClient()
     try {
       setLoading(true)
       setError(null)
@@ -71,7 +65,6 @@ export default function AttendantDashboard() {
       const serviceData = servicesResult.data || []
       
       // Calculate stats
-      const assignedCount = serviceData.filter(s => s.status === 'assigned').length
       const inProgressCount = serviceData.filter(s => s.status === 'in_progress').length
       const completedCount = serviceData.filter(s => s.status === 'completed').length
       const pendingCount = serviceData.length - completedCount // All non-completed are pending
@@ -103,7 +96,13 @@ export default function AttendantDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [user])
+
+  useEffect(() => {
+    if (user) {
+      fetchDashboardData()
+    }
+  }, [user, fetchDashboardData])
 
   const getStatusColor = (status: string) => {
     switch (status) {

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -60,11 +60,7 @@ export default function AdminBillingPage() {
 
   const supabase = createClient()
 
-  useEffect(() => {
-    fetchInvoices()
-  }, [])
-
-  const fetchInvoices = async () => {
+  const fetchInvoices = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('invoices')
@@ -105,7 +101,11 @@ export default function AdminBillingPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [supabase])
+
+  useEffect(() => {
+    fetchInvoices()
+  }, [fetchInvoices])
 
   const getStatusConfig = (status: string) => {
     switch (status) {
@@ -430,7 +430,7 @@ export default function AdminBillingPage() {
                       <div className="text-sm">
                         <span className="font-medium text-gray-700">Invoice Items:</span>
                         <div className="mt-2 space-y-1">
-                          {invoice.invoice_items.slice(0, 3).map((item, index) => (
+                          {invoice.invoice_items.slice(0, 3).map((item) => (
                             <div key={item.id} className="flex justify-between items-center bg-gray-50 p-2 rounded">
                               <div>
                                 <span className="font-medium capitalize">{item.item_type}</span>: {item.description}

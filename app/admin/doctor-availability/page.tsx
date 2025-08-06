@@ -3,7 +3,7 @@
 import { DoctorAvailabilityManagement } from '@/components/appointments/doctor-availability'
 
 export default function DoctorAvailabilityPage() {
-  const handleSave = (data: any) => {
+  const handleSave = (data: Record<string, unknown>) => {
     console.log('Saving availability/leave data:', data)
     // Here you would typically save to your database
   }

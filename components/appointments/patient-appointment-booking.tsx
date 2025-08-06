@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -134,15 +134,7 @@ export function PatientAppointmentBooking({
   
   const supabase = createClient()
 
-  useEffect(() => {
-    if (availableDoctors && !loadingData) {
-      setDoctors(availableDoctors)
-    } else {
-      fetchDoctorsAndDepartments()
-    }
-  }, [availableDoctors])
-
-  const fetchDoctorsAndDepartments = async () => {
+  const fetchDoctorsAndDepartments = useCallback(async () => {
     try {
       setLoadingData(true)
       
@@ -156,7 +148,19 @@ export function PatientAppointmentBooking({
       
       if (doctorsError) throw doctorsError
       
-      const mappedDoctors = (doctorsData as any[]).map(doc => ({
+      interface DoctorData {
+        id: string
+        full_name: string
+        email: string
+        phone: string
+        department?: string
+        specialization?: string
+        password_hash?: string
+        is_active: boolean
+        created_at: string
+        updated_at: string
+      }
+      const mappedDoctors = (doctorsData as DoctorData[]).map(doc => ({
         id: doc.id,
         role: 'doctor' as const,
         full_name: doc.full_name,
@@ -193,7 +197,15 @@ export function PatientAppointmentBooking({
     } finally {
       setLoadingData(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    if (availableDoctors && !loadingData) {
+      setDoctors(availableDoctors)
+    } else {
+      fetchDoctorsAndDepartments()
+    }
+  }, [availableDoctors, loadingData, fetchDoctorsAndDepartments])
 
   const filteredDoctors = selectedDepartment 
     ? doctors.filter(doc => doc.department === selectedDepartment)

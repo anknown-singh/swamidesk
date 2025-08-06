@@ -63,7 +63,19 @@ const fetchDoctors = async (): Promise<UserProfile[]> => {
     return []
   }
   
-  return (data as any[]).map((doctor: any) => ({
+  interface DoctorData {
+    id: string
+    full_name: string
+    role: string
+    department?: string
+    specialization?: string
+    email: string
+    phone?: string
+    is_active: boolean
+    created_at: string
+    updated_at: string
+  }
+  return (data as DoctorData[]).map((doctor: DoctorData) => ({
     id: doctor.id,
     full_name: doctor.full_name,
     role: doctor.role as const,
@@ -103,7 +115,49 @@ const fetchAppointments = async (startDate?: Date, endDate?: Date): Promise<Appo
     return []
   }
   
-  return (data as any[]).map((apt: any) => ({
+  interface AppointmentData {
+    id: string
+    patient_id: string
+    doctor_id: string
+    department: string
+    appointment_type: string
+    status: string
+    scheduled_date: string
+    scheduled_time: string
+    duration?: number
+    title?: string
+    priority?: boolean
+    is_recurring?: boolean
+    reminder_sent?: boolean
+    confirmation_sent?: boolean
+    confirmed_at?: string
+    created_by: string
+    created_at: string
+    updated_at: string
+    patients?: {
+      id: string
+      full_name: string
+      phone: string
+      email: string
+      date_of_birth: string
+      gender: string
+      address: string
+      emergency_contact_phone: string
+      created_at: string
+      updated_at: string
+    }
+    users?: {
+      id: string
+      full_name: string
+      email: string
+      phone?: string
+      department: string
+      specialization?: string
+      created_at: string
+      updated_at: string
+    }
+  }
+  return (data as AppointmentData[]).map((apt: AppointmentData) => ({
     id: apt.id,
     patient_id: apt.patient_id,
     doctor_id: apt.doctor_id,
@@ -319,12 +373,12 @@ export function AppointmentCalendar({
 
   const calendarData = view === 'week' ? getWeekDays(currentDate) : [getSingleDay(currentDate)]
 
-  const getMonthYear = () => {
-    return currentDate.toLocaleDateString('en-US', { 
-      month: 'long', 
-      year: 'numeric' 
-    })
-  }
+  // const getMonthYear = () => {
+  //   return currentDate.toLocaleDateString('en-US', { 
+  //     month: 'long', 
+  //     year: 'numeric' 
+  //   })
+  // }
 
   const getWeekRange = () => {
     const weekDays = getWeekDays(currentDate)

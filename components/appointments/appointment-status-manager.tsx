@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -25,7 +24,7 @@ import type { Appointment, AppointmentStatus } from '@/lib/types'
 
 interface AppointmentStatusManagerProps {
   appointment: Appointment
-  onStatusUpdate?: (appointmentId: string, status: AppointmentStatus, data?: any) => void
+  onStatusUpdate?: (appointmentId: string, status: AppointmentStatus, data?: Record<string, unknown>) => void
   onSendReminder?: (appointmentId: string, type: 'sms' | 'email' | 'call') => void
   canModify?: boolean
 }
@@ -168,7 +167,7 @@ export function AppointmentStatusManager({
     setIsProcessing(true)
     
     try {
-      const updateData: any = {
+      const updateData: Record<string, unknown> = {
         status: selectedAction.status,
         [`${selectedAction.status}_at`]: new Date().toISOString()
       }

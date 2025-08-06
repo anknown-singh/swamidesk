@@ -4,8 +4,8 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge'
 import { GitBranch, Calendar, ExternalLink } from 'lucide-react'
 
-// Import package.json at the top level
-const packageJson = require('../../package.json')
+// Import package.json using proper ES module syntax
+import packageJson from '../../package.json'
 
 export function VersionInfo() {
   // In a real app, this would come from an API or environment variables

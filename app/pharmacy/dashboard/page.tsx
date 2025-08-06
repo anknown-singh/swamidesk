@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Pill, Package, AlertTriangle, TrendingDown } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -40,13 +40,8 @@ export default function PharmacyDashboard() {
   const [lowStockItems, setLowStockItems] = useState<LowStockItem[]>([])
   const [loading, setLoading] = useState(true)
 
-  const supabase = createClient()
-
-  useEffect(() => {
-    fetchPharmacyData()
-  }, [])
-
-  const fetchPharmacyData = async () => {
+  const fetchPharmacyData = useCallback(async () => {
+    const supabase = createClient()
     try {
       setLoading(true)
       
@@ -101,7 +96,15 @@ export default function PharmacyDashboard() {
         .limit(4)
 
       if (queueData) {
-        const mappedQueue = (queueData as any[]).map((item: any) => ({
+        interface QueueDataItem {
+          id: string
+          priority?: boolean
+          created_at: string
+          patients?: { full_name: string } | null
+          users?: { full_name: string } | null
+          prescription_items?: { id: string }[] | null
+        }
+        const mappedQueue = (queueData as QueueDataItem[]).map((item: QueueDataItem) => ({
           id: item.id,
           patient_name: item.patients?.full_name || 'Unknown Patient',
           medicine_count: item.prescription_items?.length || 0,
@@ -126,7 +129,13 @@ export default function PharmacyDashboard() {
         .limit(4)
 
       if (stockData) {
-        const mappedStock = (stockData as any[]).map((item: any) => ({
+        interface StockDataItem {
+          id: string
+          quantity: number
+          min_level: number
+          medicines?: { name: string } | null
+        }
+        const mappedStock = (stockData as StockDataItem[]).map((item: StockDataItem) => ({
           id: item.id,
           medicine_name: item.medicines?.name || 'Unknown Medicine',
           current_stock: item.quantity || 0,
@@ -140,7 +149,11 @@ export default function PharmacyDashboard() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchPharmacyData()
+  }, [fetchPharmacyData])
 
   if (loading) {
     return (

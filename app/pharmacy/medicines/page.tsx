@@ -1,7 +1,6 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -54,7 +53,6 @@ export default function MedicinesPage() {
   const [success, setSuccess] = useState<string | null>(null)
 
   const supabase = createClient()
-  const router = useRouter()
 
   useEffect(() => {
     fetchMedicines()
@@ -62,7 +60,7 @@ export default function MedicinesPage() {
 
   const fetchMedicines = async () => {
     try {
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('medicines')
         .select('*')
         .order('name', { ascending: true })
@@ -87,7 +85,7 @@ export default function MedicinesPage() {
       const userData = localStorage.getItem('swamicare_user')
       const user = userData ? JSON.parse(userData) : null
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('medicines')
         .insert([{
           ...formData,

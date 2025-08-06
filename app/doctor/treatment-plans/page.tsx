@@ -1,14 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Calendar, Plus, Search, User, Clock, Stethoscope, FileText } from 'lucide-react'
+import { Calendar, Plus, Search, Stethoscope, FileText } from 'lucide-react'
 
 interface Patient {
   id: string
@@ -61,7 +60,6 @@ export default function TreatmentPlansPage() {
   const [success, setSuccess] = useState<string | null>(null)
 
   const supabase = createClient()
-  const router = useRouter()
 
   useEffect(() => {
     fetchTreatmentPlans()
@@ -163,7 +161,7 @@ export default function TreatmentPlansPage() {
         return
       }
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('treatment_plans')
         .insert([{
           visit_id: selectedVisit,

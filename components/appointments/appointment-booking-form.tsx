@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Label } from '@/components/ui/label'
@@ -9,7 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { CalendarIcon, ClockIcon, UserIcon, StethoscopeIcon, AlertTriangleIcon } from 'lucide-react'
-import type { AppointmentBookingForm, AppointmentType, UserProfile } from '@/lib/types'
+import type { AppointmentBookingForm, AppointmentType } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 
 interface AppointmentBookingFormProps {
@@ -69,18 +69,13 @@ export function AppointmentBookingForm({
   })
 
   const [selectedPatient, setSelectedPatient] = useState('')
-  const [availableSlots, setAvailableSlots] = useState<string[]>(timeSlots)
+  const [availableSlots] = useState<string[]>(timeSlots)
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [loadingData, setLoadingData] = useState(true)
   
-  const supabase = createClient()
-
-  useEffect(() => {
-    fetchDoctorsAndDepartments()
-  }, [])
-
-  const fetchDoctorsAndDepartments = async () => {
+  const fetchDoctorsAndDepartments = useCallback(async () => {
+    const supabase = createClient()
     try {
       setLoadingData(true)
       
@@ -94,7 +89,13 @@ export function AppointmentBookingForm({
       
       if (doctorsError) throw doctorsError
       
-      const mappedDoctors = (doctorsData as any[]).map(doc => ({
+      interface DoctorData {
+        id: string
+        full_name: string
+        department?: string
+        specialization?: string
+      }
+      const mappedDoctors = (doctorsData as DoctorData[]).map(doc => ({
         id: doc.id,
         name: doc.full_name,
         department: doc.department || 'general',
@@ -124,9 +125,13 @@ export function AppointmentBookingForm({
     } finally {
       setLoadingData(false)
     }
-  }
+  }, [])
 
-  const handleInputChange = (field: keyof AppointmentBookingForm, value: any) => {
+  useEffect(() => {
+    fetchDoctorsAndDepartments()
+  }, [fetchDoctorsAndDepartments])
+
+  const handleInputChange = (field: keyof AppointmentBookingForm, value: unknown) => {
     setFormData(prev => ({ ...prev, [field]: value }))
   }
 
@@ -380,7 +385,7 @@ export function AppointmentBookingForm({
           {/* Notes */}
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
-              <Label htmlFor="description">Doctor's Notes</Label>
+              <Label htmlFor="description">Doctor&apos;s Notes</Label>
               <Textarea
                 id="description"
                 placeholder="Internal notes for the doctor..."
@@ -392,7 +397,7 @@ export function AppointmentBookingForm({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="patient_notes">Patient's Notes</Label>
+              <Label htmlFor="patient_notes">Patient&apos;s Notes</Label>
               <Textarea
                 id="patient_notes"
                 placeholder="Patient's concerns or symptoms..."

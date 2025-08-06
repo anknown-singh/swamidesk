@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -34,25 +34,8 @@ export default function AdminQueuePage() {
   const [filterPriority, setFilterPriority] = useState<string>('all')
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
-
-  useEffect(() => {
-    fetchQueue()
-    
-    // Set up real-time subscription
-    const subscription = supabase
-      .channel('queue_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'queue' }, () => {
-        fetchQueue()
-      })
-      .subscribe()
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [])
-
-  const fetchQueue = async () => {
+  const fetchQueue = useCallback(async () => {
+    const supabase = createClient()
     try {
       const { data, error } = await supabase
         .from('queue')
@@ -76,7 +59,24 @@ export default function AdminQueuePage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchQueue()
+    
+    // Set up real-time subscription  
+    const supabase = createClient()
+    const subscription = supabase
+      .channel('queue_changes')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'queue' }, () => {
+        fetchQueue()
+      })
+      .subscribe()
+
+    return () => {
+      subscription.unsubscribe()
+    }
+  }, [fetchQueue])
 
   const getStatusConfig = (status: string) => {
     switch (status) {

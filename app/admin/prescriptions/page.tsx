@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -61,13 +61,8 @@ export default function AdminPrescriptionsPage() {
   const [dateFilter, setDateFilter] = useState<string>('all')
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
-
-  useEffect(() => {
-    fetchPrescriptions()
-  }, [])
-
-  const fetchPrescriptions = async () => {
+  const fetchPrescriptions = useCallback(async () => {
+    const supabase = createClient()
     try {
       const { data, error } = await supabase
         .from('prescriptions')
@@ -116,7 +111,11 @@ export default function AdminPrescriptionsPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [])
+
+  useEffect(() => {
+    fetchPrescriptions()
+  }, [fetchPrescriptions])
 
   const getStatusConfig = (status: string) => {
     switch (status) {
@@ -415,7 +414,7 @@ export default function AdminPrescriptionsPage() {
                       <div className="text-sm">
                         <span className="font-medium text-gray-700">Medicines:</span>
                         <div className="mt-2 space-y-2">
-                          {prescription.prescription_items.map((item, index) => (
+                          {prescription.prescription_items.map((item) => (
                             <div key={item.id} className="bg-gray-50 p-3 rounded-md">
                               <div className="flex justify-between items-start">
                                 <div>

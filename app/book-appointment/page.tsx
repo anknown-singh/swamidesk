@@ -81,7 +81,7 @@ export default function BookAppointmentPage() {
             )}
 
             <div className="space-y-4">
-              <h3 className="font-medium">What's Next?</h3>
+              <h3 className="font-medium">What&apos;s Next?</h3>
               <div className="text-sm text-muted-foreground space-y-2">
                 <p>✓ You will receive a confirmation SMS and email shortly</p>
                 <p>✓ Our team will contact you within 2 hours to confirm your appointment</p>

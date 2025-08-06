@@ -1,14 +1,13 @@
 'use client'
 
 import { useState, useEffect } from 'react'
-import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { ClipboardList, Plus, Search, Clock, User, CheckCircle, XCircle } from 'lucide-react'
+import { ClipboardList, Plus, Search, Clock, User, CheckCircle } from 'lucide-react'
 
 interface Patient {
   id: string
@@ -56,7 +55,6 @@ export default function ServiceQueuePage() {
   const [serviceTypes, setServiceTypes] = useState<string[]>([])
 
   const supabase = createClient()
-  const router = useRouter()
 
   useEffect(() => {
     fetchServiceRequests()
@@ -171,7 +169,7 @@ export default function ServiceQueuePage() {
       const userData = localStorage.getItem('swamicare_user')
       const user = userData ? JSON.parse(userData) : null
 
-      const { data, error } = await supabase
+      const { error } = await supabase
         .from('service_requests')
         .insert([{
           patient_id: selectedPatient,
