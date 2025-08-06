@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { createClient } from '@/lib/supabase/client'
-import type { Appointment, AppointmentStatus, UserProfile } from '@/lib/types'
+import type { Appointment, AppointmentStatus, AppointmentType, UserProfile } from '@/lib/types'
 
 interface AppointmentCalendarProps {
   appointments?: Appointment[]
@@ -78,11 +78,12 @@ const fetchDoctors = async (): Promise<UserProfile[]> => {
   return (data as DoctorData[]).map((doctor: DoctorData) => ({
     id: doctor.id,
     full_name: doctor.full_name,
-    role: doctor.role as const,
+    role: doctor.role as 'admin' | 'doctor' | 'receptionist' | 'attendant' | 'service_attendant' | 'pharmacist',
     department: doctor.department || 'general',
-    specialization: doctor.specialization || 'General Practice',
+    specialization: doctor.specialization || null,
     email: doctor.email,
-    phone: doctor.phone,
+    phone: doctor.phone || null,
+    password_hash: 'hashed_password',
     is_active: doctor.is_active,
     created_at: doctor.created_at,
     updated_at: doctor.updated_at
@@ -162,8 +163,8 @@ const fetchAppointments = async (startDate?: Date, endDate?: Date): Promise<Appo
     patient_id: apt.patient_id,
     doctor_id: apt.doctor_id,
     department: apt.department,
-    appointment_type: apt.appointment_type,
-    status: apt.status,
+    appointment_type: apt.appointment_type as AppointmentType,
+    status: apt.status as AppointmentStatus,
     scheduled_date: apt.scheduled_date,
     scheduled_time: apt.scheduled_time,
     duration: apt.duration || 30,
@@ -180,7 +181,7 @@ const fetchAppointments = async (startDate?: Date, endDate?: Date): Promise<Appo
       name: apt.patients.full_name,
       mobile: apt.patients.phone,
       dob: apt.patients.date_of_birth,
-      gender: apt.patients.gender,
+      gender: apt.patients.gender as 'male' | 'female' | 'other' | null,
       address: apt.patients.address,
       email: apt.patients.email,
       emergency_contact: apt.patients.emergency_contact_phone,
@@ -193,9 +194,10 @@ const fetchAppointments = async (startDate?: Date, endDate?: Date): Promise<Appo
       role: 'doctor' as const,
       full_name: apt.users.full_name,
       email: apt.users.email,
-      phone: apt.users.phone,
+      phone: apt.users.phone || null,
       department: apt.users.department,
-      specialization: apt.users.specialization,
+      specialization: apt.users.specialization || null,
+      password_hash: 'hashed_password',
       is_active: true,
       created_at: apt.users.created_at,
       updated_at: apt.users.updated_at

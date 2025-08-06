@@ -19,7 +19,7 @@ async function globalSetup(config: FullConfig) {
   try {
     // Wait for the development server to be ready
     console.log('⏳ Waiting for development server...')
-    const baseURL = config.use?.baseURL || 'http://localhost:3000'
+    const baseURL = (config as any).use?.baseURL || 'http://localhost:3000'
     await page.goto(baseURL)
     await page.waitForLoadState('networkidle')
     console.log('✅ Development server is ready')

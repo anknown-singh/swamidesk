@@ -35,7 +35,7 @@ export async function getCurrentUser() {
     return null
   }
 
-  const profile = profiles[0]
+  const profile = profiles[0] as UserProfile
 
   return {
     user,

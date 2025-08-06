@@ -125,8 +125,8 @@ export default function DoctorDashboard() {
       const queuePatients: QueuePatient[] = queueResult.data?.map(visit => ({
         id: visit.id,
         token_number: visit.token_number,
-        patient_name: visit.patients?.name || 'Unknown',
-        patient_mobile: visit.patients?.mobile || '',
+        patient_name: visit.patients?.[0]?.name || 'Unknown',
+        patient_mobile: visit.patients?.[0]?.mobile || '',
         checked_in_at: visit.checked_in_at,
         priority: visit.priority,
         status: visit.status

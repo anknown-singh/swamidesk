@@ -82,7 +82,7 @@ export default function PharmacyQueuePage() {
 
   const fetchPharmacyQueue = async () => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('pharmacy_queue')
         .select(`
           *,
@@ -139,7 +139,7 @@ export default function PharmacyQueuePage() {
 
   const fetchPendingPrescriptions = async () => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('prescriptions')
         .select(`
           *,

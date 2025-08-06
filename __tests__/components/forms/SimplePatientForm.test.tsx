@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
-import { expect, test, describe, vi } from 'vitest'
+import { expect, test, describe, vi, beforeEach } from 'vitest'
 import userEvent from '@testing-library/user-event'
+import React from 'react'
 import { type TestPatient } from '@/lib/test/db-seeding'
 
 // Simplified PatientForm component without complex state management

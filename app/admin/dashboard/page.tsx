@@ -44,10 +44,6 @@ export default function AdminDashboard() {
   
   const supabase = createClient()
 
-  useEffect(() => {
-    fetchDashboardData()
-  }, [fetchDashboardData])
-
   const fetchDashboardData = useCallback(async () => {
     try {
       setLoading(true)
@@ -152,7 +148,7 @@ export default function AdminDashboard() {
         const current = deptMap.get(dept) || { patients: 0, revenue: 0 }
         deptMap.set(dept, {
           patients: current.patients + 1,
-          revenue: current.revenue + (visit.invoices?.total_amount || 0)
+          revenue: current.revenue + (visit.invoices?.[0]?.total_amount || 0)
         })
       })
 
@@ -168,7 +164,7 @@ export default function AdminDashboard() {
       // Process recent activities
       const recentActivities: RecentActivity[] = activitiesResult.data?.map(invoice => ({
         id: invoice.id,
-        activity: `Invoice generated for ${invoice.visits?.patients?.name} - ₹${invoice.total_amount?.toLocaleString()}`,
+        activity: `Invoice generated for ${invoice.visits?.[0]?.patients?.[0]?.name || 'Patient'} - ₹${invoice.total_amount?.toLocaleString()}`,
         type: 'billing',
         created_at: invoice.created_at,
         amount: invoice.total_amount
@@ -183,6 +179,10 @@ export default function AdminDashboard() {
       setLoading(false)
     }
   }, [supabase])
+
+  useEffect(() => {
+    fetchDashboardData()
+  }, [fetchDashboardData])
 
   const formatCurrency = (amount: number) => {
     return `₹${amount.toLocaleString()}`
@@ -243,7 +243,7 @@ export default function AdminDashboard() {
               {loading ? (
                 <Skeleton className="h-3 w-24" />
               ) : (
-                `${stats?.monthlyGrowth >= 0 ? '+' : ''}${stats?.monthlyGrowth}% from last month`
+                `${(stats?.monthlyGrowth ?? 0) >= 0 ? '+' : ''}${stats?.monthlyGrowth ?? 0}% from last month`
               )}
             </p>
           </CardContent>
@@ -301,7 +301,7 @@ export default function AdminDashboard() {
               <Skeleton className="h-8 w-20" />
             ) : (
               <div className="text-2xl font-bold">
-                {stats?.monthlyGrowth >= 0 ? '+' : ''}{stats?.monthlyGrowth}%
+                {(stats?.monthlyGrowth ?? 0) >= 0 ? '+' : ''}{stats?.monthlyGrowth ?? 0}%
               </div>
             )}
             <p className="text-xs text-muted-foreground">

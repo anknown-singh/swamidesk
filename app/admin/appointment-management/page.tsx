@@ -15,7 +15,7 @@ import {
 import { AppointmentStatusManager } from '@/components/appointments/appointment-status-manager'
 import { AppointmentConfirmation } from '@/components/appointments/appointment-confirmation'
 import { createClient } from '@/lib/supabase/client'
-import type { Appointment, AppointmentStatus } from '@/lib/types'
+import type { Appointment, AppointmentStatus, AppointmentType } from '@/lib/types'
 
 // Dynamic data fetching - no more mock data needed
 
@@ -121,11 +121,12 @@ export default function AdminAppointmentManagementPage() {
         doctor: apt.users ? {
           id: apt.users.id,
           role: 'doctor' as const,
-          name: apt.users.full_name,
+          full_name: apt.users.full_name,
           email: apt.users.email,
           phone: apt.users.phone,
           department: apt.users.department,
           specialization: apt.users.specialization,
+          password_hash: 'hashed_password',
           is_active: true,
           created_at: apt.users.created_at,
           updated_at: apt.users.updated_at
@@ -519,7 +520,7 @@ export default function AdminAppointmentManagementPage() {
                           <Badge>{appointment.status}</Badge>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {appointment.doctor?.name} • {appointment.scheduled_time}
+                          {appointment.doctor?.full_name} • {appointment.scheduled_time}
                         </div>
                       </div>
                     </div>

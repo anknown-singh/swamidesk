@@ -137,6 +137,7 @@ const mockAppointments: Appointment[] = [
       phone: '+91-9876543220',
       department: 'general',
       specialization: 'Internal Medicine',
+      password_hash: 'hashed_password',
       is_active: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -181,6 +182,7 @@ const mockAppointments: Appointment[] = [
       phone: '+91-9876543221',
       department: 'cardiology',
       specialization: 'Cardiology',
+      password_hash: 'hashed_password',
       is_active: true,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString()
@@ -339,7 +341,7 @@ export function AppointmentConfirmation({
         <CardContent className="p-4">
           <div className="flex items-center gap-4">
             <Label>Filter:</Label>
-            <Select value={filterStatus} onValueChange={(value: string) => setFilterStatus(value)}>
+            <Select value={filterStatus} onValueChange={(value: string) => setFilterStatus(value as 'all' | 'confirmed' | 'unconfirmed')}>
               <SelectTrigger className="w-48">
                 <SelectValue />
               </SelectTrigger>

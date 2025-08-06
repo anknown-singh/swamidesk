@@ -81,11 +81,11 @@ export default function AttendantDashboard() {
         .filter(service => service.status !== 'completed')
         .map(service => ({
           id: service.id,
-          patient_name: service.visits?.patients?.name || 'Unknown',
-          service_name: service.services?.name || 'Unknown Service',
+          patient_name: service.visits?.[0]?.patients?.[0]?.name || 'Unknown',
+          service_name: service.services?.[0]?.name || 'Unknown Service',
           status: service.status,
-          priority: service.visits?.priority || false,
-          visit_id: service.visits?.id || ''
+          priority: service.visits?.[0]?.priority || false,
+          visit_id: service.visits?.[0]?.id || ''
         }))
 
       setServices(serviceItems.slice(0, 3))

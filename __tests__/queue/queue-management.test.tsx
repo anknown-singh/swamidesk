@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, fireEvent, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import React from 'react'
 import { createSupabaseMock } from '../utils/supabase-mock'
 import { createMockVisit, createMockPatient } from '../utils/test-helpers'
 import type { Visit, Patient } from '@/lib/types'

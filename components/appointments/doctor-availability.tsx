@@ -60,6 +60,7 @@ const mockDoctors: UserProfile[] = [
     phone: '+91-9876543210',
     department: 'general',
     specialization: 'Internal Medicine',
+    password_hash: 'hashed_password',
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -72,6 +73,7 @@ const mockDoctors: UserProfile[] = [
     phone: '+91-9876543211',
     department: 'cardiology',
     specialization: 'Cardiology',
+    password_hash: 'hashed_password',
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -84,6 +86,7 @@ const mockDoctors: UserProfile[] = [
     phone: '+91-9876543212',
     department: 'dermatology',
     specialization: 'Dermatology',
+    password_hash: 'hashed_password',
     is_active: true,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString()
@@ -508,7 +511,7 @@ export function DoctorAvailabilityManagement({
                     <Label htmlFor="leave_type">Leave Type *</Label>
                     <Select 
                       value={leaveForm.leave_type} 
-                      onValueChange={(value: string) => setLeaveForm({...leaveForm, leave_type: value})}
+                      onValueChange={(value: string) => setLeaveForm({...leaveForm, leave_type: value as 'vacation' | 'sick' | 'conference' | 'emergency' | 'other'})}
                     >
                       <SelectTrigger>
                         <SelectValue />

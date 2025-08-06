@@ -167,7 +167,7 @@ export function PatientAppointmentBooking({
         phone: doc.phone,
         department: doc.department || 'general',
         specialization: doc.specialization || 'General Practice',
-        password_hash: doc.password_hash,
+        password_hash: doc.password_hash || 'hashed_password',
         is_active: doc.is_active,
         created_at: doc.created_at,
         updated_at: doc.updated_at

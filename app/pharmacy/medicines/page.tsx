@@ -60,7 +60,7 @@ export default function MedicinesPage() {
 
   const fetchMedicines = async () => {
     try {
-      const { error } = await supabase
+      const { data, error } = await supabase
         .from('medicines')
         .select('*')
         .order('name', { ascending: true })

@@ -22,7 +22,7 @@ describe('Authentication Flows Integration Tests', () => {
       
       roles.forEach(role => {
         const user = TEST_USERS[role]
-        const result = mockAuthFlow.signIn(user.email, 'password123')
+        const result = mockAuthFlow.signIn(user.email || '', 'password123')
         
         expect(result.error).toBeNull()
         expect(result.data.user).toEqual(user)
@@ -39,7 +39,7 @@ describe('Authentication Flows Integration Tests', () => {
         const user = TEST_USERS[role]
         
         // Test wrong password
-        const wrongPasswordResult = mockAuthFlow.signIn(user.email, 'wrongpassword')
+        const wrongPasswordResult = mockAuthFlow.signIn(user.email || '', 'wrongpassword')
         expect(wrongPasswordResult.error).toEqual({ message: 'Invalid credentials' })
         expect(wrongPasswordResult.data.user).toBeNull()
         expect(wrongPasswordResult.data.session).toBeNull()

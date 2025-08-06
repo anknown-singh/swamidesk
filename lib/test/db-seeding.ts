@@ -29,6 +29,7 @@ export interface TestQueueEntry {
   created_at: string
   updated_at: string
   estimated_time?: number
+  [key: string]: unknown
 }
 
 export interface TestConsultation {

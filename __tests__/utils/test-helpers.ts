@@ -4,14 +4,18 @@
 
 import { vi } from 'vitest'
 
-export const createMockAppointmentBookingForm = () => {
+export const createMockAppointmentBookingForm = (overrides: any = {}) => {
   return {
-    patientId: 'patient-123',
-    doctorId: 'doctor-456',
-    appointmentDate: '2025-08-07',
-    appointmentTime: '10:00',
+    patient_id: 'patient-123',
+    doctor_id: 'doctor-456',
     department: 'ENT',
-    notes: 'Regular checkup'
+    appointment_type: 'consultation',
+    scheduled_date: '2025-08-07',
+    scheduled_time: '10:00',
+    duration: 30,
+    priority: false,
+    notes: 'Regular checkup',
+    ...overrides
   }
 }
 
@@ -120,6 +124,71 @@ export const createMockDoctor = (overrides: any = {}) => {
     specialization: 'ENT Specialist',
     password_hash: 'hashed_password',
     is_active: true,
+    created_at: '2025-01-01T00:00:00.000Z',
+    updated_at: '2025-01-01T00:00:00.000Z',
+    ...overrides
+  }
+}
+
+export const createMockVisit = (overrides: any = {}) => {
+  return {
+    id: 'visit-123',
+    patient_id: 'patient-123',
+    doctor_id: 'doctor-456',
+    token_number: 1,
+    department: 'ENT',
+    visit_date: '2025-08-07',
+    status: 'waiting' as const,
+    consultation_notes: '',
+    diagnosis: '',
+    opd_charge: 500,
+    priority: false,
+    checked_in_at: '2025-08-07T09:00:00.000Z',
+    consultation_started_at: null,
+    consultation_ended_at: null,
+    created_at: '2025-08-07T09:00:00.000Z',
+    updated_at: '2025-08-07T09:00:00.000Z',
+    patient: {
+      id: 'patient-123',
+      name: 'John Doe',
+      mobile: '+91-9876543210',
+      dob: '1990-01-01',
+      gender: 'male' as const,
+      address: '123 Main St',
+      email: 'john@example.com',
+      emergency_contact: '+91-9876543211',
+      created_by: 'user-1',
+      created_at: '2025-01-01T00:00:00.000Z',
+      updated_at: '2025-01-01T00:00:00.000Z'
+    },
+    doctor: {
+      id: 'doctor-456',
+      role: 'doctor' as const,
+      full_name: 'Dr. Smith',
+      email: 'doctor@example.com',
+      phone: '+91-9876543210',
+      department: 'ENT',
+      specialization: 'ENT Specialist',
+      password_hash: 'hashed_password',
+      is_active: true,
+      created_at: '2025-01-01T00:00:00.000Z',
+      updated_at: '2025-01-01T00:00:00.000Z'
+    },
+    ...overrides
+  }
+}
+
+export const createMockPatient = (overrides: any = {}) => {
+  return {
+    id: 'patient-123',
+    name: 'John Doe',
+    mobile: '+91-9876543210',
+    dob: '1990-01-01',
+    gender: 'male' as const,
+    address: '123 Main St',
+    email: 'john@example.com',
+    emergency_contact: '+91-9876543211',
+    created_by: 'user-1',
     created_at: '2025-01-01T00:00:00.000Z',
     updated_at: '2025-01-01T00:00:00.000Z',
     ...overrides

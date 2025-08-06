@@ -110,8 +110,8 @@ export default function ReportsPage() {
       // Top doctors
       const doctorVisits: { [key: string]: { name: string; visits: number } } = {}
       visitsResult.data?.forEach(visit => {
-        if (visit.users?.full_name) {
-          const doctorName = visit.users.full_name
+        if (visit.users?.[0]?.full_name) {
+          const doctorName = visit.users[0].full_name
           if (!doctorVisits[doctorName]) {
             doctorVisits[doctorName] = { name: doctorName, visits: 0 }
           }
@@ -142,7 +142,7 @@ export default function ReportsPage() {
       const medicineCount: { [key: string]: { name: string; quantity: number } } = {}
       prescriptionsResult.data?.forEach(prescription => {
         prescription.prescription_items?.forEach(item => {
-          const medicineName = item.medicines?.name
+          const medicineName = item.medicines?.[0]?.name
           if (medicineName) {
             if (!medicineCount[medicineName]) {
               medicineCount[medicineName] = { name: medicineName, quantity: 0 }
@@ -183,8 +183,8 @@ export default function ReportsPage() {
   const generateCSV = (data: unknown[], filename: string) => {
     if (data.length === 0) return
     
-    const headers = Object.keys(data[0]).join(',')
-    const rows = data.map(row => Object.values(row).join(',')).join('\n')
+    const headers = Object.keys(data[0] as Record<string, unknown>).join(',')
+    const rows = (data as Record<string, unknown>[]).map(row => Object.values(row).join(',')).join('\n')
     const csv = `${headers}\n${rows}`
     
     const blob = new Blob([csv], { type: 'text/csv' })

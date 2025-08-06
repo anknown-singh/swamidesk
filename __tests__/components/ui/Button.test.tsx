@@ -1,6 +1,7 @@
 import { render, screen } from '@testing-library/react'
-import { expect, test, describe } from 'vitest'
+import { expect, test, describe, vi } from 'vitest'
 import userEvent from '@testing-library/user-event'
+import React from 'react'
 import { Button } from '@/components/ui/button'
 
 describe('Button Component', () => {

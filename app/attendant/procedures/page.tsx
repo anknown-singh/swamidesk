@@ -50,6 +50,8 @@ export default function ProceduresPage() {
   const [patients, setPatients] = useState<Patient[]>([])
   const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(true)
+  
+  const supabase = createClient()
   const [showForm, setShowForm] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
   const [filterStatus, setFilterStatus] = useState<string>('all')
@@ -136,18 +138,6 @@ export default function ProceduresPage() {
     }
   }, [])
 
-  useEffect(() => {
-    fetchProcedures()
-    fetchPatients()
-    fetchProcedureConfiguration()
-  }, [fetchProcedures, fetchPatients, fetchProcedureConfiguration])
-
-  useEffect(() => {
-    if (selectedPatient) {
-      fetchPatientVisits(selectedPatient)
-    }
-  }, [selectedPatient, fetchPatientVisits])
-
   const fetchProcedures = useCallback(async () => {
     const supabase = createClient()
     try {
@@ -226,7 +216,25 @@ export default function ProceduresPage() {
         .limit(10)
 
       if (error) throw error
-      setVisits(data || [])
+      
+      // Map the data to the correct Visit structure
+      interface VisitData {
+        id: string
+        patient_id: string
+        visit_number: string
+        visit_date: string
+        created_at: string
+        patients?: { id: string; full_name: string; phone: string }[]
+        users?: { id: string; full_name: string }[]
+        visit_procedures?: unknown[]
+      }
+      const mappedVisits = (data as any[] || []).map((visit: any) => ({
+        ...visit,
+        patient: visit.patients?.[0], // Convert patients array to single patient
+        doctor: visit.users?.[0] // Convert users array to single doctor
+      })) as Visit[]
+      
+      setVisits(mappedVisits)
     } catch (error) {
       console.error('Error fetching patient visits:', error)
       setVisits([])

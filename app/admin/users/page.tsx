@@ -173,10 +173,10 @@ export default function UsersPage() {
         const updateData: Partial<User> & { updated_by?: string } = {
           full_name: formData.full_name,
           phone: formData.phone,
-          role: formData.role,
+          role: formData.role as "admin" | "doctor" | "receptionist" | "attendant" | "pharmacist",
           department: formData.department,
           employee_id: formData.employee_id,
-          hire_date: formData.hire_date || null,
+          hire_date: formData.hire_date || undefined,
           updated_by: currentUser?.id
         }
 
@@ -673,7 +673,7 @@ export default function UsersPage() {
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => resetUserPassword(user.id, user.email)}
+                        onClick={() => resetUserPassword(user.id)}
                       >
                         Reset Password
                       </Button>

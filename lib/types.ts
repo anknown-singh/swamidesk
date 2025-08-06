@@ -484,6 +484,7 @@ export interface DoctorAvailabilityForm {
   max_appointments?: number
   appointment_duration: number
   buffer_time: number
+  [key: string]: unknown
 }
 
 export interface DoctorLeaveForm {
@@ -495,6 +496,7 @@ export interface DoctorLeaveForm {
   end_time?: string
   reason?: string
   is_recurring: boolean
+  [key: string]: unknown
 }
 
 export interface WaitlistEntryForm {

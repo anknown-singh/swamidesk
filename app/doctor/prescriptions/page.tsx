@@ -156,7 +156,22 @@ export default function PrescriptionsPage() {
         .order('visit_date', { ascending: false })
 
       if (error) throw error
-      setRecentVisits(data || [])
+      
+      // Map the data to the correct Visit structure  
+      interface VisitData {
+        id: string
+        patient_id: string
+        visit_number: string
+        visit_date: string
+        created_at: string
+        patients?: { id: string; full_name: string; phone: string }[]
+      }
+      const mappedVisits = (data as any[] || []).map((visit: any) => ({
+        ...visit,
+        patient: visit.patients?.[0] // Convert patients array to single patient
+      })) as Visit[]
+      
+      setRecentVisits(mappedVisits)
     } catch (error) {
       console.error('Error fetching recent visits:', error)
     }

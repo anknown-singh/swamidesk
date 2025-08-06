@@ -299,7 +299,7 @@ export default function AdminBillingPage() {
               <option value="all">All Payment Methods</option>
               <option value="none">No Payment Method</option>
               {paymentMethods.map((method) => (
-                <option key={method} value={method}>
+                <option key={method} value={method || ''}>
                   {method}
                 </option>
               ))}

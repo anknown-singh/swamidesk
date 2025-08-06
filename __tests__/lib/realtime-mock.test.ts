@@ -63,13 +63,15 @@ describe('Real-time Mocking Infrastructure', () => {
       expect(callback).toHaveBeenCalledWith(payload)
     })
 
-    test('handles subscription callback', (done) => {
+    test('handles subscription callback', async () => {
       const channel = new MockRealtimeChannel('test-topic')
       
-      channel.subscribe((status, error) => {
-        expect(status).toBe('SUBSCRIBED')
-        expect(error).toBeNull()
-        done()
+      return new Promise<void>((resolve) => {
+        channel.subscribe((status, error) => {
+          expect(status).toBe('SUBSCRIBED')
+          expect(error).toBeNull()
+          resolve()
+        })
       })
     })
   })

@@ -100,15 +100,15 @@ export default function PharmacyDashboard() {
           id: string
           priority?: boolean
           created_at: string
-          patients?: { full_name: string } | null
-          users?: { full_name: string } | null
+          patients?: { full_name: string }[] | null
+          users?: { full_name: string }[] | null
           prescription_items?: { id: string }[] | null
         }
-        const mappedQueue = (queueData as QueueDataItem[]).map((item: QueueDataItem) => ({
+        const mappedQueue = (queueData as any[] || []).map((item: any) => ({
           id: item.id,
-          patient_name: item.patients?.full_name || 'Unknown Patient',
+          patient_name: item.patients?.[0]?.full_name || 'Unknown Patient',
           medicine_count: item.prescription_items?.length || 0,
-          doctor_name: item.users?.full_name || 'Unknown Doctor',
+          doctor_name: item.users?.[0]?.full_name || 'Unknown Doctor',
           priority: item.priority || false,
           created_at: item.created_at
         }))
@@ -133,11 +133,11 @@ export default function PharmacyDashboard() {
           id: string
           quantity: number
           min_level: number
-          medicines?: { name: string } | null
+          medicines?: { name: string }[] | null
         }
-        const mappedStock = (stockData as StockDataItem[]).map((item: StockDataItem) => ({
+        const mappedStock = (stockData as any[] || []).map((item: any) => ({
           id: item.id,
-          medicine_name: item.medicines?.name || 'Unknown Medicine',
+          medicine_name: item.medicines?.[0]?.name || 'Unknown Medicine',
           current_stock: item.quantity || 0,
           min_level: item.min_level || 0,
           is_critical: item.quantity <= (item.min_level * 0.3)

@@ -16,7 +16,7 @@ import {
 } from 'lucide-react'
 import { AppointmentStatusManager } from '@/components/appointments/appointment-status-manager'
 import { AppointmentConfirmation } from '@/components/appointments/appointment-confirmation'
-import type { Appointment, AppointmentStatus } from '@/lib/types'
+import type { Appointment, AppointmentStatus, AppointmentType } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 
 // Dynamic data fetching - no more mock data needed
@@ -28,6 +28,8 @@ export default function AppointmentManagementPage() {
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | 'all'>('all')
   const [activeView, setActiveView] = useState<'status' | 'confirmations'>('status')
   const [loading, setLoading] = useState(true)
+  
+  const supabase = createClient()
   
   // Fetch appointments from database
   const fetchAppointments = useCallback(async () => {
@@ -94,8 +96,8 @@ export default function AppointmentManagementPage() {
         patient_id: apt.patient_id,
         doctor_id: apt.doctor_id,
         department: apt.department,
-        appointment_type: apt.appointment_type,
-        status: apt.status,
+        appointment_type: apt.appointment_type as AppointmentType,
+        status: apt.status as AppointmentStatus,
         scheduled_date: apt.scheduled_date,
         scheduled_time: apt.scheduled_time,
         duration: apt.duration || 30,
@@ -113,7 +115,7 @@ export default function AppointmentManagementPage() {
           name: apt.patients.full_name,
           mobile: apt.patients.phone,
           dob: apt.patients.date_of_birth,
-          gender: apt.patients.gender,
+          gender: apt.patients.gender as 'male' | 'female' | 'other' | null,
           address: apt.patients.address,
           email: apt.patients.email,
           emergency_contact: apt.patients.emergency_contact_phone,
@@ -124,11 +126,12 @@ export default function AppointmentManagementPage() {
         doctor: apt.users ? {
           id: apt.users.id,
           role: 'doctor' as const,
-          name: apt.users.full_name,
+          full_name: apt.users.full_name,
           email: apt.users.email,
-          phone: apt.users.phone,
-          department: apt.users.department,
-          specialization: apt.users.specialization,
+          phone: apt.users.phone || null,
+          department: apt.users.department || null,
+          specialization: apt.users.specialization || null,
+          password_hash: 'hashed_password',
           is_active: true,
           created_at: apt.users.created_at,
           updated_at: apt.users.updated_at
@@ -150,8 +153,8 @@ export default function AppointmentManagementPage() {
   // Filter appointments based on search and status
   const filteredAppointments = appointments.filter(appointment => {
     const matchesSearch = !searchTerm || 
-      appointment.patient?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      appointment.doctor?.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      appointment.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      appointment.doctor?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       appointment.title?.toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesStatus = statusFilter === 'all' || appointment.status === statusFilter
@@ -451,7 +454,7 @@ export default function AppointmentManagementPage() {
                             </div>
                             <div className="text-sm text-muted-foreground">
                               <UserIcon className="h-3 w-3 inline mr-1" />
-                              {appointment.doctor?.name}
+                              {appointment.doctor?.full_name}
                             </div>
                             <div className="text-sm text-muted-foreground">
                               <CalendarIcon className="h-3 w-3 inline mr-1" />
