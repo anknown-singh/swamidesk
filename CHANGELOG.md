@@ -5,6 +5,15 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.3.2](https://github.com/anknown-singh/swamidesk/compare/v1.3.1...v1.3.2) (2025-08-06)
+
+
+### Bug Fixes
+
+* correct user_role enum to use service_attendant instead of attendant ([524fab0](https://github.com/anknown-singh/swamidesk/commit/524fab040c422ca2b8cd184a1b089b71ad4c21f5))
+* normalize service_attendant role to attendant in login routing ([3c76863](https://github.com/anknown-singh/swamidesk/commit/3c76863ef6e9b4a41d40f56f4262335c3d88f006))
+* update all user_profiles table references to users table ([007f20d](https://github.com/anknown-singh/swamidesk/commit/007f20d5229a602f2fd806635d629ad78531ff29))
+
 ## [1.3.1](https://github.com/anknown-singh/swamidesk/compare/v1.3.0...v1.3.1) (2025-08-06)
 
 
