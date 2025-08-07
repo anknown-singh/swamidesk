@@ -5,6 +5,23 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.6.0](https://github.com/anknown-singh/swamidesk/compare/v1.5.5...v1.6.0) (2025-08-07)
+
+
+### Features
+
+* add appointment navigation for all user roles ([fb4b39b](https://github.com/anknown-singh/swamidesk/commit/fb4b39b25db16bcdb5db877343139dd450a3e4f4))
+* complete appointment management system for all roles ([9821c95](https://github.com/anknown-singh/swamidesk/commit/9821c95c8f588a50f4d34baae0df0375d8db6a82))
+* comprehensive uuid validation fixes across all roles ([b5c4e61](https://github.com/anknown-singh/swamidesk/commit/b5c4e61e9b5527fa893aa297d891fdfe5eedda73))
+
+
+### Bug Fixes
+
+* comprehensive database permissions and error handling for appointments ([ebd9eec](https://github.com/anknown-singh/swamidesk/commit/ebd9eec64c720ba6da6b67f4c9ba57a10076105d))
+* postgrest relationship ambiguity and database permissions ([8cb52a9](https://github.com/anknown-singh/swamidesk/commit/8cb52a99b2deb6177f03e0f7b3c157b1d0d1461e))
+* replace invalid uuid in appointment creation ([f1eb9d3](https://github.com/anknown-singh/swamidesk/commit/f1eb9d3fbd7e69c825f8a3c7c13f86685bf27ea5))
+* resolve appointment insertion permissions with proper rls policies ([ca9bc00](https://github.com/anknown-singh/swamidesk/commit/ca9bc002dd1eb8233590f2b9ee99c006bce4e12c))
+
 ## [1.5.5](https://github.com/anknown-singh/swamidesk/compare/v1.5.4...v1.5.5) (2025-08-06)
 
 
