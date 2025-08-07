@@ -254,7 +254,15 @@ export default function AdminAppointmentsPage() {
       alert('Appointment created successfully!')
     } catch (error) {
       console.error('Error creating appointment:', error)
-      alert('Error creating appointment. Please try again.')
+      
+      // Enhanced error reporting for debugging
+      if (error && typeof error === 'object' && 'message' in error) {
+        const errorMessage = (error as { message: string }).message
+        console.error('Detailed error:', errorMessage)
+        alert(`Error creating appointment: ${errorMessage}. Please check browser console for details.`)
+      } else {
+        alert('Error creating appointment. Please check browser console for details.')
+      }
     }
   }
 
