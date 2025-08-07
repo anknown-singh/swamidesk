@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -228,11 +228,21 @@ export default function ProceduresPage() {
         users?: { id: string; full_name: string }[]
         visit_procedures?: unknown[]
       }
-      const mappedVisits = (data as any[] || []).map((visit: any) => ({
+      interface RawVisit {
+        id: string
+        patient_id: string
+        doctor_id: string
+        visit_date: string
+        created_at: string
+        patients?: { id: string; full_name: string; phone: string }[]
+        users?: { id: string; full_name: string }[]
+        visit_procedures?: unknown[]
+      }
+      const mappedVisits = (data as unknown as RawVisit[] || []).map((visit: RawVisit) => ({
         ...visit,
         patient: visit.patients?.[0], // Convert patients array to single patient
         doctor: visit.users?.[0] // Convert users array to single doctor
-      })) as Visit[]
+      })) as unknown as Visit[]
       
       setVisits(mappedVisits)
     } catch (error) {

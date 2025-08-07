@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { CalendarIcon, PlusIcon, FilterIcon, SearchIcon, TrendingUpIcon, ClockIcon } from 'lucide-react'
+import { CalendarIcon, PlusIcon, FilterIcon, SearchIcon, ClockIcon } from 'lucide-react'
 import { AppointmentCalendar } from '@/components/appointments/appointment-calendar'
 import { AppointmentBookingForm } from '@/components/appointments/appointment-booking-form'
 import { createClient } from '@/lib/supabase/client'

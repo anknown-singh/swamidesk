@@ -434,7 +434,7 @@ export const createMockSupabaseWithData = () => {
     from: vi.fn((table: string) => {
       const mockQuery = {
         select: vi.fn(() => {
-          let data: any[] = []
+          let data: unknown[] = []
           
           switch (table) {
             case 'patients':
@@ -463,12 +463,12 @@ export const createMockSupabaseWithData = () => {
           }
         }),
 
-        insert: vi.fn((newData: any) => ({
+        insert: vi.fn((newData: unknown) => ({
           data: Array.isArray(newData) ? newData : [newData],
           error: null
         })),
 
-        update: vi.fn((updates: any) => ({
+        update: vi.fn((updates: unknown) => ({
           data: [updates],
           error: null
         })),
@@ -478,11 +478,11 @@ export const createMockSupabaseWithData = () => {
           error: null
         })),
 
-        eq: vi.fn((column: string, value: any) => mockQuery),
-        in: vi.fn((column: string, values: any[]) => mockQuery),
-        gte: vi.fn((column: string, value: any) => mockQuery),
-        lte: vi.fn((column: string, value: any) => mockQuery),
-        ilike: vi.fn((column: string, value: any) => mockQuery),
+        eq: vi.fn((column: string, value: unknown) => mockQuery),
+        in: vi.fn((column: string, values: unknown[]) => mockQuery),
+        gte: vi.fn((column: string, value: unknown) => mockQuery),
+        lte: vi.fn((column: string, value: unknown) => mockQuery),
+        ilike: vi.fn((column: string, value: unknown) => mockQuery),
         order: vi.fn((column: string) => mockQuery),
         limit: vi.fn((count: number) => mockQuery),
         single: vi.fn(() => mockQuery)

@@ -13,8 +13,7 @@ import {
   StethoscopeIcon,
   PlusIcon,
   FilterIcon,
-  RefreshCwIcon,
-  WifiIcon
+  RefreshCwIcon
 } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { createClient } from '@/lib/supabase/client'

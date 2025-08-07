@@ -41,7 +41,7 @@ export function useUser() {
     )
 
     return () => subscription.unsubscribe()
-  }, [supabase.auth])
+  }, [supabase, supabase.auth])
 
   return { user, loading }
 }

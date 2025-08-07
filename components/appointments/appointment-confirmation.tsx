@@ -20,7 +20,7 @@ import {
   UserIcon,
   SendIcon
 } from 'lucide-react'
-import type { Appointment, AppointmentReminder } from '@/lib/types'
+import type { Appointment } from '@/lib/types'
 
 interface AppointmentConfirmationProps {
   appointments?: Appointment[]

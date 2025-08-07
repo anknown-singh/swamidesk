@@ -144,10 +144,18 @@ export default function TreatmentPlansPage() {
         created_at: string
         patients?: { id: string; full_name: string; phone: string }[]
       }
-      const mappedVisits = (data as any[] || []).map((visit: any) => ({
+      interface RawVisit {
+        id: string
+        patient_id: string
+        doctor_id: string
+        visit_date: string
+        created_at: string
+        patients?: { id: string; full_name: string; phone: string }[]
+      }
+      const mappedVisits = (data as unknown as RawVisit[] || []).map((visit: RawVisit) => ({
         ...visit,
         patient: visit.patients?.[0] // Convert patients array to single patient
-      })) as Visit[]
+      })) as unknown as Visit[]
       
       setRecentVisits(mappedVisits)
     } catch (error) {

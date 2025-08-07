@@ -2,6 +2,8 @@
  * UUID utilities for consistent UUID handling across the application
  */
 
+import type { SupabaseClient } from '@supabase/supabase-js'
+
 /**
  * Generates a valid v4 UUID
  */
@@ -35,7 +37,7 @@ export function ensureValidUUID(uuid?: string | null): string {
 /**
  * Gets current user ID from Supabase or returns a valid fallback UUID
  */
-export async function getCurrentUserIdOrFallback(supabase: any): Promise<string> {
+export async function getCurrentUserIdOrFallback(supabase: SupabaseClient): Promise<string> {
   try {
     const { data: { user } } = await supabase.auth.getUser();
     return ensureValidUUID(user?.id);
