@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
+import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
 
 const PatientAppointmentBooking = dynamic(
   () => import('@/components/appointments/patient-appointment-booking').then(mod => ({ default: mod.PatientAppointmentBooking })),
@@ -18,27 +19,44 @@ export default function BookAppointmentPage() {
   const [isSubmitted, setIsSubmitted] = useState(false)
   const [submittedData, setSubmittedData] = useState<AppointmentBookingForm | null>(null)
 
-  const handleSubmit = (data: AppointmentBookingForm) => {
+  const handleSubmit = async (data: AppointmentBookingForm) => {
     console.log('Appointment booking submitted:', data)
     
-    // Here you would typically submit to your API
-    // For now, we'll just simulate success
-    setSubmittedData(data)
-    setIsSubmitted(true)
-    
-    // In a real app, you'd make an API call like:
-    // try {
-    //   const response = await fetch('/api/appointments/book', {
-    //     method: 'POST',
-    //     headers: { 'Content-Type': 'application/json' },
-    //     body: JSON.stringify(data)
-    //   })
-    //   if (response.ok) {
-    //     setIsSubmitted(true)
-    //   }
-    // } catch (error) {
-    //   console.error('Booking failed:', error)
-    // }
+    try {
+      const supabase = createAuthenticatedClient()
+      
+      // Save appointment with 'pending' status for admin approval
+      const { error } = await supabase
+        .from('appointments')
+        .insert([{
+          patient_id: data.patient_id || null,
+          doctor_id: data.doctor_id,
+          department: data.department,
+          appointment_type: data.appointment_type,
+          scheduled_date: data.scheduled_date,
+          scheduled_time: data.scheduled_time,
+          duration: data.duration || 30,
+          title: data.title || 'Patient Appointment Request',
+          priority: data.priority || false,
+          status: 'pending', // Set to pending for admin approval
+          patient_notes: data.patient_notes || null,
+          estimated_cost: data.estimated_cost || null
+        }])
+
+      if (error) {
+        console.error('❌ Error creating appointment:', error)
+        alert('Error submitting appointment request. Please try again.')
+        return
+      }
+
+      console.log('✅ Patient appointment request submitted successfully')
+      setSubmittedData(data)
+      setIsSubmitted(true)
+
+    } catch (error) {
+      console.error('Error booking appointment:', error)
+      alert('Error submitting appointment request. Please try again.')
+    }
   }
 
   const handleCancel = () => {
@@ -56,9 +74,9 @@ export default function BookAppointmentPage() {
             </div>
             
             <div className="space-y-2">
-              <h1 className="text-2xl font-bold text-green-900">Appointment Booked Successfully!</h1>
+              <h1 className="text-2xl font-bold text-green-900">Appointment Request Submitted!</h1>
               <p className="text-muted-foreground">
-                Your appointment request has been submitted and is being processed.
+                Your appointment request has been submitted and is pending approval from our team.
               </p>
             </div>
 
@@ -91,9 +109,10 @@ export default function BookAppointmentPage() {
             <div className="space-y-4">
               <h3 className="font-medium">What&apos;s Next?</h3>
               <div className="text-sm text-muted-foreground space-y-2">
-                <p>✓ You will receive a confirmation SMS and email shortly</p>
-                <p>✓ Our team will contact you within 2 hours to confirm your appointment</p>
-                <p>✓ Please arrive 15 minutes before your scheduled time</p>
+                <p>⏳ Your request is being reviewed by our medical team</p>
+                <p>✓ We will contact you within 4 hours to confirm your appointment</p>
+                <p>✓ You will receive confirmation via SMS and email once approved</p>
+                <p>✓ Please arrive 15 minutes before your confirmed appointment time</p>
                 <p>✓ Bring a valid ID and any relevant medical documents</p>
               </div>
             </div>

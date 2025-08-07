@@ -1,39 +1,86 @@
-# SwamiCare Documentation
+# Swamidesk Documentation
 
-## 📁 Documentation Structure
+This directory contains all project documentation organized for easy access.
 
-### 🗄️ `/database/`
-SQL scripts and database setup files from development:
-- `CLEAN_FRESH_SETUP.sql` - Final working database schema
-- `SAFE_DATABASE_SETUP.sql` - Original safe database setup script
-- Various troubleshooting SQL scripts used during development
+## 📁 Directory Structure
 
-### ⚙️ `/setup/`
-Setup guides and configuration documentation:
-- `CLOUD_SETUP_GUIDE.md` - Supabase cloud setup instructions
-- `VERCEL_SETUP.md` - Vercel deployment guide
-- `TESTING_GUIDE.md` - Testing procedures
-- Various setup and configuration guides
+### `client-presentation/` - Client-Ready Documentation
+- **CLIENT_PRESENTATION.html** - Interactive HTML presentation with navigation
+- **CLIENT_PDF_DOCUMENT.html** - PDF-optimized comprehensive documentation  
+- **QUICK_REFERENCE_GUIDES.html** - Role-based quick reference cards
 
-### 🔧 `/troubleshooting/`
-Development progress and troubleshooting documentation:
-- `SUCCESS_REPORT.md` - Final success status
-- `TESTING_COMPLETE.md` - Testing completion report
-- Various progress and status reports from development
+### `workflow-documentation/` - Technical Documentation
+- **PATIENT_JOURNEY_WORKFLOW.md** - Complete workflow guide (380+ lines)
+- **WORKFLOW_IMPLEMENTATION_COMPLETE.md** - Implementation summary
 
-## 🚀 Quick Start
+### `database/` - Database Scripts and Schema
+- Production database setup scripts
+- Migration files and schema definitions
+- Sample data insertion scripts
 
-For production setup, refer to:
-1. `/setup/CLOUD_SETUP_GUIDE.md` - Database setup
-2. `/setup/VERCEL_SETUP.md` - Deployment
-3. `/database/CLEAN_FRESH_SETUP.sql` - Database schema
+### `deployment/` - Deployment Guides
+- Production deployment instructions
+- Environment setup guides
+
+### `setup/` - Project Setup Documentation
+- Testing setup guides
+- Cloud platform configuration
+- Troubleshooting guides
+
+## 🌐 Accessing Client Documentation
+
+### Option 1: Direct File Access
+Open any HTML file directly in your browser:
+- `client-presentation/CLIENT_PRESENTATION.html`
+- `client-presentation/CLIENT_PDF_DOCUMENT.html`
+- `client-presentation/QUICK_REFERENCE_GUIDES.html`
+
+### Option 2: Local Web Server (Currently Running)
+Access via: http://localhost:8080/
+
+Available URLs:
+- **Interactive Presentation**: http://localhost:8080/CLIENT_PRESENTATION.html
+- **PDF Document**: http://localhost:8080/CLIENT_PDF_DOCUMENT.html  
+- **Quick Reference**: http://localhost:8080/QUICK_REFERENCE_GUIDES.html
+
+### Option 3: Print to PDF
+1. Open any HTML file in your browser
+2. Press Ctrl+P (Cmd+P on Mac)
+3. Select "Save as PDF" or "Print to PDF"
+4. Choose appropriate settings and save
+
+## 📋 Client Presentation Files Description
+
+### CLIENT_PRESENTATION.html
+- **Purpose**: Interactive client presentation
+- **Features**: Navigation tabs, animations, professional styling
+- **Best for**: Client meetings, system demonstrations
+
+### CLIENT_PDF_DOCUMENT.html  
+- **Purpose**: Comprehensive documentation for printing/PDF
+- **Features**: Professional formatting, executive summary, technical details
+- **Best for**: Detailed system documentation, stakeholder reports
+
+### QUICK_REFERENCE_GUIDES.html
+- **Purpose**: Role-based quick reference cards  
+- **Features**: Printable guides for each department
+- **Best for**: Staff training, workstation reference materials
+
+## 🎯 Usage Recommendations
+
+**For Client Meetings**: Use CLIENT_PRESENTATION.html
+**For Documentation**: Use CLIENT_PDF_DOCUMENT.html
+**For Staff Training**: Use QUICK_REFERENCE_GUIDES.html
+
+All files are self-contained and work without internet connection.
 
 ## 📋 Current Status
 
-The SwamiCare project is **production ready** with:
-- ✅ Complete authentication system
-- ✅ Role-based dashboards
-- ✅ Full database schema
-- ✅ Deployed on Vercel
+The Swamidesk project is **production ready** with:
+- ✅ Complete patient workflow system
+- ✅ Role-based interfaces for all departments
+- ✅ Real-time patient tracking
+- ✅ Integrated billing system
+- ✅ Custom diagnosis-based pricing
 
 **Live URL:** https://swamidesk-ij5v81eh7-anknownsinghs-projects.vercel.app

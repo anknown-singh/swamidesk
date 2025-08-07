@@ -17,6 +17,7 @@ import {
   FilterIcon
 } from 'lucide-react'
 import { AppointmentStatusManager } from '@/components/appointments/appointment-status-manager'
+import { RoleBasedCalendar } from '@/components/appointments/role-based-calendar'
 import { createClient } from '@/lib/supabase/client'
 import type { Appointment, AppointmentStatus, AppointmentType } from '@/lib/types'
 
@@ -25,7 +26,7 @@ export default function AttendantAppointmentManagementPage() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | 'all'>('all')
-  const [activeView, setActiveView] = useState<'queue' | 'arrived' | 'completed'>('queue')
+  const [activeView, setActiveView] = useState<'queue' | 'arrived' | 'completed' | 'calendar'>('queue')
   const [loading, setLoading] = useState(true)
   
   const supabase = createClient()
@@ -360,11 +361,58 @@ export default function AttendantAppointmentManagementPage() {
           <CheckCircleIcon className="h-4 w-4 mr-2" />
           Completed
         </Button>
+        <Button
+          variant={activeView === 'calendar' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => setActiveView('calendar')}
+        >
+          <CalendarIcon className="h-4 w-4 mr-2" />
+          Calendar View
+        </Button>
       </div>
 
-      <div className="grid gap-6 lg:grid-cols-2">
-        {/* Appointment List */}
+      {/* Calendar View */}
+      {activeView === 'calendar' && (
         <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Service Schedule Calendar</CardTitle>
+              <CardDescription>
+                View and manage service appointments in calendar format
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RoleBasedCalendar
+                userRole="attendant"
+                onAppointmentSelect={(appointment) => setSelectedAppointment(appointment)}
+                onSlotSelect={(date, time, doctorId) => {
+                  console.log('Selected slot:', { date, time, doctorId })
+                  // In a real app, this would open service scheduling dialog
+                }}
+                onBookAppointment={() => {
+                  console.log('Book service clicked')
+                  // In a real app, this would open service booking dialog
+                }}
+                onEditAppointment={async (appointment) => {
+                  console.log('Edit appointment:', appointment)
+                  // In a real app, this would open appointment editing dialog
+                }}
+                onCancelAppointment={async (appointment) => {
+                  await handleStatusUpdate(appointment.id, 'cancelled')
+                }}
+                viewMode="week"
+                readonly={false}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      )}
+
+      {/* List Views */}
+      {activeView !== 'calendar' && (
+        <div className="grid gap-6 lg:grid-cols-2">
+          {/* Appointment List */}
+          <div className="space-y-4">
           {/* Search and Filter */}
           <Card>
             <CardContent className="p-4">
@@ -492,10 +540,10 @@ export default function AttendantAppointmentManagementPage() {
               </div>
             </CardContent>
           </Card>
-        </div>
+          </div>
 
-        {/* Service Management Panel */}
-        <div>
+          {/* Service Management Panel */}
+          <div>
           {selectedAppointment ? (
             <div className="space-y-4">
               {/* Patient Service Information */}
@@ -593,8 +641,9 @@ export default function AttendantAppointmentManagementPage() {
               </CardContent>
             </Card>
           )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   )
 }

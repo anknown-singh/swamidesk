@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { CalendarIcon, PlusIcon, FilterIcon, SearchIcon, ClockIcon } from 'lucide-react'
 import { AppointmentCalendar } from '@/components/appointments/appointment-calendar'
 import { AppointmentBookingForm } from '@/components/appointments/appointment-booking-form'
-import { createClient } from '@/lib/supabase/client'
+import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
 import type { Appointment, AppointmentBookingForm as AppointmentBookingFormData } from '@/lib/types'
 
 interface AppointmentStats {
@@ -35,7 +35,7 @@ export default function AppointmentsPage() {
   // Fetch appointment statistics
   useEffect(() => {
     const fetchStats = async () => {
-      const supabase = createClient()
+      const supabase = createAuthenticatedClient()
       try {
         // Get today's appointments
         const { data: todayAppointments, error } = await supabase

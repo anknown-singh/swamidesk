@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -18,9 +18,11 @@ import {
   FileTextIcon,
   MoreHorizontalIcon
 } from 'lucide-react'
-import { createClient } from '@/lib/supabase/client'
+import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
 import type { Appointment, AppointmentStatus, AppointmentType } from '@/lib/types'
-import { getCurrentUserIdOrFallback } from '@/lib/utils/uuid'
+import { checkDoctorAvailability } from '@/lib/availability-checker'
+import { RoleBasedCalendar } from '@/components/appointments/role-based-calendar'
+import { ProperCalendar } from '@/components/appointments/proper-calendar'
 
 interface Doctor {
   id: string
@@ -45,8 +47,10 @@ export default function AdminAppointmentsPage() {
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | 'all'>('all')
   const [departmentFilter, setDepartmentFilter] = useState<string>('all')
   const [dateFilter, setDateFilter] = useState<string>('all')
-  const [activeView, setActiveView] = useState<'calendar' | 'list' | 'create'>('list')
+  const [activeView, setActiveView] = useState<'calendar' | 'list' | 'create' | 'pending'>('list')
+  const [calendarType, setCalendarType] = useState<'existing' | 'proper'>('existing')
   const [loading, setLoading] = useState(true)
+  const [, setLoadingDoctorsPatients] = useState(false)
   const [showCreateForm, setShowCreateForm] = useState(false)
   
   // Form state for creating appointments
@@ -63,7 +67,7 @@ export default function AdminAppointmentsPage() {
     notes: ''
   })
   
-  const supabase = createClient()
+  const supabase = useMemo(() => createAuthenticatedClient(), [])
 
   // Fetch appointments from database
   const fetchAppointments = useCallback(async () => {
@@ -182,6 +186,7 @@ export default function AdminAppointmentsPage() {
   // Fetch doctors and patients for form dropdowns
   const fetchDoctorsAndPatients = useCallback(async () => {
     try {
+      setLoadingDoctorsPatients(true)
       const [doctorsResult, patientsResult] = await Promise.all([
         supabase
           .from('users')
@@ -198,6 +203,8 @@ export default function AdminAppointmentsPage() {
       if (patientsResult.data) setPatients(patientsResult.data)
     } catch (error) {
       console.error('Error fetching doctors and patients:', error)
+    } finally {
+      setLoadingDoctorsPatients(false)
     }
   }, [supabase])
 
@@ -213,10 +220,23 @@ export default function AdminAppointmentsPage() {
       return
     }
 
-    try {
-      // Get current authenticated user with proper UUID handling
-      const currentUserId = await getCurrentUserIdOrFallback(supabase)
+    // Check doctor availability before creating appointment
+    console.log('🔍 Checking doctor availability...')
+    const availabilityCheck = await checkDoctorAvailability(
+      newAppointment.doctor_id,
+      newAppointment.scheduled_date,
+      newAppointment.scheduled_time,
+      newAppointment.duration || 30
+    )
 
+    if (!availabilityCheck.available) {
+      alert(`Cannot create appointment: ${availabilityCheck.message}${availabilityCheck.conflicts ? '\n\nConflicts:\n' + availabilityCheck.conflicts.join('\n') : ''}`)
+      return
+    }
+
+    try {
+      console.log('🚀 Creating appointment with authenticated client...')
+      
       const { error } = await supabase
         .from('appointments')
         .insert([{
@@ -230,11 +250,17 @@ export default function AdminAppointmentsPage() {
           title: newAppointment.title || 'Consultation',
           priority: newAppointment.priority,
           status: 'scheduled',
-          created_by: currentUserId
+          patient_notes: newAppointment.notes || null
         }])
 
-      if (error) throw error
+      if (error) {
+        console.error('❌ Supabase insert error:', error)
+        console.error('Error details:', JSON.stringify(error, null, 2))
+        throw error
+      }
 
+      console.log('✅ Appointment created successfully!')
+      
       // Reset form and refresh appointments
       setNewAppointment({
         patient_id: '',
@@ -255,19 +281,246 @@ export default function AdminAppointmentsPage() {
     } catch (error) {
       console.error('Error creating appointment:', error)
       
-      // Enhanced error reporting for debugging
+      // Enhanced error reporting with user-friendly messages
       if (error && typeof error === 'object' && 'message' in error) {
         const errorMessage = (error as { message: string }).message
         console.error('Detailed error:', errorMessage)
-        alert(`Error creating appointment: ${errorMessage}. Please check browser console for details.`)
+        
+        // Provide user-friendly error messages based on common issues
+        if (errorMessage.includes('Authentication failed')) {
+          alert('Authentication required. Please ensure you are logged in and try again.')
+        } else if (errorMessage.includes('violates row-level security')) {
+          alert('Permission denied. Please ensure you have the necessary permissions to create appointments.')
+        } else if (errorMessage.includes('duplicate key value')) {
+          alert('This appointment slot may already be taken. Please choose a different time.')
+        } else if (errorMessage.includes('foreign key constraint')) {
+          alert('Invalid doctor or patient selected. Please refresh the page and try again.')
+        } else {
+          alert(`Error creating appointment: ${errorMessage}. Please check browser console for details.`)
+        }
       } else {
-        alert('Error creating appointment. Please check browser console for details.')
+        alert('Unexpected error creating appointment. Please ensure you are logged in and try again.')
       }
     }
   }
 
   // Handle bulk operations
   const [selectedAppointments, setSelectedAppointments] = useState<string[]>([])
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+  const [showDetailsModal, setShowDetailsModal] = useState(false)
+  const [showEditModal, setShowEditModal] = useState(false)
+  const [editAppointment, setEditAppointment] = useState({
+    id: '',
+    patient_id: '',
+    doctor_id: '',
+    department: '',
+    appointment_type: 'consultation' as AppointmentType,
+    scheduled_date: '',
+    scheduled_time: '',
+    duration: 30,
+    title: '',
+    priority: false,
+    notes: '',
+    status: 'scheduled' as AppointmentStatus
+  })
+  const [dropdownOpen, setDropdownOpen] = useState<string | null>(null)
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownOpen && !(event.target as Element).closest('.relative')) {
+        setDropdownOpen(null)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [dropdownOpen])
+
+  const handleViewDetails = (appointment: Appointment) => {
+    setSelectedAppointment(appointment)
+    setShowDetailsModal(true)
+  }
+
+  const handleAppointmentAction = (appointment: Appointment, action: string) => {
+    switch (action) {
+      case 'edit':
+        handleEditAppointment(appointment)
+        break
+      case 'cancel':
+        handleCancelAppointment(appointment)
+        break
+      case 'complete':
+        handleCompleteAppointment(appointment)
+        break
+      case 'reschedule':
+        // TODO: Implement reschedule functionality
+        alert(`Reschedule appointment for ${appointment.patient?.name}`)
+        break
+      default:
+        console.log('Unknown action:', action)
+    }
+  }
+
+  const handleEditAppointment = (appointment: Appointment) => {
+    setEditAppointment({
+      id: appointment.id,
+      patient_id: appointment.patient_id,
+      doctor_id: appointment.doctor_id,
+      department: appointment.department,
+      appointment_type: appointment.appointment_type,
+      scheduled_date: appointment.scheduled_date,
+      scheduled_time: appointment.scheduled_time,
+      duration: appointment.duration,
+      title: appointment.title || '',
+      priority: appointment.priority || false,
+      notes: appointment.patient_notes || '',
+      status: appointment.status
+    })
+    setShowEditModal(true)
+  }
+
+  const handleUpdateAppointment = async () => {
+    if (!editAppointment.patient_id || !editAppointment.doctor_id || !editAppointment.scheduled_date || !editAppointment.scheduled_time) {
+      alert('Please fill in all required fields')
+      return
+    }
+
+    // Check doctor availability before updating appointment (exclude current appointment from conflict check)
+    console.log('🔍 Checking doctor availability for update...')
+    const availabilityCheck = await checkDoctorAvailability(
+      editAppointment.doctor_id,
+      editAppointment.scheduled_date,
+      editAppointment.scheduled_time,
+      editAppointment.duration || 30,
+      editAppointment.id // Exclude current appointment from conflict check
+    )
+
+    if (!availabilityCheck.available) {
+      alert(`Cannot update appointment: ${availabilityCheck.message}${availabilityCheck.conflicts ? '\n\nConflicts:\n' + availabilityCheck.conflicts.join('\n') : ''}`)
+      return
+    }
+
+    try {
+      console.log('🚀 Updating appointment with authenticated client...')
+      
+      const { error, count } = await supabase
+        .from('appointments')
+        .update({
+          patient_id: editAppointment.patient_id,
+          doctor_id: editAppointment.doctor_id,
+          department: editAppointment.department,
+          appointment_type: editAppointment.appointment_type,
+          scheduled_date: editAppointment.scheduled_date,
+          scheduled_time: editAppointment.scheduled_time,
+          duration: editAppointment.duration,
+          title: editAppointment.title || 'Consultation',
+          priority: editAppointment.priority,
+          status: editAppointment.status,
+          patient_notes: editAppointment.notes
+        })
+        .eq('id', editAppointment.id)
+
+      if (error) {
+        console.error('❌ Supabase update error:', error)
+        throw error
+      }
+      
+      if (count === 0) {
+        console.warn('⚠️ No rows were updated. Check if appointment ID exists:', editAppointment.id)
+        alert('Warning: No appointment was updated. The appointment may have been deleted.')
+        return
+      }
+      
+      setShowEditModal(false)
+      fetchAppointments()
+      
+      alert('Appointment updated successfully!')
+    } catch (error) {
+      console.error('Error updating appointment:', error)
+      alert('Error updating appointment. Please try again.')
+    }
+  }
+
+  const handleApproveAppointment = async (appointment: Appointment) => {
+    if (!confirm(`Approve appointment request from ${appointment.patient?.name || 'patient'}?`)) return
+    
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status: 'scheduled' })
+        .eq('id', appointment.id)
+
+      if (error) throw error
+      
+      fetchAppointments()
+      alert('Appointment request approved successfully!')
+    } catch (error) {
+      console.error('Error approving appointment:', error)
+      alert('Error approving appointment. Please try again.')
+    }
+  }
+
+  const handleRejectAppointment = async (appointment: Appointment) => {
+    const reason = prompt(`Reject appointment request from ${appointment.patient?.name || 'patient'}?\n\nOptional rejection reason:`)
+    if (reason === null) return // User cancelled
+    
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ 
+          status: 'cancelled',
+          cancellation_reason: reason || 'Rejected by admin'
+        })
+        .eq('id', appointment.id)
+
+      if (error) throw error
+      
+      fetchAppointments()
+      alert('Appointment request rejected successfully!')
+    } catch (error) {
+      console.error('Error rejecting appointment:', error)
+      alert('Error rejecting appointment. Please try again.')
+    }
+  }
+
+  const handleCancelAppointment = async (appointment: Appointment) => {
+    if (!confirm(`Are you sure you want to cancel the appointment for ${appointment.patient?.name}?`)) return
+    
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status: 'cancelled' })
+        .eq('id', appointment.id)
+
+      if (error) throw error
+      
+      fetchAppointments()
+      alert('Appointment cancelled successfully!')
+    } catch (error) {
+      console.error('Error cancelling appointment:', error)
+      alert('Error cancelling appointment. Please try again.')
+    }
+  }
+
+  const handleCompleteAppointment = async (appointment: Appointment) => {
+    if (!confirm(`Mark appointment for ${appointment.patient?.name} as completed?`)) return
+    
+    try {
+      const { error } = await supabase
+        .from('appointments')
+        .update({ status: 'completed' })
+        .eq('id', appointment.id)
+
+      if (error) throw error
+      
+      fetchAppointments()
+      alert('Appointment marked as completed!')
+    } catch (error) {
+      console.error('Error completing appointment:', error)
+      alert('Error updating appointment. Please try again.')
+    }
+  }
 
   const handleBulkCancel = async () => {
     if (selectedAppointments.length === 0) return
@@ -296,7 +549,8 @@ export default function AdminAppointmentsPage() {
     const matchesSearch = !searchTerm || 
       appointment.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       appointment.doctor?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      appointment.title?.toLowerCase().includes(searchTerm.toLowerCase())
+      appointment.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      appointment.patient_notes?.toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesDoctor = doctorFilter === 'all' || appointment.doctor_id === doctorFilter
     const matchesStatus = statusFilter === 'all' || appointment.status === statusFilter
@@ -338,6 +592,10 @@ export default function AdminAppointmentsPage() {
 
   const getStatusInfo = (status: AppointmentStatus) => {
     switch (status) {
+      case 'pending':
+        return { color: 'bg-amber-100 text-amber-800', label: 'Pending Approval' }
+      case 'requested':
+        return { color: 'bg-yellow-100 text-yellow-800', label: 'Requested' }
       case 'scheduled':
         return { color: 'bg-blue-100 text-blue-800', label: 'Scheduled' }
       case 'confirmed':
@@ -347,11 +605,11 @@ export default function AdminAppointmentsPage() {
       case 'in_progress':
         return { color: 'bg-orange-100 text-orange-800', label: 'In Progress' }
       case 'completed':
-        return { color: 'bg-gray-100 text-gray-800', label: 'Completed' }
+        return { color: 'bg-emerald-100 text-emerald-800', label: 'Completed' }
       case 'cancelled':
         return { color: 'bg-red-100 text-red-800', label: 'Cancelled' }
       case 'no_show':
-        return { color: 'bg-yellow-100 text-yellow-800', label: 'No Show' }
+        return { color: 'bg-gray-100 text-gray-800', label: 'No Show' }
       case 'rescheduled':
         return { color: 'bg-indigo-100 text-indigo-800', label: 'Rescheduled' }
       default:
@@ -459,7 +717,21 @@ export default function AdminAppointmentsPage() {
           onClick={() => setActiveView('list')}
         >
           <FileTextIcon className="h-4 w-4 mr-2" />
-          List View
+          All Appointments
+        </Button>
+        <Button
+          variant={activeView === 'pending' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => setActiveView('pending')}
+          className="relative"
+        >
+          <ClockIcon className="h-4 w-4 mr-2" />
+          Pending Requests
+          {appointments.filter(apt => apt.status === 'pending' || apt.status === 'requested').length > 0 && (
+            <Badge className="ml-2 bg-amber-500 text-white text-xs">
+              {appointments.filter(apt => apt.status === 'pending' || apt.status === 'requested').length}
+            </Badge>
+          )}
         </Button>
         <Button
           variant={activeView === 'calendar' ? 'default' : 'ghost'}
@@ -596,6 +868,17 @@ export default function AdminAppointmentsPage() {
                 />
                 <label htmlFor="priority" className="text-sm font-medium">Priority Appointment</label>
               </div>
+              
+              <div className="md:col-span-3">
+                <label className="text-sm font-medium mb-2 block">Patient Notes</label>
+                <textarea
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                  rows={3}
+                  placeholder="Additional notes or patient concerns"
+                  value={newAppointment.notes}
+                  onChange={(e) => setNewAppointment(prev => ({...prev, notes: e.target.value}))}
+                />
+              </div>
             </div>
             
             <div className="flex gap-2 mt-6">
@@ -648,6 +931,8 @@ export default function AdminAppointmentsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="requested">Requested</SelectItem>
                   <SelectItem value="scheduled">Scheduled</SelectItem>
                   <SelectItem value="confirmed">Confirmed</SelectItem>
                   <SelectItem value="arrived">Arrived</SelectItem>
@@ -710,6 +995,7 @@ export default function AdminAppointmentsPage() {
                         <input
                           type="checkbox"
                           checked={isSelected}
+                          aria-label={`Select appointment for ${appointment.patient?.name}`}
                           onChange={(e) => {
                             if (e.target.checked) {
                               setSelectedAppointments([...selectedAppointments, appointment.id])
@@ -750,6 +1036,20 @@ export default function AdminAppointmentsPage() {
                               <span>{appointment.duration} minutes</span>
                               <span>{appointment.patient?.mobile}</span>
                             </div>
+                            
+                            {(appointment.title && appointment.title !== 'Medical Appointment' && appointment.title !== 'Consultation') && (
+                              <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
+                                <span className="font-medium text-gray-800">Title: </span>
+                                <span className="text-gray-700">{appointment.title}</span>
+                              </div>
+                            )}
+                            
+                            {appointment.patient_notes && (
+                              <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                                <span className="font-medium text-blue-800">Patient Notes: </span>
+                                <span className="text-blue-700">{appointment.patient_notes}</span>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -758,13 +1058,65 @@ export default function AdminAppointmentsPage() {
                         <Button
                           variant="outline"
                           size="sm"
-                          onClick={() => console.log('View details for:', appointment.id)}
+                          onClick={() => handleViewDetails(appointment)}
                         >
                           View Details
                         </Button>
-                        <Button variant="ghost" size="sm">
-                          <MoreHorizontalIcon className="h-4 w-4" />
-                        </Button>
+                        <div className="relative">
+                          <Button 
+                            variant="ghost" 
+                            size="sm"
+                            onClick={() => setDropdownOpen(dropdownOpen === appointment.id ? null : appointment.id)}
+                          >
+                            <MoreHorizontalIcon className="h-4 w-4" />
+                          </Button>
+                          {dropdownOpen === appointment.id && (
+                            <div className="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg border z-10">
+                              <div className="py-1">
+                                <button
+                                  type="button"
+                                  className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                                  onClick={() => {
+                                    handleAppointmentAction(appointment, 'edit')
+                                    setDropdownOpen(null)
+                                  }}
+                                >
+                                  Edit Appointment
+                                </button>
+                                <button
+                                  type="button"
+                                  className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                                  onClick={() => {
+                                    handleAppointmentAction(appointment, 'complete')
+                                    setDropdownOpen(null)
+                                  }}
+                                >
+                                  Mark Complete
+                                </button>
+                                <button
+                                  type="button"
+                                  className="block w-full text-left px-4 py-2 text-sm hover:bg-gray-100"
+                                  onClick={() => {
+                                    handleAppointmentAction(appointment, 'reschedule')
+                                    setDropdownOpen(null)
+                                  }}
+                                >
+                                  Reschedule
+                                </button>
+                                <button
+                                  type="button"
+                                  className="block w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-gray-100"
+                                  onClick={() => {
+                                    handleAppointmentAction(appointment, 'cancel')
+                                    setDropdownOpen(null)
+                                  }}
+                                >
+                                  Cancel Appointment
+                                </button>
+                              </div>
+                            </div>
+                          )}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -782,23 +1134,443 @@ export default function AdminAppointmentsPage() {
         </Card>
       )}
 
-      {/* Calendar View Placeholder */}
+      {/* Calendar View */}
       {activeView === 'calendar' && (
+        <div className="space-y-4">
+          {/* Calendar Type Selector */}
+          <div className="flex items-center justify-between">
+            <div className="flex space-x-1 bg-muted p-1 rounded-lg">
+              <Button
+                variant={calendarType === 'existing' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setCalendarType('existing')}
+              >
+                Time Slots View
+              </Button>
+              <Button
+                variant={calendarType === 'proper' ? 'default' : 'ghost'}
+                size="sm"
+                onClick={() => setCalendarType('proper')}
+              >
+                Traditional Calendar
+              </Button>
+            </div>
+          </div>
+
+          {/* Existing Calendar */}
+          {calendarType === 'existing' && (
+            <RoleBasedCalendar
+              userRole="admin"
+              onAppointmentSelect={(appointment) => console.log('Selected appointment:', appointment)}
+              onSlotSelect={(date, time, doctorId) => {
+                console.log('Selected slot:', { date, time, doctorId })
+                setActiveView('create')
+              }}
+              onBookAppointment={() => setActiveView('create')}
+              onEditAppointment={(appointment) => {
+                console.log('Edit appointment:', appointment)
+                // Could set editing state and show edit form
+              }}
+              onApproveAppointment={handleApproveAppointment}
+              onCancelAppointment={(appointment) => {
+                if (confirm(`Cancel appointment for ${appointment.patient?.name}?`)) {
+                  handleCancelAppointment(appointment)
+                }
+              }}
+              viewMode="week"
+            />
+          )}
+
+          {/* New Proper Calendar */}
+          {calendarType === 'proper' && (
+            <ProperCalendar
+              userRole="admin"
+              onAppointmentSelect={(appointment) => console.log('Selected appointment:', appointment)}
+              onDateSelect={(date) => {
+                console.log('Selected date:', date)
+                setActiveView('create')
+              }}
+              onBookAppointment={() => setActiveView('create')}
+              viewMode="month"
+            />
+          )}
+        </div>
+      )}
+
+      {/* Pending Appointments Section */}
+      {activeView === 'pending' && (
         <Card>
           <CardHeader>
-            <CardTitle>Calendar View</CardTitle>
-            <CardDescription>Calendar view will be implemented with appointment scheduling interface</CardDescription>
+            <CardTitle className="flex items-center gap-2">
+              <ClockIcon className="h-5 w-5" />
+              Pending Appointment Requests ({appointments.filter(apt => apt.status === 'pending' || apt.status === 'requested').length})
+            </CardTitle>
+            <CardDescription>Review and approve patient appointment requests</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="text-center py-12">
-              <CalendarIcon className="h-16 w-16 mx-auto mb-4 text-muted-foreground" />
-              <h3 className="text-lg font-medium mb-2">Calendar View Coming Soon</h3>
-              <p className="text-muted-foreground">
-                Interactive calendar with drag-and-drop scheduling, conflict detection, and doctor availability integration
-              </p>
+            <div className="space-y-3">
+              {appointments.filter(apt => apt.status === 'pending' || apt.status === 'requested').length === 0 ? (
+                <div className="text-center py-8 text-muted-foreground">
+                  <ClockIcon className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p>No pending appointment requests</p>
+                  <p className="text-sm">All appointment requests have been reviewed</p>
+                </div>
+              ) : (
+                appointments
+                  .filter(apt => apt.status === 'pending' || apt.status === 'requested')
+                  .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime())
+                  .map((appointment) => {
+                    const statusInfo = getStatusInfo(appointment.status)
+                    
+                    return (
+                      <div
+                        key={appointment.id}
+                        className="p-4 border rounded-lg bg-amber-50 border-amber-200"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div className="flex-1">
+                            <div className="space-y-2">
+                              <div className="flex items-center gap-2">
+                                <h3 className="font-medium">{appointment.patient?.name}</h3>
+                                <Badge className={statusInfo.color}>
+                                  {statusInfo.label}
+                                </Badge>
+                                {appointment.priority && (
+                                  <Badge variant="outline" className="text-red-600 border-red-200">
+                                    Priority
+                                  </Badge>
+                                )}
+                              </div>
+                              <div className="text-sm text-muted-foreground space-y-1">
+                                <div className="flex items-center gap-4">
+                                  <span className="flex items-center gap-1">
+                                    <CalendarIcon className="h-3 w-3" />
+                                    {new Date(appointment.scheduled_date).toLocaleDateString()} at {appointment.scheduled_time}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <StethoscopeIcon className="h-3 w-3" />
+                                    Dr. {appointment.doctor?.full_name}
+                                  </span>
+                                  <span className="flex items-center gap-1">
+                                    <UserIcon className="h-3 w-3" />
+                                    {appointment.department}
+                                  </span>
+                                </div>
+                                <div className="flex items-center gap-4">
+                                  <span>{appointment.appointment_type}</span>
+                                  <span>{appointment.duration} minutes</span>
+                                  <span>{appointment.patient?.mobile}</span>
+                                </div>
+                                <div className="text-xs text-gray-500">
+                                  Requested: {new Date(appointment.created_at).toLocaleString()}
+                                </div>
+                              </div>
+                              
+                              {(appointment.title && appointment.title !== 'Patient Appointment Request' && appointment.title !== 'Consultation') && (
+                                <div className="mt-2 p-2 bg-gray-50 rounded text-sm">
+                                  <span className="font-medium text-gray-800">Title: </span>
+                                  <span className="text-gray-700">{appointment.title}</span>
+                                </div>
+                              )}
+                              
+                              {appointment.patient_notes && (
+                                <div className="mt-2 p-2 bg-blue-50 rounded text-sm">
+                                  <span className="font-medium text-blue-800">Patient Notes: </span>
+                                  <span className="text-blue-700">{appointment.patient_notes}</span>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                          
+                          <div className="flex items-center gap-2 ml-4">
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleViewDetails(appointment)}
+                            >
+                              View Details
+                            </Button>
+                            <Button
+                              variant="default"
+                              size="sm"
+                              onClick={() => handleApproveAppointment(appointment)}
+                              className="bg-green-600 hover:bg-green-700"
+                            >
+                              Approve
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleRejectAppointment(appointment)}
+                              className="text-red-600 border-red-200 hover:bg-red-50"
+                            >
+                              Reject
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    )
+                  })
+              )}
             </div>
           </CardContent>
         </Card>
+      )}
+
+      {/* Appointment Details Modal */}
+      {showDetailsModal && selectedAppointment && (
+        <>
+          {/* Full window opaque overlay */}
+          <div className="fixed inset-0 bg-gray-500/[.15] backdrop-blur-sm z-40"></div>
+          {/* Centered modal */}
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
+            <div className="bg-white rounded-lg p-6 max-w-2xl w-full mx-4 max-h-screen overflow-y-auto shadow-2xl border">
+              <div className="flex justify-between items-center mb-4">
+              <h2 className="text-2xl font-bold">Appointment Details</h2>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowDetailsModal(false)}
+              >
+                ✕
+              </Button>
+            </div>
+            
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="font-semibold text-gray-700">Patient Information</h3>
+                  <p><strong>Name:</strong> {selectedAppointment.patient?.name}</p>
+                  <p><strong>Mobile:</strong> {selectedAppointment.patient?.mobile}</p>
+                  <p><strong>Email:</strong> {selectedAppointment.patient?.email}</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-700">Doctor Information</h3>
+                  <p><strong>Name:</strong> Dr. {selectedAppointment.doctor?.full_name}</p>
+                  <p><strong>Department:</strong> {selectedAppointment.department}</p>
+                  <p><strong>Specialization:</strong> {selectedAppointment.doctor?.specialization}</p>
+                </div>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="font-semibold text-gray-700">Appointment Details</h3>
+                  <p><strong>Date:</strong> {new Date(selectedAppointment.scheduled_date).toLocaleDateString()}</p>
+                  <p><strong>Time:</strong> {selectedAppointment.scheduled_time}</p>
+                  <p><strong>Duration:</strong> {selectedAppointment.duration} minutes</p>
+                  <p><strong>Type:</strong> {selectedAppointment.appointment_type}</p>
+                </div>
+                <div>
+                  <h3 className="font-semibold text-gray-700">Status Information</h3>
+                  <p><strong>Status:</strong> 
+                    <Badge className={`ml-2 ${getStatusInfo(selectedAppointment.status).color}`}>
+                      {getStatusInfo(selectedAppointment.status).label}
+                    </Badge>
+                  </p>
+                  {selectedAppointment.priority && (
+                    <p><strong>Priority:</strong> <Badge variant="outline" className="ml-2 text-red-600">High Priority</Badge></p>
+                  )}
+                  <p><strong>Created:</strong> {new Date(selectedAppointment.created_at).toLocaleString()}</p>
+                </div>
+              </div>
+              
+              {selectedAppointment.title && selectedAppointment.title !== 'Consultation' && (
+                <div>
+                  <h3 className="font-semibold text-gray-700">Title/Description</h3>
+                  <p className="bg-gray-50 p-3 rounded">{selectedAppointment.title}</p>
+                </div>
+              )}
+              
+              {selectedAppointment.patient_notes && (
+                <div>
+                  <h3 className="font-semibold text-gray-700">Patient Notes</h3>
+                  <p className="bg-blue-50 p-3 rounded">{selectedAppointment.patient_notes}</p>
+                </div>
+              )}
+            </div>
+            
+            <div className="flex justify-end space-x-2 mt-6">
+              <Button variant="outline" onClick={() => setShowDetailsModal(false)}>
+                Close
+              </Button>
+              <Button onClick={() => {
+                handleAppointmentAction(selectedAppointment, 'edit')
+                setShowDetailsModal(false)
+              }}>
+                Edit Appointment
+              </Button>
+            </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* Edit Appointment Modal */}
+      {showEditModal && (
+        <>
+          {/* Full window opaque overlay */}
+          <div className="fixed inset-0 bg-gray-500/[.15] backdrop-blur-sm z-40"></div>
+          {/* Centered modal */}
+          <div className="fixed top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2 z-50">
+            <div className="bg-white rounded-lg p-6 max-w-4xl w-full mx-4 max-h-screen overflow-y-auto shadow-2xl border">
+              <div className="flex justify-between items-center mb-4">
+                <h2 className="text-2xl font-bold">Edit Appointment</h2>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setShowEditModal(false)}
+                >
+                  ✕
+                </Button>
+              </div>
+              
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Patient (Read-only)</label>
+                  <div className="p-2 bg-gray-50 rounded-md border">
+                    <span className="text-gray-700">
+                      {patients.find(p => p.id === editAppointment.patient_id)?.full_name || 'Patient not found'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-gray-500 mt-1">Patient cannot be changed after appointment creation</p>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Doctor *</label>
+                  <Select value={editAppointment.doctor_id} onValueChange={(value) => {
+                    const doctor = doctors.find(d => d.id === value)
+                    setEditAppointment(prev => ({
+                      ...prev, 
+                      doctor_id: value,
+                      department: doctor?.department || ''
+                    }))
+                  }}>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select doctor" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {doctors.map(doctor => (
+                        <SelectItem key={doctor.id} value={doctor.id}>
+                          {doctor.full_name} - {doctor.specialization}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Appointment Type</label>
+                  <Select value={editAppointment.appointment_type} onValueChange={(value: AppointmentType) => setEditAppointment(prev => ({...prev, appointment_type: value}))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="consultation">Consultation</SelectItem>
+                      <SelectItem value="follow_up">Follow-up</SelectItem>
+                      <SelectItem value="checkup">Check-up</SelectItem>
+                      <SelectItem value="procedure">Procedure</SelectItem>
+                      <SelectItem value="emergency">Emergency</SelectItem>
+                      <SelectItem value="vaccination">Vaccination</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Status</label>
+                  <Select value={editAppointment.status} onValueChange={(value: AppointmentStatus) => setEditAppointment(prev => ({...prev, status: value}))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="pending">Pending</SelectItem>
+                      <SelectItem value="requested">Requested</SelectItem>
+                      <SelectItem value="scheduled">Scheduled</SelectItem>
+                      <SelectItem value="confirmed">Confirmed</SelectItem>
+                      <SelectItem value="in_progress">In Progress</SelectItem>
+                      <SelectItem value="completed">Completed</SelectItem>
+                      <SelectItem value="cancelled">Cancelled</SelectItem>
+                      <SelectItem value="no_show">No Show</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Date *</label>
+                  <Input
+                    type="date"
+                    value={editAppointment.scheduled_date}
+                    onChange={(e) => setEditAppointment(prev => ({...prev, scheduled_date: e.target.value}))}
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Time *</label>
+                  <Input
+                    type="time"
+                    value={editAppointment.scheduled_time}
+                    onChange={(e) => setEditAppointment(prev => ({...prev, scheduled_time: e.target.value}))}
+                  />
+                </div>
+                
+                <div>
+                  <label className="text-sm font-medium mb-2 block">Duration (minutes)</label>
+                  <Select value={editAppointment.duration.toString()} onValueChange={(value) => setEditAppointment(prev => ({...prev, duration: parseInt(value)}))}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="15">15 minutes</SelectItem>
+                      <SelectItem value="30">30 minutes</SelectItem>
+                      <SelectItem value="45">45 minutes</SelectItem>
+                      <SelectItem value="60">60 minutes</SelectItem>
+                      <SelectItem value="90">90 minutes</SelectItem>
+                      <SelectItem value="120">120 minutes</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                
+                <div className="md:col-span-2">
+                  <label className="text-sm font-medium mb-2 block">Title/Notes</label>
+                  <Input
+                    placeholder="Appointment title or notes"
+                    value={editAppointment.title}
+                    onChange={(e) => setEditAppointment(prev => ({...prev, title: e.target.value}))}
+                  />
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <input
+                    type="checkbox"
+                    id="editPriority"
+                    checked={editAppointment.priority}
+                    onChange={(e) => setEditAppointment(prev => ({...prev, priority: e.target.checked}))}
+                  />
+                  <label htmlFor="editPriority" className="text-sm font-medium">Priority Appointment</label>
+                </div>
+              </div>
+              
+              <div className="mt-4">
+                <label className="text-sm font-medium mb-2 block">Patient Notes</label>
+                <textarea
+                  className="w-full p-2 border border-gray-300 rounded-md"
+                  rows={3}
+                  placeholder="Additional notes or patient concerns"
+                  value={editAppointment.notes}
+                  onChange={(e) => setEditAppointment(prev => ({...prev, notes: e.target.value}))}
+                />
+              </div>
+              
+              <div className="flex justify-end space-x-2 mt-6">
+                <Button variant="outline" onClick={() => setShowEditModal(false)}>
+                  Cancel
+                </Button>
+                <Button onClick={handleUpdateAppointment}>
+                  Update Appointment
+                </Button>
+              </div>
+            </div>
+          </div>
+        </>
       )}
     </div>
   )

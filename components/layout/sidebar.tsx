@@ -39,6 +39,13 @@ const sidebarItems: SidebarItem[] = [
     icon: Home,
     roles: ['admin', 'doctor', 'receptionist', 'attendant', 'pharmacist'],
   },
+  // Calendar for MVP roles (except pharmacist)
+  {
+    href: '/calendar',
+    label: 'Calendar',
+    icon: Calendar,
+    roles: ['admin', 'doctor', 'receptionist', 'attendant'],
+  },
   // Receptionist specific
   {
     href: '/patients',
@@ -49,7 +56,7 @@ const sidebarItems: SidebarItem[] = [
   {
     href: '/appointments',
     label: 'Appointments',
-    icon: Calendar,
+    icon: ClipboardList,
     roles: ['admin', 'receptionist'],
   },
   {
@@ -68,7 +75,7 @@ const sidebarItems: SidebarItem[] = [
   {
     href: '/appointment-management',
     label: 'My Appointments',
-    icon: Calendar,
+    icon: ClipboardList,
     roles: ['doctor'],
   },
   {
@@ -92,7 +99,7 @@ const sidebarItems: SidebarItem[] = [
   {
     href: '/availability',
     label: 'My Availability',
-    icon: Calendar,
+    icon: Clock,
     roles: ['doctor'],
   },
   // Service Attendant specific
@@ -161,7 +168,7 @@ const sidebarItems: SidebarItem[] = [
   {
     href: '/doctor-availability',
     label: 'Doctor Availability',
-    icon: Calendar,
+    icon: Clock,
     roles: ['admin'],
   },
   {

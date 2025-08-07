@@ -12,7 +12,7 @@ export type PaymentStatus = 'pending' | 'partial' | 'completed' | 'refunded'
 export type PaymentMethod = 'cash' | 'card' | 'upi' | 'insurance' | 'bank_transfer'
 
 // Appointment Management Types
-export type AppointmentStatus = 'scheduled' | 'confirmed' | 'arrived' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'rescheduled'
+export type AppointmentStatus = 'pending' | 'requested' | 'scheduled' | 'confirmed' | 'arrived' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'rescheduled'
 
 export type AppointmentType = 'consultation' | 'follow_up' | 'procedure' | 'checkup' | 'emergency' | 'vaccination'
 

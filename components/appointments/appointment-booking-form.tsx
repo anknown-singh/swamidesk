@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Checkbox } from '@/components/ui/checkbox'
 import { CalendarIcon, ClockIcon, UserIcon, StethoscopeIcon, AlertTriangleIcon } from 'lucide-react'
 import type { AppointmentBookingForm, AppointmentType } from '@/lib/types'
-import { createClient } from '@/lib/supabase/client'
+import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
 
 interface AppointmentBookingFormProps {
   onSubmit: (data: AppointmentBookingForm) => void
@@ -75,7 +75,7 @@ export function AppointmentBookingForm({
   const [loadingData, setLoadingData] = useState(true)
   
   const fetchDoctorsAndDepartments = useCallback(async () => {
-    const supabase = createClient()
+    const supabase = createAuthenticatedClient()
     try {
       setLoadingData(true)
       

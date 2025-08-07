@@ -16,6 +16,7 @@ import {
 } from 'lucide-react'
 import { AppointmentStatusManager } from '@/components/appointments/appointment-status-manager'
 import { AppointmentConfirmation } from '@/components/appointments/appointment-confirmation'
+import { RoleBasedCalendar } from '@/components/appointments/role-based-calendar'
 import type { Appointment, AppointmentStatus, AppointmentType } from '@/lib/types'
 import { createClient } from '@/lib/supabase/client'
 
@@ -26,7 +27,7 @@ export default function AppointmentManagementPage() {
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [searchTerm, setSearchTerm] = useState('')
   const [statusFilter, setStatusFilter] = useState<AppointmentStatus | 'all'>('all')
-  const [activeView, setActiveView] = useState<'status' | 'confirmations'>('status')
+  const [activeView, setActiveView] = useState<'status' | 'confirmations' | 'calendar'>('status')
   const [loading, setLoading] = useState(true)
   
   const supabase = createClient()
@@ -374,9 +375,54 @@ export default function AppointmentManagementPage() {
           <MessageSquareIcon className="h-4 w-4 mr-2" />
           Confirmations
         </Button>
+        <Button
+          variant={activeView === 'calendar' ? 'default' : 'ghost'}
+          size="sm"
+          onClick={() => setActiveView('calendar')}
+        >
+          <CalendarIcon className="h-4 w-4 mr-2" />
+          Calendar View
+        </Button>
       </div>
 
-      {activeView === 'confirmations' ? (
+      {activeView === 'calendar' ? (
+        <div className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Appointment Calendar</CardTitle>
+              <CardDescription>
+                View and manage all appointments in calendar format
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <RoleBasedCalendar
+                userRole="receptionist"
+                onAppointmentSelect={(appointment) => setSelectedAppointment(appointment)}
+                onSlotSelect={(date, time, doctorId) => {
+                  console.log('Selected slot:', { date, time, doctorId })
+                  // In a real app, this would open appointment booking dialog
+                }}
+                onBookAppointment={() => {
+                  console.log('Book appointment clicked')
+                  // In a real app, this would open appointment booking dialog
+                }}
+                onEditAppointment={async (appointment) => {
+                  console.log('Edit appointment:', appointment)
+                  // In a real app, this would open appointment editing dialog
+                }}
+                onCancelAppointment={async (appointment) => {
+                  await handleStatusUpdate(appointment.id, 'cancelled')
+                }}
+                onApproveAppointment={async (appointment) => {
+                  await handleStatusUpdate(appointment.id, 'confirmed')
+                }}
+                viewMode="week"
+                readonly={false}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      ) : activeView === 'confirmations' ? (
         <AppointmentConfirmation
           appointments={appointments}
           onSendConfirmation={handleSendConfirmation}

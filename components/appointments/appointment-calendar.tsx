@@ -16,7 +16,7 @@ import {
   RefreshCwIcon
 } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { createClient } from '@/lib/supabase/client'
+import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
 import type { Appointment, AppointmentStatus, AppointmentType, UserProfile } from '@/lib/types'
 import type { RealtimeChannel } from '@supabase/supabase-js'
 
@@ -52,7 +52,7 @@ const timeSlots = [
 
 // Dynamic data fetching functions
 const fetchDoctors = async (): Promise<UserProfile[]> => {
-  const supabase = createClient()
+  const supabase = createAuthenticatedClient()
   const { data, error } = await supabase
     .from('users')
     .select('*')
@@ -93,7 +93,7 @@ const fetchDoctors = async (): Promise<UserProfile[]> => {
 }
 
 const fetchAppointments = async (startDate?: Date, endDate?: Date): Promise<Appointment[]> => {
-  const supabase = createClient()
+  const supabase = createAuthenticatedClient()
   
   let query = supabase
     .from('appointments')
@@ -267,7 +267,7 @@ export function AppointmentCalendar({
 
   // Set up real-time subscriptions
   useEffect(() => {
-    const supabase = createClient()
+    const supabase = createAuthenticatedClient()
     
     // Only set up subscriptions if we're not using prop data (real-time mode)
     if (!propAppointments) {

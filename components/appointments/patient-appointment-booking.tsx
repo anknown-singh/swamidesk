@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -23,7 +23,8 @@ import {
   CreditCardIcon
 } from 'lucide-react'
 import type { AppointmentBookingForm, AppointmentType, UserProfile } from '@/lib/types'
-import { createClient } from '@/lib/supabase/client'
+import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
+import { getAvailableTimeSlots, checkDoctorAvailability, type AvailabilitySlot } from '@/lib/availability-checker'
 
 interface PatientAppointmentBookingProps {
   patientId?: string
@@ -81,11 +82,11 @@ interface Department {
 
 // Doctor interface removed as it was unused
 
-const mockAvailableSlots: { [key: string]: string[] } = {
-  [new Date(Date.now() + 86400000).toISOString().split('T')[0]]: ['09:00', '10:30', '14:00', '15:30'],
-  [new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0]]: ['09:30', '11:00', '14:30', '16:00'],
-  [new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0]]: ['10:00', '11:30', '15:00', '16:30'],
-}
+// const mockAvailableSlots: { [key: string]: string[] } = {
+//   [new Date(Date.now() + 86400000).toISOString().split('T')[0]]: ['09:00', '10:30', '14:00', '15:30'],
+//   [new Date(Date.now() + 2 * 86400000).toISOString().split('T')[0]]: ['09:30', '11:00', '14:30', '16:00'],
+//   [new Date(Date.now() + 3 * 86400000).toISOString().split('T')[0]]: ['10:00', '11:30', '15:00', '16:30'],
+// }
 
 export function PatientAppointmentBooking({
   patientId,
@@ -93,7 +94,8 @@ export function PatientAppointmentBooking({
   onCancel,
   isLoading = false,
   availableDoctors,
-  availableSlots
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  availableSlots: _availableSlots
 }: PatientAppointmentBookingProps) {
   const [step, setStep] = useState<'type' | 'department' | 'doctor' | 'datetime' | 'details' | 'confirmation'>('type')
   const [formData, setFormData] = useState<AppointmentBookingForm>({
@@ -126,10 +128,13 @@ export function PatientAppointmentBooking({
   const [doctors, setDoctors] = useState<UserProfile[]>([])
   const [departments, setDepartments] = useState<Department[]>([])
   const [loadingData, setLoadingData] = useState(true)
+  const [realAvailableSlots, setRealAvailableSlots] = useState<{ [date: string]: AvailabilitySlot[] }>({})
+  const [loadingSlots, setLoadingSlots] = useState(false)
+  const [availabilityError, setAvailabilityError] = useState<string | null>(null)
 
   const fetchDoctorsAndDepartments = useCallback(async () => {
     try {
-      const supabase = createClient()
+      const supabase = createAuthenticatedClient()
       setLoadingData(true)
       
       // Fetch doctors
@@ -207,13 +212,61 @@ export function PatientAppointmentBooking({
     }
   }, [availableDoctors, loadingData, fetchDoctorsAndDepartments])
 
+  // Generate next 14 days as available dates
+  const generateAvailableDates = useCallback(() => {
+    const dates: string[] = []
+    const today = new Date()
+    
+    for (let i = 1; i <= 14; i++) {
+      const date = new Date(today)
+      date.setDate(today.getDate() + i)
+      dates.push(date.toISOString().split('T')[0])
+    }
+    
+    return dates
+  }, [])
+
+  const availableDates = useMemo(() => generateAvailableDates(), [generateAvailableDates])
+
+  // Fetch available time slots when doctor is selected
+  const fetchAvailabilityForDoctor = useCallback(async (doctorId: string) => {
+    if (!doctorId) return
+    
+    setLoadingSlots(true)
+    setAvailabilityError(null)
+    
+    try {
+      const slotsData: { [date: string]: AvailabilitySlot[] } = {}
+      
+      // Fetch availability for next 14 days
+      await Promise.all(
+        availableDates.map(async (date) => {
+          const slots = await getAvailableTimeSlots(doctorId, date, formData.duration || 30)
+          slotsData[date] = slots
+        })
+      )
+      
+      setRealAvailableSlots(slotsData)
+    } catch (error) {
+      console.error('Error fetching doctor availability:', error)
+      setAvailabilityError('Error loading availability. Please try again.')
+    } finally {
+      setLoadingSlots(false)
+    }
+  }, [availableDates, formData.duration])
+
+  // Fetch availability when doctor changes
+  useEffect(() => {
+    if (selectedDoctor) {
+      fetchAvailabilityForDoctor(selectedDoctor.id)
+    }
+  }, [selectedDoctor, fetchAvailabilityForDoctor])
+
   const filteredDoctors = selectedDepartment 
     ? doctors.filter(doc => doc.department === selectedDepartment)
     : doctors
-
-  const availableDates = Object.keys(availableSlots || mockAvailableSlots).sort()
-  const availableTimesForDate = formData.scheduled_date 
-    ? (availableSlots || mockAvailableSlots)[formData.scheduled_date] || []
+  const availableTimesForDate = formData.scheduled_date && realAvailableSlots[formData.scheduled_date]
+    ? realAvailableSlots[formData.scheduled_date].filter(slot => slot.is_available).map(slot => slot.start_time)
     : []
 
   useEffect(() => {
@@ -304,6 +357,26 @@ export function PatientAppointmentBooking({
     if (!agreedToTerms) {
       setNotification({ type: 'error', message: 'Please agree to the terms and conditions to proceed.' })
       return
+    }
+
+    // Validate availability before submitting
+    if (selectedDoctor && formData.scheduled_date && formData.scheduled_time) {
+      setNotification({ type: 'success', message: 'Checking availability...' })
+      
+      const availabilityCheck = await checkDoctorAvailability(
+        selectedDoctor.id,
+        formData.scheduled_date,
+        formData.scheduled_time,
+        formData.duration || 30
+      )
+      
+      if (!availabilityCheck.available) {
+        setNotification({ 
+          type: 'error', 
+          message: `Appointment not available: ${availabilityCheck.message}` 
+        })
+        return
+      }
     }
 
     try {
@@ -522,30 +595,56 @@ export function PatientAppointmentBooking({
           {/* Step 4: Date & Time Selection */}
           {step === 'datetime' && (
             <div className="space-y-6">
+              {availabilityError && (
+                <Alert variant="destructive">
+                  <AlertCircleIcon className="h-4 w-4" />
+                  <AlertDescription>{availabilityError}</AlertDescription>
+                </Alert>
+              )}
+              
+              {loadingSlots && (
+                <Alert>
+                  <InfoIcon className="h-4 w-4" />
+                  <AlertDescription>Loading availability for {selectedDoctor?.full_name}...</AlertDescription>
+                </Alert>
+              )}
+              
               <div className="grid gap-6 md:grid-cols-2">
                 {/* Date Selection */}
                 <div className="space-y-4">
                   <h3 className="font-medium">Select Date</h3>
                   <div className="grid gap-2">
-                    {availableDates.map((date) => (
-                      <div
-                        key={date}
-                        className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                          formData.scheduled_date === date 
-                            ? 'border-primary bg-primary/5' 
-                            : 'hover:border-primary/50'
-                        }`}
-                        onClick={() => setFormData(prev => ({ ...prev, scheduled_date: date, scheduled_time: '' }))}
-                      >
-                        <div className="flex items-center gap-2">
-                          <CalendarIcon className="h-4 w-4 text-primary" />
-                          <span className="font-medium">{formatDate(date)}</span>
+                    {availableDates.map((date) => {
+                      const dateSlots = realAvailableSlots[date] || []
+                      const availableCount = dateSlots.filter(slot => slot.is_available).length
+                      const hasAvailableSlots = availableCount > 0
+                      
+                      return (
+                        <div
+                          key={date}
+                          className={`p-3 border rounded-lg transition-colors ${
+                            !hasAvailableSlots 
+                              ? 'opacity-50 cursor-not-allowed bg-gray-50' 
+                              : formData.scheduled_date === date 
+                                ? 'border-primary bg-primary/5 cursor-pointer' 
+                                : 'hover:border-primary/50 cursor-pointer'
+                          }`}
+                          onClick={() => {
+                            if (hasAvailableSlots) {
+                              setFormData(prev => ({ ...prev, scheduled_date: date, scheduled_time: '' }))
+                            }
+                          }}
+                        >
+                          <div className="flex items-center gap-2">
+                            <CalendarIcon className="h-4 w-4 text-primary" />
+                            <span className="font-medium">{formatDate(date)}</span>
+                          </div>
+                          <div className="text-sm text-muted-foreground mt-1">
+                            {loadingSlots ? 'Loading...' : hasAvailableSlots ? `${availableCount} slots available` : 'No slots available'}
+                          </div>
                         </div>
-                        <div className="text-sm text-muted-foreground mt-1">
-                          {(availableSlots || mockAvailableSlots)[date]?.length || 0} slots available
-                        </div>
-                      </div>
-                    ))}
+                      )
+                    })}
                   </div>
                 </div>
 
@@ -554,25 +653,44 @@ export function PatientAppointmentBooking({
                   <h3 className="font-medium">Select Time</h3>
                   {formData.scheduled_date ? (
                     <div className="grid gap-2">
-                      {availableTimesForDate.map((time) => (
-                        <div
-                          key={time}
-                          className={`p-3 border rounded-lg cursor-pointer transition-colors ${
-                            formData.scheduled_time === time 
-                              ? 'border-primary bg-primary/5' 
-                              : 'hover:border-primary/50'
-                          }`}
-                          onClick={() => setFormData(prev => ({ ...prev, scheduled_time: time }))}
-                        >
-                          <div className="flex items-center gap-2">
-                            <ClockIcon className="h-4 w-4 text-primary" />
-                            <span className="font-medium">{formatTime(time)}</span>
+                      {availableTimesForDate.map((time) => {
+                        const slot = realAvailableSlots[formData.scheduled_date]?.find(s => s.start_time === time)
+                        return (
+                          <div
+                            key={time}
+                            className={`p-3 border rounded-lg cursor-pointer transition-colors ${
+                              formData.scheduled_time === time 
+                                ? 'border-primary bg-primary/5' 
+                                : 'hover:border-primary/50'
+                            }`}
+                            onClick={() => setFormData(prev => ({ ...prev, scheduled_time: time }))}
+                            title={slot?.reason}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-2">
+                                <ClockIcon className="h-4 w-4 text-primary" />
+                                <span className="font-medium">{formatTime(time)}</span>
+                              </div>
+                              {slot && (
+                                <Badge variant="outline" className="text-xs">
+                                  {slot.end_time ? `${formatTime(slot.end_time)}` : ''}
+                                </Badge>
+                              )}
+                            </div>
                           </div>
-                        </div>
-                      ))}
-                      {availableTimesForDate.length === 0 && (
+                        )
+                      })}
+                      {availableTimesForDate.length === 0 && !loadingSlots && (
                         <div className="text-center py-8 text-muted-foreground">
-                          No available time slots for selected date
+                          {realAvailableSlots[formData.scheduled_date] ? 
+                            'No available time slots for selected date' : 
+                            'Please wait while we load available times'}
+                        </div>
+                      )}
+                      {loadingSlots && (
+                        <div className="text-center py-8 text-muted-foreground">
+                          <div className="animate-spin inline-block h-4 w-4 border-2 border-current border-t-transparent rounded-full mr-2" />
+                          Loading available times...
                         </div>
                       )}
                     </div>

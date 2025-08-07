@@ -1,0 +1,123 @@
+import { createClient } from './client'
+import type { SupabaseClient } from '@supabase/supabase-js'
+
+/**
+ * Creates an authenticated Supabase client that includes user context from localStorage
+ * This is a workaround for the custom authentication system using localStorage
+ */
+export function createAuthenticatedClient(): SupabaseClient {
+  const supabase = createClient()
+  
+  // Get user from localStorage
+  const getAuthenticatedUserId = (): string | null => {
+    try {
+      const sessionData = localStorage.getItem('swamicare_user')
+      const authToken = localStorage.getItem('swamicare_auth_token')
+      
+      if (sessionData && authToken) {
+        const userData = JSON.parse(sessionData)
+        return userData.id || authToken
+      }
+      return null
+    } catch {
+      return null
+    }
+  }
+
+  // Create a proxy to intercept requests and add authentication
+  const authenticatedSupabase = new Proxy(supabase, {
+    get(target, prop) {
+      if (prop === 'from') {
+        return function(table: string) {
+          const queryBuilder = target.from(table)
+          const userId = getAuthenticatedUserId()
+          
+          // Check if user is authenticated
+          if (!userId) {
+            console.warn('⚠️ No authenticated user found. Please ensure you are logged in.')
+            
+            // For critical operations, we could redirect to login
+            if (table === 'appointments' || table === 'patients' || table === 'prescriptions') {
+              // Check if we're in a browser environment
+              if (typeof window !== 'undefined') {
+                // Provide user-friendly error message
+                alert('Please log in to continue. You will be redirected to the login page.')
+                window.location.href = '/login'
+              }
+            }
+          }
+          
+          if (userId) {
+            // Add the authenticated user ID to the request context
+            // This is a workaround since we can't modify the actual JWT
+            const originalInsert = queryBuilder.insert.bind(queryBuilder)
+            const originalUpdate = queryBuilder.update.bind(queryBuilder)
+            const originalSelect = queryBuilder.select.bind(queryBuilder)
+            
+            queryBuilder.insert = function(values: Record<string, unknown> | Record<string, unknown>[]) {
+              try {
+                // Add created_by field for inserts if not present
+                if (values && typeof values === 'object' && !Array.isArray(values)) {
+                  if (!values.created_by && table === 'appointments') {
+                    values.created_by = userId
+                    console.log('✅ Authenticated appointment creation for user:', userId)
+                  }
+                } else if (Array.isArray(values)) {
+                  values.forEach(value => {
+                    if (!value.created_by && table === 'appointments') {
+                      value.created_by = userId
+                      console.log('✅ Authenticated batch appointment creation for user:', userId)
+                    }
+                  })
+                }
+                return originalInsert(values)
+              } catch (error) {
+                console.error('❌ Authentication error during insert:', error)
+                throw new Error('Authentication failed. Please ensure you are logged in and try again.')
+              }
+            }
+            
+            queryBuilder.update = function(values: Record<string, unknown>) {
+              try {
+                // Add updated_by context if needed for audit trails
+                if (values && typeof values === 'object' && table === 'appointments') {
+                  console.log('✅ Authenticated appointment update for user:', userId)
+                }
+                return originalUpdate(values)
+              } catch (error) {
+                console.error('❌ Authentication error during update:', error)
+                throw new Error('Authentication failed. Please ensure you are logged in and try again.')
+              }
+            }
+            
+            // For select queries, we'll rely on RLS policies being disabled
+            queryBuilder.select = function(columns?: string) {
+              return originalSelect(columns)
+            }
+          }
+          
+          return queryBuilder
+        }
+      }
+      
+      return target[prop as keyof typeof target]
+    }
+  })
+  
+  return authenticatedSupabase
+}
+
+/**
+ * Hook to get current authenticated user from localStorage
+ */
+export function useAuthenticatedUser() {
+  try {
+    const sessionData = localStorage.getItem('swamicare_user')
+    if (sessionData) {
+      return JSON.parse(sessionData)
+    }
+    return null
+  } catch {
+    return null
+  }
+}
