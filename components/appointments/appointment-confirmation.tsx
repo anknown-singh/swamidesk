@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { TEST_UUIDS } from '@/lib/utils/uuid'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -113,11 +114,11 @@ const mockAppointments: Appointment[] = [
     is_recurring: false,
     reminder_sent: false,
     confirmation_sent: false,
-    created_by: 'rec1',
+    created_by: TEST_UUIDS.RECEPTIONIST,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     patient: {
-      id: 'pat1',
+      id: TEST_UUIDS.PATIENT_1,
       name: 'John Doe',
       mobile: '+91-9876543210',
       dob: '1985-06-15',
@@ -125,12 +126,12 @@ const mockAppointments: Appointment[] = [
       address: '123 Main St',
       email: 'john.doe@email.com',
       emergency_contact: '+91-9876543211',
-      created_by: 'rec1',
+      created_by: TEST_UUIDS.RECEPTIONIST,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
     doctor: {
-      id: 'doc1',
+      id: TEST_UUIDS.DOCTOR_1,
       role: 'doctor',
       full_name: 'Dr. Sarah Smith',
       email: 'sarah.smith@swamidesk.com',
@@ -158,11 +159,11 @@ const mockAppointments: Appointment[] = [
     is_recurring: false,
     reminder_sent: false,
     confirmation_sent: false,
-    created_by: 'rec1',
+    created_by: TEST_UUIDS.RECEPTIONIST,
     created_at: new Date().toISOString(),
     updated_at: new Date().toISOString(),
     patient: {
-      id: 'pat2',
+      id: TEST_UUIDS.PATIENT_2,
       name: 'Sarah Johnson',
       mobile: '+91-9876543211',
       dob: '1978-09-12',
@@ -170,12 +171,12 @@ const mockAppointments: Appointment[] = [
       address: '456 Oak Ave',
       email: 'sarah.johnson@email.com',
       emergency_contact: '+91-9876543212',
-      created_by: 'rec1',
+      created_by: TEST_UUIDS.RECEPTIONIST,
       created_at: new Date().toISOString(),
       updated_at: new Date().toISOString(),
     },
     doctor: {
-      id: 'doc2',
+      id: TEST_UUIDS.DOCTOR_2,
       role: 'doctor',
       full_name: 'Dr. John Brown',
       email: 'john.brown@swamidesk.com',

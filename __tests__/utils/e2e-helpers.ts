@@ -3,6 +3,7 @@
  */
 
 import { vi } from 'vitest'
+import { TEST_UUIDS } from '@/lib/utils/uuid'
 
 export const createMockRealtimeClient = () => {
   const callbacks: { [key: string]: ((payload?: any) => void)[] } = {}
@@ -51,7 +52,7 @@ export const createMockPatientData = () => {
     is_active: true,
     created_at: '2025-01-01T00:00:00.000Z',
     updated_at: '2025-01-01T00:00:00.000Z',
-    created_by: 'e2e-user'
+    created_by: TEST_UUIDS.E2E_USER
   }
 }
 

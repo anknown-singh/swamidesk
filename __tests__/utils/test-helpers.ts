@@ -3,11 +3,12 @@
  */
 
 import { vi } from 'vitest'
+import { TEST_UUIDS } from '@/lib/utils/uuid'
 
 export const createMockAppointmentBookingForm = (overrides: any = {}) => {
   return {
-    patient_id: 'patient-123',
-    doctor_id: 'doctor-456',
+    patient_id: TEST_UUIDS.PATIENT_1,
+    doctor_id: TEST_UUIDS.DOCTOR_1,
     department: 'ENT',
     appointment_type: 'consultation',
     scheduled_date: '2025-08-07',
@@ -21,7 +22,7 @@ export const createMockAppointmentBookingForm = (overrides: any = {}) => {
 
 export const createMockPatientData = () => {
   return {
-    id: 'patient-123',
+    id: TEST_UUIDS.PATIENT_1,
     first_name: 'John',
     last_name: 'Doe',
     email: 'john.doe@example.com',
@@ -36,13 +37,13 @@ export const createMockPatientData = () => {
     is_active: true,
     created_at: '2025-01-01T00:00:00.000Z',
     updated_at: '2025-01-01T00:00:00.000Z',
-    created_by: 'user-1'
+    created_by: TEST_UUIDS.USER_1
   }
 }
 
 export const createMockDoctorData = () => {
   return {
-    id: 'doctor-456',
+    id: TEST_UUIDS.DOCTOR_1,
     first_name: 'Dr. John',
     last_name: 'Smith',
     email: 'doctor@example.com',
@@ -57,8 +58,8 @@ export const createMockDoctorData = () => {
 export const createMockAppointmentData = () => {
   return {
     id: 'appointment-789',
-    patient_id: 'patient-123',
-    doctor_id: 'doctor-456',
+    patient_id: TEST_UUIDS.PATIENT_1,
+    doctor_id: TEST_UUIDS.DOCTOR_1,
     appointment_date: '2025-08-07',
     appointment_time: '10:00',
     status: 'scheduled' as const,
@@ -81,8 +82,8 @@ export const mockSupabaseResponse = <T>(data: T, error: any = null) => ({
 export const createMockAppointment = (overrides: any = {}) => {
   return {
     id: 'appointment-123',
-    patient_id: 'patient-123',
-    doctor_id: 'doctor-456', 
+    patient_id: TEST_UUIDS.PATIENT_1,
+    doctor_id: TEST_UUIDS.DOCTOR_1, 
     department: 'ENT',
     appointment_type: 'consultation',
     status: 'scheduled',
@@ -98,14 +99,14 @@ export const createMockAppointment = (overrides: any = {}) => {
     cancelled_at: null,
     created_at: '2025-01-01T00:00:00.000Z',
     updated_at: '2025-01-01T00:00:00.000Z',
-    created_by: 'user-1',
+    created_by: TEST_UUIDS.USER_1,
     patient: {
-      id: 'patient-123',
+      id: TEST_UUIDS.PATIENT_1,
       full_name: 'John Doe',
       phone: '+91-9876543210'
     },
     doctor: {
-      id: 'doctor-456',
+      id: TEST_UUIDS.DOCTOR_1,
       full_name: 'Dr. Smith',
       department: 'ENT'
     },
@@ -115,7 +116,7 @@ export const createMockAppointment = (overrides: any = {}) => {
 
 export const createMockDoctor = (overrides: any = {}) => {
   return {
-    id: 'doctor-456',
+    id: TEST_UUIDS.DOCTOR_1,
     role: 'doctor',
     full_name: 'Dr. Smith',
     email: 'doctor@example.com',
@@ -133,8 +134,8 @@ export const createMockDoctor = (overrides: any = {}) => {
 export const createMockVisit = (overrides: any = {}) => {
   return {
     id: 'visit-123',
-    patient_id: 'patient-123',
-    doctor_id: 'doctor-456',
+    patient_id: TEST_UUIDS.PATIENT_1,
+    doctor_id: TEST_UUIDS.DOCTOR_1,
     token_number: 1,
     department: 'ENT',
     visit_date: '2025-08-07',
@@ -149,7 +150,7 @@ export const createMockVisit = (overrides: any = {}) => {
     created_at: '2025-08-07T09:00:00.000Z',
     updated_at: '2025-08-07T09:00:00.000Z',
     patient: {
-      id: 'patient-123',
+      id: TEST_UUIDS.PATIENT_1,
       name: 'John Doe',
       mobile: '+91-9876543210',
       dob: '1990-01-01',
@@ -157,12 +158,12 @@ export const createMockVisit = (overrides: any = {}) => {
       address: '123 Main St',
       email: 'john@example.com',
       emergency_contact: '+91-9876543211',
-      created_by: 'user-1',
+      created_by: TEST_UUIDS.USER_1,
       created_at: '2025-01-01T00:00:00.000Z',
       updated_at: '2025-01-01T00:00:00.000Z'
     },
     doctor: {
-      id: 'doctor-456',
+      id: TEST_UUIDS.DOCTOR_1,
       role: 'doctor' as const,
       full_name: 'Dr. Smith',
       email: 'doctor@example.com',
@@ -180,7 +181,7 @@ export const createMockVisit = (overrides: any = {}) => {
 
 export const createMockPatient = (overrides: any = {}) => {
   return {
-    id: 'patient-123',
+    id: TEST_UUIDS.PATIENT_1,
     name: 'John Doe',
     mobile: '+91-9876543210',
     dob: '1990-01-01',
@@ -188,7 +189,7 @@ export const createMockPatient = (overrides: any = {}) => {
     address: '123 Main St',
     email: 'john@example.com',
     emergency_contact: '+91-9876543211',
-    created_by: 'user-1',
+    created_by: TEST_UUIDS.USER_1,
     created_at: '2025-01-01T00:00:00.000Z',
     updated_at: '2025-01-01T00:00:00.000Z',
     ...overrides

@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import type { Appointment, AppointmentStatus, AppointmentType } from '@/lib/types'
+import { getCurrentUserIdOrFallback } from '@/lib/utils/uuid'
 
 interface Doctor {
   id: string
@@ -213,9 +214,8 @@ export default function AdminAppointmentsPage() {
     }
 
     try {
-      // Get current authenticated user
-      const { data: { user } } = await supabase.auth.getUser()
-      const currentUserId = user?.id || '00000000-0000-0000-0000-000000000000' // fallback UUID
+      // Get current authenticated user with proper UUID handling
+      const currentUserId = await getCurrentUserIdOrFallback(supabase)
 
       const { error } = await supabase
         .from('appointments')
