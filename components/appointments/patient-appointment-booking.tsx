@@ -79,12 +79,7 @@ interface Department {
   description: string
 }
 
-interface Doctor {
-  id: string
-  name: string
-  department: string
-  specialization: string
-}
+// Doctor interface removed as it was unused
 
 const mockAvailableSlots: { [key: string]: string[] } = {
   [new Date(Date.now() + 86400000).toISOString().split('T')[0]]: ['09:00', '10:30', '14:00', '15:30'],
@@ -333,7 +328,7 @@ export function PatientAppointmentBooking({
       
       await onSubmit?.(submissionData)
       setNotification({ type: 'success', message: 'Your appointment request has been submitted successfully!' })
-    } catch (error) {
+    } catch {
       setNotification({ type: 'error', message: 'Error submitting appointment. Please try again.' })
     }
   }

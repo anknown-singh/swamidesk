@@ -225,7 +225,8 @@ export function AppointmentCalendar({
   const [loading, setLoading] = useState(true)
   const [isConnected, setIsConnected] = useState(true)
   const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
-  const [realtimeChannel, setRealtimeChannel] = useState<RealtimeChannel | null>(null)
+  // Realtime channel removed - not implemented yet
+  const [, setRealtimeChannel] = useState<RealtimeChannel | null>(null)
 
   // Callback to load appointment data
   const loadData = useCallback(async () => {

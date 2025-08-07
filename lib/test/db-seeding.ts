@@ -478,20 +478,23 @@ export const createMockSupabaseWithData = () => {
           error: null
         })),
 
-        eq: vi.fn((column: string, value: unknown) => mockQuery),
-        in: vi.fn((column: string, values: unknown[]) => mockQuery),
-        gte: vi.fn((column: string, value: unknown) => mockQuery),
-        lte: vi.fn((column: string, value: unknown) => mockQuery),
-        ilike: vi.fn((column: string, value: unknown) => mockQuery),
-        order: vi.fn((column: string) => mockQuery),
-        limit: vi.fn((count: number) => mockQuery),
+        /* eslint-disable @typescript-eslint/no-unused-vars */
+        eq: vi.fn((_column: string, _value: unknown) => mockQuery),
+        in: vi.fn((_column: string, _values: unknown[]) => mockQuery),
+        gte: vi.fn((_column: string, _value: unknown) => mockQuery),
+        lte: vi.fn((_column: string, _value: unknown) => mockQuery),
+        ilike: vi.fn((_column: string, _value: unknown) => mockQuery),
+        order: vi.fn((_column: string) => mockQuery),
+        limit: vi.fn((_count: number) => mockQuery),
+        /* eslint-enable @typescript-eslint/no-unused-vars */
         single: vi.fn(() => mockQuery)
       }
 
       return mockQuery
     }),
 
-    channel: vi.fn((topic: string) => ({
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
+    channel: vi.fn((_topic: string) => ({
       on: vi.fn(),
       subscribe: vi.fn(),
       unsubscribe: vi.fn()

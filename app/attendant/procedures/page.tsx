@@ -47,8 +47,6 @@ interface Procedure {
 
 export default function ProceduresPage() {
   const [procedures, setProcedures] = useState<Procedure[]>([])
-  const [patients, setPatients] = useState<Patient[]>([])
-  const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(true)
   
   const supabase = createClient()
@@ -70,73 +68,36 @@ export default function ProceduresPage() {
   })
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
-  const [procedureCategories, setProcedureCategories] = useState<string[]>([])
-  const [procedureTypes, setProcedureTypes] = useState<string[]>([])
+  const [procedureCategories] = useState<string[]>([
+    'Diagnostic',
+    'Therapeutic',
+    'Surgical',
+    'Laboratory',
+    'Imaging',
+    'Cardiology',
+    'Dermatology',
+    'Orthopedic',
+    'Gynecology',
+    'Pediatric',
+    'Emergency',
+    'Other'
+  ])
+  const [procedureTypes] = useState<string[]>([
+    'Blood Test',
+    'X-Ray',
+    'Ultrasound',
+    'CT Scan',
+    'MRI',
+    'ECG/EKG',
+    'Endoscopy',
+    'Biopsy',
+    'Vaccination',
+    'Injection',
+    'Wound Care',
+    'Physical Therapy',
+    'Other'
+  ])
 
-  const fetchProcedureConfiguration = useCallback(async () => {
-    const supabase = createClient()
-    try {
-      // Try to fetch procedure categories from configuration
-      const { data: categoriesData, error: categoriesError } = await supabase
-        .from('procedure_categories')
-        .select('name')
-        .eq('is_active', true)
-        .order('name')
-
-      if (categoriesError) {
-        console.log('Procedure categories table not found, using default values')
-        setProcedureCategories([
-          'Diagnostic',
-          'Therapeutic',
-          'Surgical',
-          'Laboratory',
-          'Imaging',
-          'Cardiology',
-          'Dermatology',
-          'Orthopedic',
-          'Gynecology',
-          'Pediatric',
-          'Emergency',
-          'Other'
-        ])
-      } else {
-        setProcedureCategories(categoriesData.map(item => item.name))
-      }
-
-      // Try to fetch procedure types from configuration  
-      const { data: typesData, error: typesError } = await supabase
-        .from('procedure_types')
-        .select('name')
-        .eq('is_active', true)
-        .order('name')
-
-      if (typesError) {
-        console.log('Procedure types table not found, using default values')
-        setProcedureTypes([
-          'Blood Test',
-          'X-Ray',
-          'Ultrasound',
-          'CT Scan',
-          'MRI',
-          'ECG/EKG',
-          'Endoscopy',
-          'Biopsy',
-          'Vaccination',
-          'Injection',
-          'Wound Care',
-          'Physical Therapy',
-          'Other'
-        ])
-      } else {
-        setProcedureTypes(typesData.map(item => item.name))
-      }
-    } catch (error) {
-      console.error('Error fetching procedure configuration:', error)
-      // Fallback to default values
-      setProcedureCategories(['Diagnostic', 'Therapeutic', 'Surgical', 'Laboratory', 'Other'])
-      setProcedureTypes(['Blood Test', 'X-Ray', 'Ultrasound', 'Minor Surgery', 'Other'])
-    }
-  }, [])
 
   const fetchProcedures = useCallback(async () => {
     const supabase = createClient()
@@ -178,78 +139,7 @@ export default function ProceduresPage() {
     }
   }, [])
 
-  const fetchPatients = useCallback(async () => {
-    const supabase = createClient()
-    try {
-      const { data, error } = await supabase
-        .from('patients')
-        .select('id, patient_number, first_name, last_name, phone')
-        .eq('is_active', true)
-        .order('first_name', { ascending: true })
 
-      if (error) throw error
-      setPatients(data || [])
-    } catch (error) {
-      console.error('Error fetching patients:', error)
-    }
-  }, [])
-
-  const fetchPatientVisits = useCallback(async (patientId: string) => {
-    const supabase = createClient()
-    try {
-      const { data, error } = await supabase
-        .from('visits')
-        .select(`
-          id,
-          visit_number,
-          visit_date,
-          patients (
-            id,
-            patient_number,
-            first_name,
-            last_name,
-            phone
-          )
-        `)
-        .eq('patient_id', patientId)
-        .order('visit_date', { ascending: false })
-        .limit(10)
-
-      if (error) throw error
-      
-      // Map the data to the correct Visit structure
-      interface VisitData {
-        id: string
-        patient_id: string
-        visit_number: string
-        visit_date: string
-        created_at: string
-        patients?: { id: string; full_name: string; phone: string }[]
-        users?: { id: string; full_name: string }[]
-        visit_procedures?: unknown[]
-      }
-      interface RawVisit {
-        id: string
-        patient_id: string
-        doctor_id: string
-        visit_date: string
-        created_at: string
-        patients?: { id: string; full_name: string; phone: string }[]
-        users?: { id: string; full_name: string }[]
-        visit_procedures?: unknown[]
-      }
-      const mappedVisits = (data as unknown as RawVisit[] || []).map((visit: RawVisit) => ({
-        ...visit,
-        patient: visit.patients?.[0], // Convert patients array to single patient
-        doctor: visit.users?.[0] // Convert users array to single doctor
-      })) as unknown as Visit[]
-      
-      setVisits(mappedVisits)
-    } catch (error) {
-      console.error('Error fetching patient visits:', error)
-      setVisits([])
-    }
-  }, [])
 
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -516,41 +406,25 @@ export default function ProceduresPage() {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-4">
               <div>
-                <Label htmlFor="patient_select">Select Patient *</Label>
-                <select
-                  id="patient_select"
+                <Label htmlFor="patient_id">Patient ID *</Label>
+                <Input
+                  id="patient_id"
                   value={selectedPatient}
                   onChange={(e) => setSelectedPatient(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
+                  placeholder="Enter patient ID"
                   required
-                >
-                  <option value="">Choose a patient...</option>
-                  {patients.map((patient) => (
-                    <option key={patient.id} value={patient.id}>
-                      {patient.first_name} {patient.last_name} - {patient.patient_number} ({patient.phone})
-                    </option>
-                  ))}
-                </select>
+                />
               </div>
 
-              {visits.length > 0 && (
-                <div>
-                  <Label htmlFor="visit_select">Link to Visit (Optional)</Label>
-                  <select
-                    id="visit_select"
-                    value={selectedVisit}
-                    onChange={(e) => setSelectedVisit(e.target.value)}
-                    className="w-full p-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="">Select a visit...</option>
-                    {visits.map((visit) => (
-                      <option key={visit.id} value={visit.id}>
-                        {visit.visit_number} - {new Date(visit.visit_date).toLocaleDateString()}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
+              <div>
+                <Label htmlFor="visit_id">Visit ID (Optional)</Label>
+                <Input
+                  id="visit_id"
+                  value={selectedVisit}
+                  onChange={(e) => setSelectedVisit(e.target.value)}
+                  placeholder="Enter visit ID"
+                />
+              </div>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>

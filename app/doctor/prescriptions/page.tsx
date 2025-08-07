@@ -158,14 +158,6 @@ export default function PrescriptionsPage() {
       if (error) throw error
       
       // Map the data to the correct Visit structure  
-      interface VisitData {
-        id: string
-        patient_id: string
-        visit_number: string
-        visit_date: string
-        created_at: string
-        patients?: { id: string; full_name: string; phone: string }[]
-      }
       interface RawVisit {
         id: string
         patient_id: string

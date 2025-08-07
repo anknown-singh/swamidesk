@@ -96,14 +96,7 @@ export default function PharmacyDashboard() {
         .limit(4)
 
       if (queueData) {
-        interface QueueDataItem {
-          id: string
-          priority?: boolean
-          created_at: string
-          patients?: { full_name: string }[] | null
-          users?: { full_name: string }[] | null
-          prescription_items?: { id: string }[] | null
-        }
+        // QueueDataItem interface removed as it was unused
         interface RawQueueData {
           id: string
           priority: boolean
@@ -137,12 +130,7 @@ export default function PharmacyDashboard() {
         .limit(4)
 
       if (stockData) {
-        interface StockDataItem {
-          id: string
-          quantity: number
-          min_level: number
-          medicines?: { name: string }[] | null
-        }
+        // StockDataItem interface removed as it was unused
         interface RawStockData {
           id: string
           quantity: number

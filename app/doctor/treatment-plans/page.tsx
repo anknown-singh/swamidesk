@@ -135,15 +135,7 @@ export default function TreatmentPlansPage() {
       if (error) throw error
       
       // Map the data to the correct Visit structure
-      interface VisitData {
-        id: string
-        patient_id: string
-        visit_number: string
-        visit_date: string
-        diagnosis: string
-        created_at: string
-        patients?: { id: string; full_name: string; phone: string }[]
-      }
+      // VisitData interface removed as it was unused
       interface RawVisit {
         id: string
         patient_id: string
