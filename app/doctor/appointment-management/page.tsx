@@ -56,7 +56,7 @@ export default function DoctorAppointmentManagementPage() {
         .select(`
           *,
           patients(id, full_name, phone, email, date_of_birth, gender, address, emergency_contact_phone, created_at, updated_at),
-          users(id, full_name, email, phone, department, specialization, created_at, updated_at)
+          users!appointments_doctor_id_fkey(id, full_name, email, phone, department, specialization, created_at, updated_at)
         `)
         .eq('doctor_id', currentDoctorId)
         .order('scheduled_date', { ascending: true })

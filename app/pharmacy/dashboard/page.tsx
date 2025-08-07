@@ -87,7 +87,7 @@ export default function PharmacyDashboard() {
           priority,
           created_at,
           patients(full_name),
-          users(full_name),
+          users!prescriptions_prescribed_by_fkey(full_name),
           prescription_items(id)
         `)
         .eq('status', 'pending')
