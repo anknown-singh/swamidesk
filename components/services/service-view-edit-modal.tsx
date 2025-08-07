@@ -16,7 +16,6 @@ import {
   ClockIcon, 
   IndianRupeeIcon,
   StethoscopeIcon,
-  TagIcon
 } from 'lucide-react'
 import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
 import { toast } from '@/lib/toast'

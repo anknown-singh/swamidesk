@@ -5,7 +5,6 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
-import { Textarea } from '@/components/ui/textarea'
 import { Badge } from '@/components/ui/badge'
 import { 
   IndianRupeeIcon,
@@ -16,7 +15,6 @@ import {
   XCircleIcon,
   AlertTriangleIcon,
   FileTextIcon,
-  CalendarIcon
 } from 'lucide-react'
 import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
 import { toast } from '@/lib/toast'
@@ -289,7 +287,7 @@ export function AdminReviewDashboard() {
               <CardHeader>
                 <CardTitle>Procedure Quotes for Review</CardTitle>
                 <CardDescription>
-                  Review doctor's quotes and set final pricing for billing
+                  Review doctor&apos;s quotes and set final pricing for billing
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -320,7 +318,7 @@ export function AdminReviewDashboard() {
                       <div className="bg-orange-50 p-3 rounded border">
                         <div className="grid grid-cols-2 gap-4 mb-3">
                           <div>
-                            <Label className="text-sm font-medium">Doctor's Quote</Label>
+                            <Label className="text-sm font-medium">Doctor&apos;s Quote</Label>
                             <div className="flex items-center gap-2 mt-1">
                               <IndianRupeeIcon className="h-4 w-4 text-gray-600" />
                               <span className="text-lg font-medium text-gray-600">
@@ -398,7 +396,7 @@ export function AdminReviewDashboard() {
                       </div>
                     </div>
                     <p className="text-sm text-muted-foreground mt-1">
-                      This will be added to the patient's final bill
+                      This will be added to the patient&apos;s final bill
                     </p>
                   </div>
                 </div>

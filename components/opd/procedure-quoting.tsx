@@ -9,8 +9,7 @@ import { Textarea } from '@/components/ui/textarea'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Badge } from '@/components/ui/badge'
 import { 
-  PlusIcon, 
-  XIcon, 
+  PlusIcon,
   IndianRupeeIcon,
   ClockIcon,
   AlertCircleIcon,
@@ -60,7 +59,6 @@ export function ProcedureQuoting({
   readonly = false
 }: ProcedureQuotingProps) {
   const [services, setServices] = useState<Service[]>([])
-  const [loading, setLoading] = useState(true)
   const [showAddForm, setShowAddForm] = useState(false)
   const [newProcedure, setNewProcedure] = useState<Partial<ProcedureQuote>>({
     service_id: '',
@@ -204,7 +202,7 @@ export function ProcedureQuoting({
             Procedure Quoting & Billing
           </CardTitle>
           <CardDescription>
-            Custom pricing based on diagnosis: <strong>"{diagnosis}"</strong> for patient: <strong>{patientName}</strong>
+            Custom pricing based on diagnosis: <strong>&quot;{diagnosis}&quot;</strong> for patient: <strong>{patientName}</strong>
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -215,9 +213,9 @@ export function ProcedureQuoting({
                 <p className="font-medium mb-1">Diagnosis-Based Pricing Workflow:</p>
                 <ol className="list-decimal list-inside space-y-1">
                   <li>Doctor identifies procedures needed based on diagnosis</li>
-                  <li>Doctor provides custom quotes considering patient's condition severity</li>
+                  <li>Doctor provides custom quotes considering patient&apos;s condition severity</li>
                   <li>Admin reviews and approves final pricing for billing</li>
-                  <li>Approved procedures are added to patient's bill</li>
+                  <li>Approved procedures are added to patient&apos;s bill</li>
                 </ol>
               </div>
             </div>
@@ -358,7 +356,7 @@ export function ProcedureQuoting({
           <CardHeader>
             <CardTitle>Add Procedure Quote</CardTitle>
             <CardDescription>
-              Select procedure and provide custom quote based on patient's diagnosis
+              Select procedure and provide custom quote based on patient&apos;s diagnosis
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -398,7 +396,7 @@ export function ProcedureQuoting({
                 <div>
                   <Label>Why is this procedure needed? (Based on diagnosis)</Label>
                   <Textarea
-                    placeholder="Explain how this procedure addresses the patient's specific condition..."
+                    placeholder="Explain how this procedure addresses the patient&apos;s specific condition..."
                     value={newProcedure.diagnosis_reason}
                     onChange={(e) => setNewProcedure(prev => ({ 
                       ...prev, diagnosis_reason: e.target.value 
@@ -423,7 +421,7 @@ export function ProcedureQuoting({
                       className="mt-1"
                     />
                     <p className="text-xs text-muted-foreground mt-1">
-                      Consider patient's condition severity and complexity
+                      Consider patient&apos;s condition severity and complexity
                     </p>
                   </div>
 

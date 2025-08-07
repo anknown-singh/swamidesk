@@ -7,20 +7,16 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { Textarea } from '@/components/ui/textarea'
 import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Checkbox } from '@/components/ui/checkbox'
 import { 
   UserIcon, 
   StethoscopeIcon,
   PillIcon,
   CalendarIcon,
-  ClockIcon,
   FileTextIcon,
   ArrowRightIcon,
-  PlusIcon,
   XIcon,
   CheckIcon,
-  AlertTriangleIcon,
   ActivityIcon
 } from 'lucide-react'
 import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
@@ -109,7 +105,6 @@ export function OPDManagement({ userRole, userId }: OPDManagementProps) {
   })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
-  const [activeTab, setActiveTab] = useState<'pending' | 'in-progress' | 'completed'>('pending')
 
   // Fetch today's consultations that need OPD
   const fetchConsultations = useCallback(async () => {
@@ -310,7 +305,7 @@ export function OPDManagement({ userRole, userId }: OPDManagementProps) {
               </CardHeader>
               <CardContent>
                 <Textarea
-                  placeholder="Enter patient's main complaint..."
+                  placeholder="Enter patient&apos;s main complaint..."
                   value={opdRecord.chief_complaint}
                   onChange={(e) => setOpdRecord(prev => ({ ...prev, chief_complaint: e.target.value }))}
                   rows={3}
@@ -543,7 +538,7 @@ export function OPDManagement({ userRole, userId }: OPDManagementProps) {
       <div className="grid gap-4 md:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Today's Consultations</CardTitle>
+            <CardTitle className="text-sm font-medium">Today&apos;s Consultations</CardTitle>
             <StethoscopeIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
@@ -591,7 +586,7 @@ export function OPDManagement({ userRole, userId }: OPDManagementProps) {
       {/* Consultations List */}
       <Card>
         <CardHeader>
-          <CardTitle>Today's Consultations</CardTitle>
+          <CardTitle>Today&apos;s Consultations</CardTitle>
           <CardDescription>
             Patients who have arrived for consultation and need OPD processing
           </CardDescription>

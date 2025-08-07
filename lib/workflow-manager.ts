@@ -18,7 +18,7 @@ export interface PatientWorkflowData {
   current_status: PatientStatus
   requires_procedures: boolean
   requires_medicines: boolean
-  procedure_quotes: any[]
+  procedure_quotes: unknown[]
   department: string
   doctor_id?: string
   created_at: string
@@ -33,7 +33,7 @@ export class WorkflowManager {
    */
   static determineNextStatus(
     requiresProcedures: boolean,
-    procedureQuotes: any[],
+    procedureQuotes: unknown[],
     requiresMedicines: boolean
   ): PatientStatus {
     // If procedures are required and quotes exist, need admin approval first
@@ -61,7 +61,7 @@ export class WorkflowManager {
   async updatePatientStatus(
     patientId: string, 
     newStatus: PatientStatus,
-    additionalData?: any
+    additionalData?: Record<string, unknown>
   ): Promise<{ success: boolean; message: string }> {
     try {
       const updates = {
@@ -139,7 +139,7 @@ export class WorkflowManager {
   async routePatientAfterConsultation(
     patientId: string,
     requiresProcedures: boolean,
-    procedureQuotes: any[],
+    procedureQuotes: unknown[],
     requiresMedicines: boolean,
     prescriptionNotes?: string
   ): Promise<{ success: boolean; nextStep: string; message: string }> {
@@ -194,7 +194,7 @@ export class WorkflowManager {
    */
   async handleAdminApproval(
     patientId: string,
-    approvedProcedures: any[],
+    approvedProcedures: unknown[],
     hasRejectedProcedures: boolean,
     stillRequiresMedicines: boolean
   ): Promise<{ success: boolean; nextStep: string; message: string }> {

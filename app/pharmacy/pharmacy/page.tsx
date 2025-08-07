@@ -90,7 +90,7 @@ export default function PharmacyPage() {
                 <div className="border-l-4 border-blue-500 pl-4">
                   <h4 className="font-semibold text-blue-900">Step 1: Review Prescriptions</h4>
                   <p className="text-sm text-blue-700">
-                    Check Patient Tracker for patients requiring medicines. Review doctor's prescription notes and dosage instructions.
+                    Check Patient Tracker for patients requiring medicines. Review doctor&apos;s prescription notes and dosage instructions.
                   </p>
                 </div>
                 

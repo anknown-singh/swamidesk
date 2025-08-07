@@ -13,15 +13,12 @@ import {
   PrinterIcon,
   MailIcon,
   UserIcon,
-  CalendarIcon,
-  StethoscopeIcon,
   ActivityIcon,
   PillIcon,
   FileTextIcon,
   CheckCircleIcon
 } from 'lucide-react'
 import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
-import { workflowManager } from '@/lib/workflow-manager'
 import { toast } from '@/lib/toast'
 
 interface Patient {
@@ -47,7 +44,7 @@ interface BillablePatient {
   treatment_plan: string
   requires_procedures: boolean
   requires_medicines: boolean
-  procedure_quotes: any[]
+  procedure_quotes: unknown[]
   prescription_notes: string
   consultation_fee: number
   created_at: string
@@ -199,7 +196,7 @@ export function IntegratedBilling() {
       const invoiceNumber = `INV-${Date.now()}`
 
       // Create invoice record
-      const { data: invoiceData, error: invoiceError } = await supabase
+      const { error: invoiceError } = await supabase
         .from('invoices')
         .insert({
           invoice_number: invoiceNumber,
@@ -467,7 +464,7 @@ export function IntegratedBilling() {
                 <div className="space-y-4">
                   {/* Bill Items */}
                   <div className="space-y-2">
-                    {invoice.items.map((item, index) => (
+                    {invoice.items.map((item) => (
                       <div key={item.id} className="flex items-center justify-between p-3 bg-gray-50 rounded">
                         <div className="flex-1">
                           <div className="flex items-center gap-2 mb-1">

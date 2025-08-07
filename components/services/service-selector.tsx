@@ -13,7 +13,6 @@ import {
   IndianRupeeIcon,
   CheckIcon,
   XIcon,
-  FilterIcon
 } from 'lucide-react'
 import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
 

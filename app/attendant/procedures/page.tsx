@@ -97,7 +97,7 @@ export default function AttendantProceduresPage() {
                 <div className="border-l-4 border-orange-500 pl-4">
                   <h4 className="font-semibold text-orange-900">Step 2: Start Procedure</h4>
                   <p className="text-sm text-orange-700">
-                    Click "Start Procedure" to begin execution. Patient status will update to show procedure in progress.
+                    Click &quot;Start Procedure&quot; to begin execution. Patient status will update to show procedure in progress.
                   </p>
                 </div>
                 

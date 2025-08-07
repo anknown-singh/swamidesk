@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeftIcon } from 'lucide-react'
 
 export default function PatientJourneyPage() {
@@ -75,7 +75,7 @@ export default function PatientJourneyPage() {
                 <div className="bg-green-50 p-3 rounded">
                   <h4 className="font-semibold mb-2">Process:</h4>
                   <ol className="list-decimal list-inside space-y-1 text-sm">
-                    <li>Click "New Patient" button</li>
+                    <li>Click &quot;New Patient&quot; button</li>
                     <li>Fill comprehensive registration form:
                       <ul className="list-disc list-inside ml-4 mt-1">
                         <li><strong>Personal Details:</strong> Name, phone, DOB, gender, address</li>
@@ -128,9 +128,9 @@ export default function PatientJourneyPage() {
                   <ol className="list-decimal list-inside space-y-1 text-sm">
                     <li>Select patient from registered patients</li>
                     <li>Choose consulting doctor from available doctors</li>
-                    <li>Pick available time slot from doctor's schedule</li>
+                    <li>Pick available time slot from doctor&apos;s schedule</li>
                     <li>Add chief complaint (reason for visit)</li>
-                    <li>Patient automatically added to today's consultation queue</li>
+                    <li>Patient automatically added to today&apos;s consultation queue</li>
                     <li>Queue number and estimated wait time provided</li>
                   </ol>
                 </div>

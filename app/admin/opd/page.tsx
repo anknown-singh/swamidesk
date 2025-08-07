@@ -1,6 +1,5 @@
 'use client'
 
-import { useState } from 'react'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { OPDManagement } from '@/components/opd/opd-management'
 import { AdminReviewDashboard } from '@/components/opd/admin-review-dashboard'

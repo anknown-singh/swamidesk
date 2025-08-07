@@ -1,7 +1,7 @@
 'use client'
 
 import Link from 'next/link'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { ArrowLeftIcon, CheckCircleIcon, BrainIcon, TargetIcon, CreditCardIcon } from 'lucide-react'
 
 export default function ImplementationPage() {
@@ -253,7 +253,7 @@ export default function ImplementationPage() {
               <div>
                 <h4 className="font-semibold text-blue-800 mb-2">Your Original Request:</h4>
                 <p className="text-sm italic text-blue-700 bg-blue-100 p-3 rounded">
-                  "Patient arrives → Consulting doctor → Diagnosis → Tests/procedures → Medicines → Payment"
+                  &quot;Patient arrives → Consulting doctor → Diagnosis → Tests/procedures → Medicines → Payment&quot;
                 </p>
               </div>
               <div>

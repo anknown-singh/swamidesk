@@ -12,9 +12,7 @@ import {
   CheckCircleIcon,
   PillIcon,
   IndianRupeeIcon,
-  ArrowRightIcon,
   ActivityIcon,
-  CalendarIcon
 } from 'lucide-react'
 import { WorkflowManager, type PatientStatus } from '@/lib/workflow-manager'
 import { toast } from '@/lib/toast'
@@ -33,7 +31,7 @@ interface PatientTrackingData {
   opd_status: PatientStatus
   requires_procedures: boolean
   requires_medicines: boolean
-  procedure_quotes: any[]
+  procedure_quotes: ProcedureQuote[]
   created_at: string
   updated_at: string
   patients?: Patient
@@ -41,6 +39,30 @@ interface PatientTrackingData {
   chief_complaint: string
   diagnosis: string
   scheduled_time?: string
+}
+
+interface ProcedureQuote {
+  service_name?: string
+  custom_price?: number
+  status?: string
+}
+
+interface DatabasePatientItem {
+  id: string
+  patient_id: string
+  appointment_id?: string
+  current_status?: PatientStatus
+  opd_status?: PatientStatus
+  requires_procedures: boolean
+  requires_medicines: boolean
+  procedure_quotes: ProcedureQuote[]
+  created_at: string
+  updated_at: string
+  patients?: Patient
+  visit_date?: string
+  chief_complaint?: string
+  diagnosis?: string
+  appointments?: Array<{scheduled_time?: string}>
 }
 
 interface PatientTrackerProps {
@@ -57,7 +79,7 @@ export function PatientTracker({
   department
 }: PatientTrackerProps) {
   const [patients, setPatients] = useState<PatientTrackingData[]>([])
-  const [workflowSummary, setWorkflowSummary] = useState<any>({})
+  const [workflowSummary, setWorkflowSummary] = useState<Record<string, unknown>>({})
   const [loading, setLoading] = useState(true)
   const [selectedPatient, setSelectedPatient] = useState<PatientTrackingData | null>(null)
 
@@ -95,21 +117,21 @@ export function PatientTracker({
         statuses
       )
       // Transform data to match PatientTrackingData interface
-      const transformedData: PatientTrackingData[] = data.map((item: any) => ({
+      const transformedData: PatientTrackingData[] = data.map((item: DatabasePatientItem) => ({
         id: item.id,
         patient_id: item.patient_id,
         appointment_id: item.appointment_id,
-        opd_status: item.current_status || (item as any).opd_status,
+        opd_status: item.current_status || item.opd_status || 'waiting',
         requires_procedures: item.requires_procedures,
         requires_medicines: item.requires_medicines,
         procedure_quotes: item.procedure_quotes,
         created_at: item.created_at,
         updated_at: item.updated_at,
-        patients: (item as any).patients,
-        visit_date: (item as any).visit_date || new Date().toISOString().split('T')[0],
-        chief_complaint: (item as any).chief_complaint || '',
-        diagnosis: (item as any).diagnosis || '',
-        scheduled_time: (item as any).appointments?.[0]?.scheduled_time
+        patients: item.patients,
+        visit_date: item.visit_date || new Date().toISOString().split('T')[0],
+        chief_complaint: item.chief_complaint || '',
+        diagnosis: item.diagnosis || '',
+        scheduled_time: item.appointments?.[0]?.scheduled_time
       }))
       setPatients(transformedData)
       
@@ -524,7 +546,7 @@ export function PatientTracker({
                   <div>
                     <h4 className="font-semibold mb-2">Procedure Quotes</h4>
                     <div className="space-y-2">
-                      {selectedPatient.procedure_quotes.map((quote: any, index: number) => (
+                      {selectedPatient.procedure_quotes.map((quote: ProcedureQuote, index: number) => (
                         <div key={index} className="bg-gray-50 p-2 rounded text-sm">
                           <div><strong>{quote.service_name}</strong></div>
                           <div>Price: ₹{quote.custom_price?.toLocaleString('en-IN')}</div>
