@@ -66,6 +66,12 @@ const sidebarItems: SidebarItem[] = [
   },
   // Doctor specific
   {
+    href: '/appointment-management',
+    label: 'My Appointments',
+    icon: Calendar,
+    roles: ['doctor'],
+  },
+  {
     href: '/consultations',
     label: 'Consultations',
     icon: Stethoscope,
@@ -91,8 +97,14 @@ const sidebarItems: SidebarItem[] = [
   },
   // Service Attendant specific
   {
-    href: '/services',
+    href: '/appointment-management',
     label: 'Service Queue',
+    icon: UserCog,
+    roles: ['attendant'],
+  },
+  {
+    href: '/services',
+    label: 'Services',
     icon: UserCog,
     roles: ['admin', 'attendant'],
   },
@@ -231,6 +243,7 @@ export function Sidebar({ userProfile }: SidebarProps) {
           </div>
         </div>
         <button
+          type="button"
           onClick={handleLogout}
           className="flex w-full items-center px-4 py-2 text-sm font-medium text-muted-foreground hover:bg-accent hover:text-accent-foreground rounded-md transition-colors"
         >
