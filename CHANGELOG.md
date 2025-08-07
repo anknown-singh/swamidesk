@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.7.0](https://github.com/anknown-singh/swamidesk/compare/v1.6.1...v1.7.0) (2025-08-07)
+
+
+### Features
+
+* add comprehensive patient workflow documentation and non-protected routes ([68db1de](https://github.com/anknown-singh/swamidesk/commit/68db1de71a1bdb3ee7e429941e30049c504f716f))
+
 ## [1.6.1](https://github.com/anknown-singh/swamidesk/compare/v1.6.0...v1.6.1) (2025-08-07)
 
 
