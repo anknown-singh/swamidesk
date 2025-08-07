@@ -213,6 +213,10 @@ export default function AdminAppointmentsPage() {
     }
 
     try {
+      // Get current authenticated user
+      const { data: { user } } = await supabase.auth.getUser()
+      const currentUserId = user?.id || '00000000-0000-0000-0000-000000000000' // fallback UUID
+
       const { error } = await supabase
         .from('appointments')
         .insert([{
@@ -226,7 +230,7 @@ export default function AdminAppointmentsPage() {
           title: newAppointment.title || 'Consultation',
           priority: newAppointment.priority,
           status: 'scheduled',
-          created_by: 'admin-user' // In real app, get from auth context
+          created_by: currentUserId
         }])
 
       if (error) throw error
