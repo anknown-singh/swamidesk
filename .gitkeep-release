@@ -1,0 +1,3 @@
+# This file was created to trigger Release Please after fixing branch conflicts
+# Date: 2025-08-07
+# Purpose: Resolve Release Please workflow issues by deleting stale branch
