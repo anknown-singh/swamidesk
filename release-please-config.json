@@ -2,7 +2,7 @@
   "release-type": "node",
   "packages": {
     ".": {
-      "component": "swamidesk",
+      "component": "swamicare",
       "include-component-in-tag": false
     }
   },

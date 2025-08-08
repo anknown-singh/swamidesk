@@ -104,7 +104,7 @@ export function MobileNav() {
           <div className="p-4 border-b bg-gradient-to-r from-blue-600 to-purple-600">
             <div className="flex items-center justify-between">
               <div className="text-white">
-                <h2 className="font-bold text-lg">SwamIDesk</h2>
+                <h2 className="font-bold text-lg">SwamiCare</h2>
                 <p className="text-blue-100 text-sm capitalize">
                   {user?.role || 'User'} Portal
                 </p>
@@ -169,7 +169,7 @@ export function MobileNav() {
           {/* Footer */}
           <div className="p-4 border-t bg-gray-50">
             <div className="text-center">
-              <p className="text-xs text-gray-500">SwamIDesk v1.7.0</p>
+              <p className="text-xs text-gray-500">SwamiCare v1.8.0</p>
               <p className="text-xs text-gray-400">Healthcare Management</p>
             </div>
           </div>

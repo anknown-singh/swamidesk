@@ -36,10 +36,31 @@ interface ReleaseNote {
 // This would typically come from a database or API
 const releaseNotes: ReleaseNote[] = [
   {
+    version: '1.8.0',
+    date: '2025-01-08',
+    type: 'minor',
+    status: 'latest',
+    features: [
+      'Complete rebrand from SwamIDesk to SwamiCare',
+      'Updated application branding and UI components',
+      'Fixed middleware deployment issues',
+      'Enhanced security headers configuration'
+    ],
+    improvements: [
+      'Consistent application naming across all interfaces',
+      'Updated mobile navigation branding',
+      'Improved deployment stability'
+    ],
+    bugFixes: [
+      'Fixed MIDDLEWARE_INVOCATION_FAILED error on Vercel',
+      'Resolved client directive conflicts in middleware'
+    ]
+  },
+  {
     version: '1.7.0',
     date: '2024-12-XX',
     type: 'minor',
-    status: 'latest',
+    status: 'stable',
     features: [
       'Added Help & Documentation sections to all role dashboards',
       'Integrated comprehensive documentation navigation in sidebar',
@@ -124,7 +145,7 @@ const releaseNotes: ReleaseNote[] = [
 ]
 
 export function ReleaseNotes() {
-  const [expandedVersions, setExpandedVersions] = useState<Set<string>>(new Set(['1.7.0']))
+  const [expandedVersions, setExpandedVersions] = useState<Set<string>>(new Set(['1.8.0']))
 
   const toggleVersion = (version: string) => {
     const newExpanded = new Set(expandedVersions)

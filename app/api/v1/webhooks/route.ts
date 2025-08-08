@@ -134,7 +134,7 @@ function generateWebhookSecret(): string {
  * Webhook delivery system
  * This would be called internally when events occur
  */
-export async function triggerWebhook(eventType: string, payload: any) {
+async function triggerWebhook(eventType: string, payload: any) {
   try {
     const supabase = await createClient()
     

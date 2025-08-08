@@ -1,5 +1,3 @@
-'use client'
-
 import { NextRequest, NextResponse } from 'next/server'
 
 // Security headers configuration
@@ -101,7 +99,7 @@ export class SecurityHeaders {
 
       // Custom healthcare-specific headers
       customHeaders: {
-        'X-Healthcare-App': 'SwamIDesk',
+        'X-Healthcare-App': 'SwamiCare',
         'X-Content-Type-Options': 'nosniff',
         'X-Download-Options': 'noopen',
         'X-Permitted-Cross-Domain-Policies': 'none',

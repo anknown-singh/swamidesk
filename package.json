@@ -1,5 +1,5 @@
 {
-  "name": "swamidesk",
+  "name": "swamicare",
   "version": "1.8.0",
   "description": "A comprehensive clinic management system with role-based dashboards for healthcare providers",
   "keywords": [
@@ -10,7 +10,7 @@
     "typescript",
     "tailwindcss"
   ],
-  "author": "SwamIDesk Team",
+  "author": "SwamiCare Team",
   "license": "MIT",
   "repository": {
     "type": "git",

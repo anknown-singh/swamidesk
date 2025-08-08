@@ -1,17 +1,17 @@
-# SwamIDesk - Healthcare Management System
+# SwamiCare - Healthcare Management System
 
 > **A comprehensive, production-ready healthcare management platform designed to streamline clinic operations and improve patient care.**
 
-![SwamIDesk Dashboard](https://github.com/anknown-singh/swamidesk/blob/main/docs/images/dashboard-preview.png?raw=true)
+![SwamiCare Dashboard](https://github.com/anknownsinghs-projects/swamidesk/blob/main/docs/images/dashboard-preview.png?raw=true)
 
-[![CI/CD Pipeline](https://github.com/anknown-singh/swamidesk/actions/workflows/ci.yml/badge.svg)](https://github.com/anknown-singh/swamidesk/actions/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-1.8.0-blue.svg)](https://github.com/anknown-singh/swamidesk/releases)
+[![CI/CD Pipeline](https://github.com/anknownsinghs-projects/swamidesk/actions/workflows/ci.yml/badge.svg)](https://github.com/anknownsinghs-projects/swamidesk/actions/workflows/ci.yml)
+[![Version](https://img.shields.io/badge/version-1.8.0-blue.svg)](https://github.com/anknownsinghs-projects/swamidesk/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 [![Live Demo](https://img.shields.io/badge/Live%20Demo-swamicare.in-blue?style=for-the-badge&logo=globe)](https://swamicare.in)
 
 ## 🏥 Overview
 
-SwamIDesk is a modern, comprehensive healthcare management system built with Next.js 15, TypeScript, and Tailwind CSS. It provides complete clinic workflow management from patient registration to billing, with specialized interfaces for different healthcare roles.
+SwamiCare is a modern, comprehensive healthcare management system built with Next.js 15, TypeScript, and Tailwind CSS. It provides complete clinic workflow management from patient registration to billing, with specialized interfaces for different healthcare roles.
 
 ## ✨ Key Features
 
