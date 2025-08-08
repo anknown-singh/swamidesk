@@ -263,7 +263,7 @@ export default function AdminOPDPage() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <ArrowRight className="h-5 w-5" />
-            Today's Patient Flow
+            Today&apos;s Patient Flow
           </CardTitle>
         </CardHeader>
         <CardContent>

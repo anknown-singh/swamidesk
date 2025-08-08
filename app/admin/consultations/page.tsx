@@ -119,7 +119,7 @@ export default function AdminConsultationsPage() {
   const todayVisits = visits.filter(v => v.visit_date === new Date().toISOString().split('T')[0]).length
 
   // Get unique doctors for filter (simplified - no doctor names without relationships)
-  const doctors: any[] = []
+  const doctors: Array<{ id: string; full_name: string }> = []
 
   if (loading) {
     return (

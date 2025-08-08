@@ -142,7 +142,7 @@ export default function AdminPrescriptionsPage() {
   ).length
 
   // Get unique doctors for filter (simplified - no doctor names without relationships)
-  const doctors: any[] = []
+  const doctors: Array<{ id: string; full_name: string }> = []
 
   const totalRevenue = prescriptions
     .filter(p => p.status === 'dispensed')

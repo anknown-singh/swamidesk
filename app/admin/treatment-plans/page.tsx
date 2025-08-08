@@ -120,7 +120,7 @@ export default function AdminTreatmentPlansPage() {
   const pausedCount = treatmentPlans.filter(p => p.status === 'paused').length
 
   // Simplified doctor filter (empty for now since no relationships)
-  const doctors: any[] = []
+  const doctors: Array<{ id: string; full_name: string }> = []
 
   if (loading) {
     return (

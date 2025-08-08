@@ -582,7 +582,7 @@ export default function ConsultationDetailPage() {
             <CardContent>
               <select
                 value={editedVisit.status || 'waiting'}
-                onChange={(e) => setEditedVisit(prev => ({ ...prev, status: e.target.value as any }))}
+                onChange={(e) => setEditedVisit(prev => ({ ...prev, status: e.target.value as Visit['status'] }))}
                 className="w-full p-2 border rounded-md"
               >
                 <option value="waiting">Waiting</option>
