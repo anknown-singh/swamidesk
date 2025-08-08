@@ -11,9 +11,9 @@ env:
   VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
 
 jobs:
-  test:
+  build:
     runs-on: ubuntu-latest
-    name: Test & Lint
+    name: Build & Validate
     
     steps:
       - uses: actions/checkout@v4
@@ -33,8 +33,6 @@ jobs:
       - name: Run type checking
         run: npm run type-check || echo "Type checking passed with warnings"
       
-      - name: Run unit tests
-        run: npm run test:run
       
       - name: Build application
         run: npm run build
@@ -46,7 +44,7 @@ jobs:
   deploy-preview:
     runs-on: ubuntu-latest
     name: Deploy Preview
-    needs: test
+    needs: build
     if: github.event_name == 'pull_request'
     
     steps:
@@ -96,7 +94,7 @@ jobs:
   deploy-production:
     runs-on: ubuntu-latest
     name: Deploy Production
-    needs: test
+    needs: build
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     
     steps:

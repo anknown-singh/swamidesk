@@ -7,8 +7,8 @@ on:
     branches: [main]
 
 jobs:
-  test:
-    name: Test and Build
+  build:
+    name: Build and Validate
     runs-on: ubuntu-latest
 
     strategy:
@@ -68,7 +68,7 @@ jobs:
     name: Deploy Preview Info
     runs-on: ubuntu-latest
     if: github.event_name == 'pull_request'
-    needs: [test]
+    needs: [build]
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -83,7 +83,7 @@ jobs:
               repo: context.repo.repo,
               body: `## 🚀 SwamIDesk Deployment Status
               
-              ✅ **CI/CD Pipeline**: All tests passed!
+              ✅ **CI/CD Pipeline**: Build and validation passed!
               
               🔄 **Vercel Preview**: A preview deployment will be automatically created for this PR.
               
@@ -92,5 +92,5 @@ jobs:
               ### Next Steps
               - **Preview**: Vercel will create a preview deployment for this PR
               - **Production**: Merge to main → Release Please → Auto-deployment
-              - **Testing**: All comprehensive tests are passing ✅`
+              - **Quality**: All builds and validations are passing ✅`
             })
