@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Calendar, Search, CheckCircle, AlertCircle, PlayCircle, PauseCircle, XCircle, User, Clock } from 'lucide-react'
+import { Calendar, Search, CheckCircle, AlertCircle, PlayCircle, PauseCircle, User, Clock } from 'lucide-react'
 
 interface TreatmentPlan {
   id: string
@@ -277,10 +277,13 @@ export default function AdminTreatmentPlansPage() {
               const statusConfig = getStatusConfig(plan.status)
               const StatusIcon = statusConfig.icon
               const isExpired = plan.expected_end_date ? new Date(plan.expected_end_date) < new Date() : false
-              const daysRemaining = plan.expected_end_date ? Math.ceil((new Date(plan.expected_end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0
               
               return (
-                <div key={plan.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                <div 
+                  key={plan.id} 
+                  className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-all duration-200 hover:shadow-md"
+                  onClick={() => window.location.href = `/admin/treatment-plans/${plan.id}`}
+                >
                   <div className="flex justify-between items-start">
                     <div className="space-y-2 flex-1">
                       <div className="flex items-center gap-4">
@@ -351,6 +354,21 @@ export default function AdminTreatmentPlansPage() {
 
                       <div className="text-sm text-gray-500">
                         Created: {new Date(plan.created_at).toLocaleDateString()}
+                      </div>
+                    </div>
+                    <div className="flex flex-col gap-2 ml-4">
+                      <Button 
+                        size="sm" 
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          window.location.href = `/admin/treatment-plans/${plan.id}`
+                        }}
+                        className="whitespace-nowrap"
+                      >
+                        View Details
+                      </Button>
+                      <div className="text-xs text-gray-500 text-center">
+                        Click to manage
                       </div>
                     </div>
                   </div>

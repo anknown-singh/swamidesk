@@ -277,7 +277,11 @@ export default function AdminConsultationsPage() {
               const statusConfig = getStatusConfig(visit.status)
               
               return (
-                <div key={visit.id} className="border rounded-lg p-4 hover:bg-gray-50">
+                <div 
+                  key={visit.id} 
+                  className="border rounded-lg p-4 hover:bg-gray-50 cursor-pointer transition-all duration-200 hover:shadow-md"
+                  onClick={() => window.location.href = `/admin/consultations/${visit.id}`}
+                >
                   <div className="flex justify-between items-start">
                     <div className="space-y-2 flex-1">
                       <div className="flex items-center gap-4">
@@ -353,6 +357,21 @@ export default function AdminConsultationsPage() {
                           <p className="text-gray-600 mt-1">{visit.vital_signs}</p>
                         </div>
                       )}
+                    </div>
+                    <div className="flex flex-col gap-2 ml-4">
+                      <Button 
+                        size="sm" 
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          window.location.href = `/admin/consultations/${visit.id}`
+                        }}
+                        className="whitespace-nowrap"
+                      >
+                        Open Consultation
+                      </Button>
+                      <div className="text-xs text-gray-500 text-center">
+                        Click to edit
+                      </div>
                     </div>
                   </div>
                 </div>

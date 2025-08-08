@@ -87,6 +87,12 @@ const sidebarItems: SidebarItem[] = [
     roles: ['admin', 'doctor'],
   },
   {
+    href: '/opd',
+    label: 'OPD Workflow',
+    icon: Activity,
+    roles: ['admin', 'doctor', 'receptionist'],
+  },
+  {
     href: '/prescriptions',
     label: 'Prescriptions',
     icon: FileText,
