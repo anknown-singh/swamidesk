@@ -11,33 +11,34 @@ import { Calendar, Search, CheckCircle, AlertCircle, PlayCircle, PauseCircle, XC
 interface TreatmentPlan {
   id: string
   visit_id: string
-  patient_id: string
-  plan_name: string
-  description: string
-  start_date: string
-  end_date: string
-  status: 'active' | 'completed' | 'paused' | 'cancelled'
-  instructions: string
-  follow_up_frequency: string
+  title: string
+  description: string | null
+  total_sessions: number
+  completed_sessions: number
+  estimated_cost: number | null
+  status: 'planned' | 'active' | 'completed' | 'paused'
+  start_date: string | null
+  expected_end_date: string | null
+  actual_end_date: string | null
   created_at: string
-  visits: {
+  updated_at: string
+  visits?: {
     id: string
     visit_date: string
     doctor_id: string
     chief_complaint: string
     diagnosis: string
+    patients: {
+      id: string
+      full_name: string
+      phone: string
+      date_of_birth: string
+    }
     users: {
       id: string
       full_name: string
       email: string
     }
-  }
-  patients: {
-    id: string
-    patient_id: string
-    full_name: string
-    phone: string
-    date_of_birth: string
   }
 }
 
@@ -55,28 +56,7 @@ export default function AdminTreatmentPlansPage() {
     try {
       const { data, error } = await supabase
         .from('treatment_plans')
-        .select(`
-          *,
-          visits (
-            id,
-            visit_date,
-            doctor_id,
-            chief_complaint,
-            diagnosis,
-            users!visits_doctor_id_fkey (
-              id,
-              full_name,
-              email
-            )
-          ),
-          patients (
-            id,
-            patient_id,
-            full_name,
-            phone,
-            date_of_birth
-          )
-        `)
+        .select('*')
         .order('created_at', { ascending: false })
 
       if (error) throw error
@@ -95,56 +75,52 @@ export default function AdminTreatmentPlansPage() {
 
   const getStatusConfig = (status: string) => {
     switch (status) {
+      case 'planned':
+        return { color: 'bg-blue-100 text-blue-800', label: 'Planned', icon: Calendar }
       case 'active':
         return { color: 'bg-green-100 text-green-800', label: 'Active', icon: PlayCircle }
       case 'completed':
-        return { color: 'bg-blue-100 text-blue-800', label: 'Completed', icon: CheckCircle }
+        return { color: 'bg-gray-100 text-gray-800', label: 'Completed', icon: CheckCircle }
       case 'paused':
         return { color: 'bg-yellow-100 text-yellow-800', label: 'Paused', icon: PauseCircle }
-      case 'cancelled':
-        return { color: 'bg-red-100 text-red-800', label: 'Cancelled', icon: XCircle }
       default:
         return { color: 'bg-gray-100 text-gray-800', label: status, icon: AlertCircle }
     }
   }
 
   const filteredTreatmentPlans = treatmentPlans.filter(plan => {
-    const matchesSearch = plan.patients.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         plan.patients.patient_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         plan.visits?.users?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         plan.plan_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         plan.visits?.diagnosis?.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesSearch = plan.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         plan.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         plan.visit_id?.toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesStatus = filterStatus === 'all' || plan.status === filterStatus
-    const matchesDoctor = filterDoctor === 'all' || plan.visits?.doctor_id === filterDoctor
+    const matchesDoctor = filterDoctor === 'all' // Simplified since we don't have doctor relation
     
     let matchesDate = true
     if (dateFilter === 'active') {
       const now = new Date()
-      const startDate = new Date(plan.start_date)
-      const endDate = new Date(plan.end_date)
-      matchesDate = startDate <= now && now <= endDate && plan.status === 'active'
+      const startDate = plan.start_date ? new Date(plan.start_date) : null
+      const endDate = plan.expected_end_date ? new Date(plan.expected_end_date) : null
+      matchesDate = plan.status === 'active' && 
+                   (!startDate || startDate <= now) && 
+                   (!endDate || now <= endDate)
     } else if (dateFilter === 'upcoming') {
-      matchesDate = new Date(plan.start_date) > new Date()
-    } else if (dateFilter === 'expired') {
-      matchesDate = new Date(plan.end_date) < new Date()
+      matchesDate = plan.start_date ? new Date(plan.start_date) > new Date() : false
+    } else if (dateFilter === 'completed') {
+      matchesDate = plan.status === 'completed'
     }
     
     return matchesSearch && matchesStatus && matchesDoctor && matchesDate
   })
 
   const totalPlans = treatmentPlans.length
+  const plannedCount = treatmentPlans.filter(p => p.status === 'planned').length
   const activeCount = treatmentPlans.filter(p => p.status === 'active').length
   const completedCount = treatmentPlans.filter(p => p.status === 'completed').length
   const pausedCount = treatmentPlans.filter(p => p.status === 'paused').length
-  const expiredCount = treatmentPlans.filter(p => {
-    return new Date(p.end_date) < new Date() && p.status === 'active'
-  }).length
 
-  // Get unique doctors for filter
-  const doctors = Array.from(new Set(treatmentPlans.map(p => p.visits?.users?.id).filter(Boolean)))
-    .map(doctorId => treatmentPlans.find(p => p.visits?.users?.id === doctorId)?.visits?.users)
-    .filter(Boolean)
+  // Simplified doctor filter (empty for now since no relationships)
+  const doctors: any[] = []
 
   if (loading) {
     return (
@@ -227,8 +203,8 @@ export default function AdminTreatmentPlansPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Expired</p>
-                <p className="text-2xl font-bold text-red-600">{expiredCount}</p>
+                <p className="text-sm text-gray-600">Planned</p>
+                <p className="text-2xl font-bold text-red-600">{plannedCount}</p>
               </div>
               <AlertCircle className="h-8 w-8 text-red-600" />
             </div>
@@ -300,8 +276,8 @@ export default function AdminTreatmentPlansPage() {
             {filteredTreatmentPlans.map((plan) => {
               const statusConfig = getStatusConfig(plan.status)
               const StatusIcon = statusConfig.icon
-              const isExpired = new Date(plan.end_date) < new Date()
-              const daysRemaining = Math.ceil((new Date(plan.end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+              const isExpired = plan.expected_end_date ? new Date(plan.expected_end_date) < new Date() : false
+              const daysRemaining = plan.expected_end_date ? Math.ceil((new Date(plan.expected_end_date).getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24)) : 0
               
               return (
                 <div key={plan.id} className="border rounded-lg p-4 hover:bg-gray-50">
@@ -309,8 +285,8 @@ export default function AdminTreatmentPlansPage() {
                     <div className="space-y-2 flex-1">
                       <div className="flex items-center gap-4">
                         <div>
-                          <h3 className="font-semibold text-lg">{plan.plan_name}</h3>
-                          <p className="text-sm text-gray-600">{plan.patients.full_name} • ID: {plan.patients.patient_id}</p>
+                          <h3 className="font-semibold text-lg">{plan.title}</h3>
+                          <p className="text-sm text-gray-600">Plan ID: {plan.id.slice(0, 8)}...</p>
                         </div>
                         <div className={`px-3 py-1 rounded-full text-sm font-medium ${statusConfig.color} flex items-center gap-1`}>
                           <StatusIcon className="h-4 w-4" />
@@ -327,52 +303,43 @@ export default function AdminTreatmentPlansPage() {
                         <div className="flex items-center gap-2">
                           <User className="h-4 w-4 text-gray-400" />
                           <div>
-                            <span className="font-medium text-gray-700">Doctor:</span>
-                            <p>{plan.visits?.users?.full_name || 'Not assigned'}</p>
+                            <span className="font-medium text-gray-700">Sessions:</span>
+                            <p>{plan.completed_sessions || 0} / {plan.total_sessions || 0}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-gray-400" />
                           <div>
                             <span className="font-medium text-gray-700">Start Date:</span>
-                            <p>{new Date(plan.start_date).toLocaleDateString()}</p>
+                            <p>{plan.start_date ? new Date(plan.start_date).toLocaleDateString() : 'Not set'}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-gray-400" />
                           <div>
                             <span className="font-medium text-gray-700">End Date:</span>
-                            <p>{new Date(plan.end_date).toLocaleDateString()}</p>
+                            <p>{plan.expected_end_date ? new Date(plan.expected_end_date).toLocaleDateString() : 'Not set'}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Clock className="h-4 w-4 text-gray-400" />
                           <div>
-                            <span className="font-medium text-gray-700">Duration:</span>
-                            <p>{isExpired ? 'Expired' : daysRemaining > 0 ? `${daysRemaining} days left` : 'Ending today'}</p>
+                            <span className="font-medium text-gray-700">Cost:</span>
+                            <p>{plan.estimated_cost ? `₹${plan.estimated_cost.toFixed(2)}` : 'Not estimated'}</p>
                           </div>
                         </div>
                       </div>
 
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div>
-                          <span className="font-medium text-gray-700">Follow-up Frequency:</span>
-                          <p className="text-gray-600">{plan.follow_up_frequency || 'Not specified'}</p>
+                          <span className="font-medium text-gray-700">Status:</span>
+                          <p className="text-gray-600">{plan.status}</p>
                         </div>
                         <div>
-                          <span className="font-medium text-gray-700">Visit Date:</span>
-                          <p className="text-gray-600">{plan.visits?.visit_date ? 
-                              new Date(plan.visits.visit_date).toLocaleDateString() 
-                              : 'N/A'}</p>
+                          <span className="font-medium text-gray-700">Visit ID:</span>
+                          <p className="text-gray-600">{plan.visit_id?.slice(0, 8) || 'N/A'}...</p>
                         </div>
                       </div>
-
-                      {plan.visits?.diagnosis && (
-                        <div className="text-sm">
-                          <span className="font-medium text-gray-700">Related Diagnosis:</span>
-                          <p className="text-gray-600 mt-1">{plan.visits.diagnosis}</p>
-                        </div>
-                      )}
 
                       {plan.description && (
                         <div className="text-sm">
@@ -381,12 +348,6 @@ export default function AdminTreatmentPlansPage() {
                         </div>
                       )}
 
-                      {plan.instructions && (
-                        <div className="text-sm">
-                          <span className="font-medium text-gray-700">Instructions:</span>
-                          <p className="text-gray-600 mt-1">{plan.instructions}</p>
-                        </div>
-                      )}
 
                       <div className="text-sm text-gray-500">
                         Created: {new Date(plan.created_at).toLocaleDateString()}

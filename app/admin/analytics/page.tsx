@@ -152,10 +152,25 @@ export default function AdminAnalyticsPage() {
   }
 
   const processOverviewData = (
-    revenueData: Array<{ created_at: string; total_amount: number }>,
-    patientData: Array<{ created_at: string }>,
+    revenueData: Array<{ 
+      created_at: string; 
+      total_amount: number; 
+      bill_items?: Array<{ category: string; total: number }> 
+    }>,
+    patientData: Array<{ 
+      created_at: string; 
+      opd_status?: string; 
+      procedures_completed_at?: string;
+      pharmacy_completed_at?: string;
+    }>,
     appointmentData: Array<{ created_at: string; status: string }>,
-    serviceData: Array<{ id: string; name: string }>
+    serviceData: Array<{ 
+      service_id: string; 
+      status: string; 
+      total_price: number; 
+      created_at: string; 
+      services: { name: string; category: string } | { name: string; category: string }[] | null 
+    }>
   ): DashboardOverview => {
     
     // Calculate revenue metrics
@@ -210,7 +225,10 @@ export default function AdminAnalyticsPage() {
     // Top services by revenue
     const serviceRevenue: { [serviceName: string]: { count: number; revenue: number } } = {}
     serviceData.forEach(service => {
-      const serviceName = service.services?.name || 'Unknown Service'
+      const services = service.services
+      const serviceName = Array.isArray(services) 
+        ? services[0]?.name || 'Unknown Service'
+        : services?.name || 'Unknown Service'
       if (!serviceRevenue[serviceName]) {
         serviceRevenue[serviceName] = { count: 0, revenue: 0 }
       }

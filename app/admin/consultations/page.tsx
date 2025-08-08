@@ -19,19 +19,13 @@ interface Visit {
   diagnosis: string
   examination_notes: string
   vital_signs: string
-  status: 'scheduled' | 'in_progress' | 'completed' | 'cancelled'
+  status: 'waiting' | 'in_consultation' | 'services_pending' | 'completed' | 'cancelled'
   created_at: string
   patients: {
     id: string
-    patient_id: string
     full_name: string
     phone: string
     date_of_birth: string
-  }
-  users: {
-    id: string
-    full_name: string
-    email: string
   }
 }
 
@@ -54,15 +48,9 @@ export default function AdminConsultationsPage() {
           *,
           patients (
             id,
-            patient_id,
             full_name,
             phone,
             date_of_birth
-          ),
-          users!visits_doctor_id_fkey (
-            id,
-            full_name,
-            email
           )
         `)
         .order('visit_date', { ascending: false })
@@ -84,10 +72,12 @@ export default function AdminConsultationsPage() {
 
   const getStatusConfig = (status: string) => {
     switch (status) {
-      case 'scheduled':
-        return { color: 'bg-blue-100 text-blue-800', label: 'Scheduled' }
-      case 'in_progress':
-        return { color: 'bg-yellow-100 text-yellow-800', label: 'In Progress' }
+      case 'waiting':
+        return { color: 'bg-yellow-100 text-yellow-800', label: 'Waiting' }
+      case 'in_consultation':
+        return { color: 'bg-blue-100 text-blue-800', label: 'In Consultation' }
+      case 'services_pending':
+        return { color: 'bg-orange-100 text-orange-800', label: 'Services Pending' }
       case 'completed':
         return { color: 'bg-green-100 text-green-800', label: 'Completed' }
       case 'cancelled':
@@ -99,8 +89,7 @@ export default function AdminConsultationsPage() {
 
   const filteredVisits = visits.filter(visit => {
     const matchesSearch = visit.patients.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         visit.patients.patient_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         visit.users?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         visit.patients.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          visit.chief_complaint?.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          visit.diagnosis?.toLowerCase().includes(searchTerm.toLowerCase())
     
@@ -124,15 +113,13 @@ export default function AdminConsultationsPage() {
   })
 
   const totalVisits = visits.length
-  const scheduledCount = visits.filter(v => v.status === 'scheduled').length
-  const inProgressCount = visits.filter(v => v.status === 'in_progress').length
+  const waitingCount = visits.filter(v => v.status === 'waiting').length
+  const inConsultationCount = visits.filter(v => v.status === 'in_consultation').length
   const completedCount = visits.filter(v => v.status === 'completed').length
   const todayVisits = visits.filter(v => v.visit_date === new Date().toISOString().split('T')[0]).length
 
-  // Get unique doctors for filter
-  const doctors = Array.from(new Set(visits.map(v => v.users?.id).filter(Boolean)))
-    .map(doctorId => visits.find(v => v.users?.id === doctorId)?.users)
-    .filter(Boolean)
+  // Get unique doctors for filter (simplified - no doctor names without relationships)
+  const doctors: any[] = []
 
   if (loading) {
     return (
@@ -179,10 +166,10 @@ export default function AdminConsultationsPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Scheduled</p>
-                <p className="text-2xl font-bold text-blue-600">{scheduledCount}</p>
+                <p className="text-sm text-gray-600">Waiting</p>
+                <p className="text-2xl font-bold text-yellow-600">{waitingCount}</p>
               </div>
-              <Calendar className="h-8 w-8 text-blue-600" />
+              <Calendar className="h-8 w-8 text-yellow-600" />
             </div>
           </CardContent>
         </Card>
@@ -191,10 +178,10 @@ export default function AdminConsultationsPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">In Progress</p>
-                <p className="text-2xl font-bold text-yellow-600">{inProgressCount}</p>
+                <p className="text-sm text-gray-600">In Consultation</p>
+                <p className="text-2xl font-bold text-blue-600">{inConsultationCount}</p>
               </div>
-              <Clock className="h-8 w-8 text-yellow-600" />
+              <Clock className="h-8 w-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
@@ -241,8 +228,9 @@ export default function AdminConsultationsPage() {
               className="p-2 border border-gray-300 rounded-md"
             >
               <option value="all">All Status</option>
-              <option value="scheduled">Scheduled</option>
-              <option value="in_progress">In Progress</option>
+              <option value="waiting">Waiting</option>
+              <option value="in_consultation">In Consultation</option>
+              <option value="services_pending">Services Pending</option>
               <option value="completed">Completed</option>
               <option value="cancelled">Cancelled</option>
             </select>
@@ -296,7 +284,7 @@ export default function AdminConsultationsPage() {
                         <div>
                           <h3 className="font-semibold text-lg">{visit.patients.full_name}</h3>
                           <p className="text-sm text-gray-600">
-                            ID: {visit.patients.patient_id}
+                            ID: {visit.patients.id.slice(0, 8)}...
                             {visit.patients.phone && ` • ${visit.patients.phone}`}
                           </p>
                         </div>
@@ -310,7 +298,7 @@ export default function AdminConsultationsPage() {
                           <User className="h-4 w-4 text-gray-400" />
                           <div>
                             <span className="font-medium text-gray-700">Doctor:</span>
-                            <p>{visit.users?.full_name || 'Not assigned'}</p>
+                            <p>Dr. {visit.doctor_id ? visit.doctor_id.slice(0, 8) + '...' : 'Not assigned'}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">

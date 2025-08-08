@@ -11,45 +11,33 @@ import { FileText, Search, Users, Pill, Calendar, User, Clock, CheckCircle } fro
 interface Prescription {
   id: string
   visit_id: string
-  patient_id: string
-  doctor_id: string
-  prescription_date: string
-  instructions: string
-  status: 'pending' | 'dispensed' | 'partially_dispensed' | 'cancelled'
-  total_amount: number
+  medicine_id: string
+  quantity: number
+  dosage: string | null
+  duration: string | null
+  instructions: string | null
+  status: 'pending' | 'dispensed' | 'cancelled'
   created_at: string
-  patients: {
+  medicines: {
     id: string
-    patient_id: string
-    full_name: string
-    phone: string
-    date_of_birth: string
-  }
-  users: {
-    id: string
-    full_name: string
-    email: string
+    name: string
+    unit_price: number
+    dosage_form: string
+    category: string
   }
   visits: {
     id: string
     visit_date: string
     chief_complaint: string
     diagnosis: string
-  }
-  prescription_items: Array<{
-    id: string
-    medicine_id: string
-    quantity: number
-    dosage: string
-    frequency: string
-    duration: string
-    medicines: {
+    doctor_id: string
+    patients: {
       id: string
-      name: string
-      strength: string
-      unit_price: number
+      full_name: string
+      phone: string
+      date_of_birth: string
     }
-  }>
+  }
 }
 
 export default function AdminPrescriptionsPage() {
@@ -68,36 +56,24 @@ export default function AdminPrescriptionsPage() {
         .from('prescriptions')
         .select(`
           *,
-          patients (
+          medicines (
             id,
-            patient_id,
-            full_name,
-            phone,
-            date_of_birth
-          ),
-          users!prescriptions_doctor_id_fkey (
-            id,
-            full_name,
-            email
+            name,
+            unit_price,
+            dosage_form,
+            category
           ),
           visits (
             id,
             visit_date,
             chief_complaint,
-            diagnosis
-          ),
-          prescription_items (
-            id,
-            medicine_id,
-            quantity,
-            dosage,
-            frequency,
-            duration,
-            medicines (
+            diagnosis,
+            doctor_id,
+            patients (
               id,
-              name,
-              strength,
-              unit_price
+              full_name,
+              phone,
+              date_of_birth
             )
           )
         `)
@@ -133,28 +109,25 @@ export default function AdminPrescriptionsPage() {
   }
 
   const filteredPrescriptions = prescriptions.filter(prescription => {
-    const matchesSearch = prescription.patients.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         prescription.patients.patient_id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         prescription.users?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    const matchesSearch = prescription.visits?.patients?.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                         prescription.visits?.patients?.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
                          prescription.visits?.diagnosis?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         prescription.prescription_items.some(item => 
-                           item.medicines.name.toLowerCase().includes(searchTerm.toLowerCase())
-                         )
+                         prescription.medicines.name.toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesStatus = filterStatus === 'all' || prescription.status === filterStatus
-    const matchesDoctor = filterDoctor === 'all' || prescription.doctor_id === filterDoctor
+    const matchesDoctor = filterDoctor === 'all' || prescription.visits?.doctor_id === filterDoctor
     
     let matchesDate = true
     if (dateFilter === 'today') {
-      matchesDate = prescription.prescription_date === new Date().toISOString().split('T')[0]
+      matchesDate = prescription.visits?.visit_date === new Date().toISOString().split('T')[0]
     } else if (dateFilter === 'this_week') {
       const weekAgo = new Date()
       weekAgo.setDate(weekAgo.getDate() - 7)
-      matchesDate = new Date(prescription.prescription_date) >= weekAgo
+      matchesDate = prescription.visits?.visit_date ? new Date(prescription.visits.visit_date) >= weekAgo : false
     } else if (dateFilter === 'this_month') {
       const monthAgo = new Date()
       monthAgo.setMonth(monthAgo.getMonth() - 1)
-      matchesDate = new Date(prescription.prescription_date) >= monthAgo
+      matchesDate = prescription.visits?.visit_date ? new Date(prescription.visits.visit_date) >= monthAgo : false
     }
     
     return matchesSearch && matchesStatus && matchesDoctor && matchesDate
@@ -163,19 +136,17 @@ export default function AdminPrescriptionsPage() {
   const totalPrescriptions = prescriptions.length
   const pendingCount = prescriptions.filter(p => p.status === 'pending').length
   const dispensedCount = prescriptions.filter(p => p.status === 'dispensed').length
-  const partiallyDispensedCount = prescriptions.filter(p => p.status === 'partially_dispensed').length
+  const cancelledCount = prescriptions.filter(p => p.status === 'cancelled').length
   const todayPrescriptions = prescriptions.filter(p => 
-    p.prescription_date === new Date().toISOString().split('T')[0]
+    p.visits?.visit_date === new Date().toISOString().split('T')[0]
   ).length
 
-  // Get unique doctors for filter
-  const doctors = Array.from(new Set(prescriptions.map(p => p.users?.id).filter(Boolean)))
-    .map(doctorId => prescriptions.find(p => p.users?.id === doctorId)?.users)
-    .filter(Boolean)
+  // Get unique doctors for filter (simplified - no doctor names without relationships)
+  const doctors: any[] = []
 
   const totalRevenue = prescriptions
     .filter(p => p.status === 'dispensed')
-    .reduce((sum, p) => sum + (p.total_amount || 0), 0)
+    .reduce((sum, p) => sum + (p.quantity * p.medicines.unit_price), 0)
 
   if (loading) {
     return (
@@ -246,10 +217,10 @@ export default function AdminPrescriptionsPage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Partial</p>
-                <p className="text-2xl font-bold text-blue-600">{partiallyDispensedCount}</p>
+                <p className="text-sm text-gray-600">Cancelled</p>
+                <p className="text-2xl font-bold text-red-600">{cancelledCount}</p>
               </div>
-              <Pill className="h-8 w-8 text-blue-600" />
+              <Pill className="h-8 w-8 text-red-600" />
             </div>
           </CardContent>
         </Card>
@@ -295,7 +266,6 @@ export default function AdminPrescriptionsPage() {
               <option value="all">All Status</option>
               <option value="pending">Pending</option>
               <option value="dispensed">Dispensed</option>
-              <option value="partially_dispensed">Partially Dispensed</option>
               <option value="cancelled">Cancelled</option>
             </select>
             <select
@@ -346,18 +316,18 @@ export default function AdminPrescriptionsPage() {
                     <div className="space-y-2 flex-1">
                       <div className="flex items-center gap-4">
                         <div>
-                          <h3 className="font-semibold text-lg">{prescription.patients.full_name}</h3>
+                          <h3 className="font-semibold text-lg">{prescription.visits?.patients?.full_name || 'Unknown Patient'}</h3>
                           <p className="text-sm text-gray-600">
-                            ID: {prescription.patients.patient_id}
-                            {prescription.patients.phone && ` • ${prescription.patients.phone}`}
+                            ID: {prescription.visits?.patients?.id?.slice(0, 8)}...
+                            {prescription.visits?.patients?.phone && ` • ${prescription.visits.patients.phone}`}
                           </p>
                         </div>
                         <div className={`px-3 py-1 rounded-full text-sm font-medium ${statusConfig.color}`}>
                           {statusConfig.label}
                         </div>
                         <div className="text-right">
-                          <p className="text-lg font-semibold text-green-600">₹{prescription.total_amount?.toFixed(2) || '0.00'}</p>
-                          <p className="text-sm text-gray-600">{prescription.prescription_items.length} items</p>
+                          <p className="text-lg font-semibold text-green-600">₹{(prescription.quantity * prescription.medicines.unit_price).toFixed(2)}</p>
+                          <p className="text-sm text-gray-600">Qty: {prescription.quantity}</p>
                         </div>
                       </div>
 
@@ -366,14 +336,14 @@ export default function AdminPrescriptionsPage() {
                           <User className="h-4 w-4 text-gray-400" />
                           <div>
                             <span className="font-medium text-gray-700">Doctor:</span>
-                            <p>{prescription.users?.full_name || 'Not assigned'}</p>
+                            <p>Dr. {prescription.visits?.doctor_id ? prescription.visits.doctor_id.slice(0, 8) + '...' : 'Not assigned'}</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
                           <Calendar className="h-4 w-4 text-gray-400" />
                           <div>
-                            <span className="font-medium text-gray-700">Date:</span>
-                            <p>{new Date(prescription.prescription_date).toLocaleDateString()}</p>
+                            <span className="font-medium text-gray-700">Medicine:</span>
+                            <p>{prescription.medicines.name} ({prescription.medicines.dosage_form})</p>
                           </div>
                         </div>
                         <div className="flex items-center gap-2">
@@ -389,8 +359,8 @@ export default function AdminPrescriptionsPage() {
                           <Users className="h-4 w-4 text-gray-400" />
                           <div>
                             <span className="font-medium text-gray-700">Age:</span>
-                            <p>{prescription.patients.date_of_birth ? 
-                                new Date().getFullYear() - new Date(prescription.patients.date_of_birth).getFullYear() 
+                            <p>{prescription.visits?.patients?.date_of_birth ? 
+                                new Date().getFullYear() - new Date(prescription.visits.patients.date_of_birth).getFullYear() 
                                 : 'N/A'} years</p>
                           </div>
                         </div>
@@ -403,6 +373,20 @@ export default function AdminPrescriptionsPage() {
                         </div>
                       )}
 
+                      {prescription.dosage && (
+                        <div className="text-sm">
+                          <span className="font-medium text-gray-700">Dosage:</span>
+                          <p className="text-gray-600 mt-1">{prescription.dosage}</p>
+                        </div>
+                      )}
+
+                      {prescription.duration && (
+                        <div className="text-sm">
+                          <span className="font-medium text-gray-700">Duration:</span>
+                          <p className="text-gray-600 mt-1">{prescription.duration}</p>
+                        </div>
+                      )}
+
                       {prescription.instructions && (
                         <div className="text-sm">
                           <span className="font-medium text-gray-700">Instructions:</span>
@@ -410,27 +394,24 @@ export default function AdminPrescriptionsPage() {
                         </div>
                       )}
 
-                      {/* Prescription Items */}
+                      {/* Medicine Details */}
                       <div className="text-sm">
-                        <span className="font-medium text-gray-700">Medicines:</span>
-                        <div className="mt-2 space-y-2">
-                          {prescription.prescription_items.map((item) => (
-                            <div key={item.id} className="bg-gray-50 p-3 rounded-md">
-                              <div className="flex justify-between items-start">
-                                <div>
-                                  <p className="font-medium">{item.medicines.name} ({item.medicines.strength})</p>
-                                  <p className="text-gray-600 text-sm">
-                                    Qty: {item.quantity} • Dosage: {item.dosage} • 
-                                    Frequency: {item.frequency} • Duration: {item.duration}
-                                  </p>
-                                </div>
-                                <div className="text-right">
-                                  <p className="font-medium">₹{(item.quantity * item.medicines.unit_price).toFixed(2)}</p>
-                                  <p className="text-sm text-gray-600">₹{item.medicines.unit_price}/unit</p>
-                                </div>
+                        <span className="font-medium text-gray-700">Medicine Details:</span>
+                        <div className="mt-2">
+                          <div className="bg-gray-50 p-3 rounded-md">
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <p className="font-medium">{prescription.medicines.name} ({prescription.medicines.dosage_form})</p>
+                                <p className="text-gray-600 text-sm">
+                                  Category: {prescription.medicines.category} • Quantity: {prescription.quantity}
+                                </p>
+                              </div>
+                              <div className="text-right">
+                                <p className="font-medium">₹{(prescription.quantity * prescription.medicines.unit_price).toFixed(2)}</p>
+                                <p className="text-sm text-gray-600">₹{prescription.medicines.unit_price}/unit</p>
                               </div>
                             </div>
-                          ))}
+                          </div>
                         </div>
                       </div>
                     </div>

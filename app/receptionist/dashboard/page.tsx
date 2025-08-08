@@ -240,7 +240,7 @@ export default function ReceptionistDashboard() {
                 <div className="font-medium">View Queue Status</div>
                 <div className="text-sm text-muted-foreground">Monitor doctor queues and waiting times</div>
               </button>
-              <a href="/receptionist/documentation" className="text-left p-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors flex items-center justify-between">
+              <a href="/documentation" className="text-left p-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors flex items-center justify-between">
                 <div>
                   <div className="font-medium">Help & Documentation</div>
                   <div className="text-sm text-muted-foreground">Registration guides & queue management</div>

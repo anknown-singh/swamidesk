@@ -31,6 +31,7 @@ interface SidebarItem {
   label: string
   icon: React.ComponentType<{ className?: string }>
   roles: UserRole[]
+  isGlobal?: boolean // for routes that don't need role prefix
 }
 
 const sidebarItems: SidebarItem[] = [
@@ -177,6 +178,7 @@ const sidebarItems: SidebarItem[] = [
     label: 'Help & Documentation',
     icon: BookOpen,
     roles: ['admin', 'doctor', 'receptionist', 'attendant', 'pharmacist'],
+    isGlobal: true,
   },
   {
     href: '/settings',
@@ -220,7 +222,7 @@ export function Sidebar({ userProfile }: SidebarProps) {
       
       <nav className="flex-1 space-y-1 p-4">
         {allowedItems.map((item) => {
-          const href = `${baseHref}${item.href}`
+          const href = item.isGlobal ? item.href : `${baseHref}${item.href}`
           const isActive = pathname === href || pathname.startsWith(`${href}/`)
           const Icon = item.icon
           

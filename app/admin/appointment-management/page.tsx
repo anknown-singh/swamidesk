@@ -133,7 +133,7 @@ export default function AdminAppointmentManagementPage() {
         } : undefined
       }))
 
-      setAppointments(mappedAppointments as Appointment[])
+      setAppointments(mappedAppointments as unknown as Appointment[])
     } catch (error) {
       console.error('Error fetching appointments:', error)
     } finally {
@@ -516,11 +516,11 @@ export default function AdminAppointmentManagementPage() {
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
-                          <h3 className="font-medium">{appointment.patient?.name}</h3>
+                          <h3 className="font-medium">{appointment.patients?.full_name}</h3>
                           <Badge>{appointment.status}</Badge>
                         </div>
                         <div className="text-sm text-muted-foreground">
-                          {appointment.doctor?.full_name} • {appointment.scheduled_time}
+                          {appointment.users?.full_name} • {appointment.scheduled_time}
                         </div>
                       </div>
                     </div>

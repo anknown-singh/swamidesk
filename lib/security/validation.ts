@@ -202,7 +202,7 @@ export class InputValidator {
 
   // Phone validation
   private validatePhone(value: any, _rule: ValidationRule, fieldName: string, errors: string[]): string {
-    let phoneValue = String(value).replace(/\D/g, '') // Remove non-digits
+    const phoneValue = String(value).replace(/\D/g, '') // Remove non-digits
 
     // Basic phone validation (adjust for your region)
     if (phoneValue.length < 10 || phoneValue.length > 15) {

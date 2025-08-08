@@ -94,15 +94,6 @@ export interface Appointment {
   services?: AppointmentService[]
 }
 
-export interface AppointmentService {
-  appointment_id: string
-  service_id: string
-  quantity: number
-  estimated_duration: number | null
-  created_at: string
-  // Relations
-  service?: Service
-}
 
 export interface Visit {
   id: string
@@ -337,7 +328,7 @@ export interface AppointmentService {
   appointment_id: string
   service_id: string
   quantity: number
-  estimated_duration: number
+  estimated_duration: number | null
   notes?: string
   created_at: string
   // Relations

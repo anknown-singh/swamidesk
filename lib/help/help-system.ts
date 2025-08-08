@@ -876,7 +876,7 @@ Great job and welcome to the team! 🎉
 
   // Track user progress
   trackProgress(userId: string, action: string, itemId: string): void {
-    let progress = this.userProgress.get(userId) || {
+    const progress = this.userProgress.get(userId) || {
       userId,
       role: UserRole.ADMIN, // This would be determined from user data
       completedOnboarding: [],

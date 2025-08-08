@@ -164,7 +164,7 @@ export default function AdminCalendarPage() {
   }
 
   const handleCancelAppointment = async (appointment: Appointment) => {
-    if (!confirm(`Cancel appointment for ${appointment.patient?.name}?`)) return
+    if (!confirm(`Cancel appointment for ${appointment.patients?.full_name}?`)) return
     
     const supabase = createAuthenticatedClient()
     try {

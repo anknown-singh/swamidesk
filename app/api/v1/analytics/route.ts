@@ -25,7 +25,7 @@ export async function GET(request: NextRequest) {
     // Calculate date range
     const now = new Date()
     let startDate: Date
-    let endDate = end_date ? new Date(end_date) : now
+    const endDate = end_date ? new Date(end_date) : now
     
     if (start_date) {
       startDate = new Date(start_date)

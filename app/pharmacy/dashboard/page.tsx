@@ -347,7 +347,7 @@ export default function PharmacyDashboard() {
                 </div>
               </div>
             </button>
-            <a href="/pharmacy/documentation" className="text-left p-4 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors">
+            <a href="/documentation" className="text-left p-4 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors">
               <div className="flex items-center gap-3">
                 <BookOpen className="h-5 w-5 text-amber-600" />
                 <div>

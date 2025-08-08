@@ -11,15 +11,16 @@ import { Clock, Search, Users, UserCheck, AlertCircle, CheckCircle, Calendar, Ph
 interface QueueItem {
   id: string
   patient_id: string
-  queue_number: number
-  status: 'waiting' | 'in_progress' | 'completed' | 'cancelled'
-  priority: 'normal' | 'urgent' | 'emergency'
+  token_number: number
+  status: 'waiting' | 'in_consultation' | 'services_pending' | 'completed'
+  priority: boolean
+  chief_complaint: string
   notes: string
+  visit_date: string
   created_at: string
   updated_at: string
   patients: {
     id: string
-    patient_id: string
     full_name: string
     phone: string
     date_of_birth: string
@@ -38,17 +39,17 @@ export default function AdminQueuePage() {
     const supabase = createClient()
     try {
       const { data, error } = await supabase
-        .from('queue')
+        .from('visits')
         .select(`
           *,
           patients (
             id,
-            patient_id,
             full_name,
             phone,
             date_of_birth
           )
         `)
+        .in('status', ['waiting', 'in_consultation'])
         .order('created_at', { ascending: true })
 
       if (error) throw error
@@ -68,7 +69,7 @@ export default function AdminQueuePage() {
     const supabase = createClient()
     const subscription = supabase
       .channel('queue_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'queue' }, () => {
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'visits' }, () => {
         fetchQueue()
       })
       .subscribe()
@@ -82,46 +83,43 @@ export default function AdminQueuePage() {
     switch (status) {
       case 'waiting':
         return { color: 'bg-yellow-100 text-yellow-800', label: 'Waiting', icon: Clock }
-      case 'in_progress':
-        return { color: 'bg-blue-100 text-blue-800', label: 'In Progress', icon: UserCheck }
+      case 'in_consultation':
+        return { color: 'bg-blue-100 text-blue-800', label: 'In Consultation', icon: UserCheck }
+      case 'services_pending':
+        return { color: 'bg-orange-100 text-orange-800', label: 'Services Pending', icon: AlertCircle }
       case 'completed':
         return { color: 'bg-green-100 text-green-800', label: 'Completed', icon: CheckCircle }
-      case 'cancelled':
-        return { color: 'bg-red-100 text-red-800', label: 'Cancelled', icon: AlertCircle }
       default:
         return { color: 'bg-gray-100 text-gray-800', label: status, icon: Clock }
     }
   }
 
-  const getPriorityConfig = (priority: string) => {
-    switch (priority) {
-      case 'emergency':
-        return { color: 'bg-red-100 text-red-800', label: 'Emergency' }
-      case 'urgent':
-        return { color: 'bg-orange-100 text-orange-800', label: 'Urgent' }
-      case 'normal':
-        return { color: 'bg-green-100 text-green-800', label: 'Normal' }
-      default:
-        return { color: 'bg-gray-100 text-gray-800', label: priority }
+  const getPriorityConfig = (priority: boolean) => {
+    if (priority) {
+      return { color: 'bg-red-100 text-red-800', label: 'High Priority' }
+    } else {
+      return { color: 'bg-gray-100 text-gray-600', label: 'Normal' }
     }
   }
 
   const filteredQueue = queueItems.filter(item => {
     const matchesSearch = (item.patients?.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                         (item.patients?.patient_id?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                         item.queue_number.toString().includes(searchTerm)
+                         (item.patients?.id?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+                         item.token_number.toString().includes(searchTerm)
     
     const matchesStatus = filterStatus === 'all' || item.status === filterStatus
-    const matchesPriority = filterPriority === 'all' || item.priority === filterPriority
+    const matchesPriority = filterPriority === 'all' || 
+                           (filterPriority === 'emergency' && item.priority) ||
+                           (filterPriority === 'normal' && !item.priority)
     
     return matchesSearch && matchesStatus && matchesPriority
   })
 
   const totalInQueue = queueItems.length
   const waitingCount = queueItems.filter(q => q.status === 'waiting').length
-  const inProgressCount = queueItems.filter(q => q.status === 'in_progress').length
+  const inProgressCount = queueItems.filter(q => q.status === 'in_consultation').length
   const completedCount = queueItems.filter(q => q.status === 'completed').length
-  const emergencyCount = queueItems.filter(q => q.priority === 'emergency').length
+  const emergencyCount = queueItems.filter(q => q.priority === true).length
 
   if (loading) {
     return (
@@ -231,9 +229,9 @@ export default function AdminQueuePage() {
             >
               <option value="all">All Status</option>
               <option value="waiting">Waiting</option>
-              <option value="in_progress">In Progress</option>
+              <option value="in_consultation">In Consultation</option>
+              <option value="services_pending">Services Pending</option>
               <option value="completed">Completed</option>
-              <option value="cancelled">Cancelled</option>
             </select>
             <select
               value={filterPriority}
@@ -241,8 +239,7 @@ export default function AdminQueuePage() {
               className="p-2 border border-gray-300 rounded-md"
             >
               <option value="all">All Priority</option>
-              <option value="emergency">Emergency</option>
-              <option value="urgent">Urgent</option>
+              <option value="emergency">High Priority</option>
               <option value="normal">Normal</option>
             </select>
             <div className="text-sm text-muted-foreground">
@@ -273,12 +270,12 @@ export default function AdminQueuePage() {
                     <div className="space-y-2 flex-1">
                       <div className="flex items-center gap-4">
                         <div className="bg-blue-100 text-blue-800 rounded-full w-12 h-12 flex items-center justify-center font-bold text-lg">
-                          #{item.queue_number}
+                          #{item.token_number}
                         </div>
                         <div>
                           <h3 className="font-semibold text-lg">{item.patients.full_name}</h3>
                           <p className="text-sm text-gray-600">
-                            ID: {item.patients.patient_id}
+                            ID: {item.patients.id.slice(0, 8)}...
                             {item.patients.phone && ` • ${item.patients.phone}`}
                           </p>
                         </div>
@@ -317,6 +314,13 @@ export default function AdminQueuePage() {
                         </div>
                       </div>
 
+                      {item.chief_complaint && (
+                        <div className="text-sm">
+                          <span className="font-medium text-gray-700">Chief Complaint:</span>
+                          <p className="text-gray-600 mt-1">{item.chief_complaint}</p>
+                        </div>
+                      )}
+                      
                       {item.notes && (
                         <div className="text-sm">
                           <span className="font-medium text-gray-700">Notes:</span>

@@ -177,7 +177,7 @@ export default function AdminAppointmentsPage() {
         } : undefined
       }))
 
-      setAppointments(mappedAppointments as Appointment[])
+      setAppointments(mappedAppointments as unknown as Appointment[])
     } catch (error) {
       console.error('Error fetching appointments:', error)
     } finally {
@@ -308,6 +308,7 @@ export default function AdminAppointmentsPage() {
 
   // Handle bulk operations
   const [selectedAppointments, setSelectedAppointments] = useState<string[]>([])
+  const [selectedAppointment] = useState<Appointment | null>(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editAppointment, setEditAppointment] = useState({
@@ -355,7 +356,7 @@ export default function AdminAppointmentsPage() {
         break
       case 'reschedule':
         // TODO: Implement reschedule functionality
-        alert(`Reschedule appointment for ${appointment.patient?.name}`)
+        alert(`Reschedule appointment for ${appointment.patients?.full_name}`)
         break
       default:
         console.log('Unknown action:', action)
@@ -367,11 +368,11 @@ export default function AdminAppointmentsPage() {
       id: appointment.id,
       patient_id: appointment.patient_id,
       doctor_id: appointment.doctor_id,
-      department: appointment.department,
+      department: appointment.department || '',
       appointment_type: appointment.appointment_type,
       scheduled_date: appointment.scheduled_date,
       scheduled_time: appointment.scheduled_time,
-      duration: appointment.duration,
+      duration: appointment.duration || 30,
       title: appointment.title || '',
       priority: appointment.priority || false,
       notes: appointment.patient_notes || '',
@@ -443,7 +444,7 @@ export default function AdminAppointmentsPage() {
   }
 
   const handleApproveAppointment = async (appointment: Appointment) => {
-    if (!confirm(`Approve appointment request from ${appointment.patient?.name || 'patient'}?`)) return
+    if (!confirm(`Approve appointment request from ${appointment.patients?.full_name || 'patient'}?`)) return
     
     try {
       const { error } = await supabase
@@ -462,7 +463,7 @@ export default function AdminAppointmentsPage() {
   }
 
   const handleRejectAppointment = async (appointment: Appointment) => {
-    const reason = prompt(`Reject appointment request from ${appointment.patient?.name || 'patient'}?\n\nOptional rejection reason:`)
+    const reason = prompt(`Reject appointment request from ${appointment.patients?.full_name || 'patient'}?\n\nOptional rejection reason:`)
     if (reason === null) return // User cancelled
     
     try {
@@ -485,7 +486,7 @@ export default function AdminAppointmentsPage() {
   }
 
   const handleCancelAppointment = async (appointment: Appointment) => {
-    if (!confirm(`Are you sure you want to cancel the appointment for ${appointment.patient?.name}?`)) return
+    if (!confirm(`Are you sure you want to cancel the appointment for ${appointment.patients?.full_name}?`)) return
     
     try {
       const { error } = await supabase
@@ -504,7 +505,7 @@ export default function AdminAppointmentsPage() {
   }
 
   const handleCompleteAppointment = async (appointment: Appointment) => {
-    if (!confirm(`Mark appointment for ${appointment.patient?.name} as completed?`)) return
+    if (!confirm(`Mark appointment for ${appointment.patients?.full_name} as completed?`)) return
     
     try {
       const { error } = await supabase
@@ -547,8 +548,8 @@ export default function AdminAppointmentsPage() {
   // Filter appointments
   const filteredAppointments = appointments.filter(appointment => {
     const matchesSearch = !searchTerm || 
-      appointment.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      appointment.doctor?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      appointment.patients?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      appointment.users?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       appointment.title?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       appointment.patient_notes?.toLowerCase().includes(searchTerm.toLowerCase())
     
@@ -948,8 +949,8 @@ export default function AdminAppointmentsPage() {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Departments</SelectItem>
-                  {[...new Set(appointments.map(apt => apt.department))].map(dept => (
-                    <SelectItem key={dept} value={dept}>{dept}</SelectItem>
+                  {[...new Set(appointments.map(apt => apt.department).filter(Boolean))].map(dept => (
+                    <SelectItem key={dept} value={dept || ''}>{dept}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -995,7 +996,7 @@ export default function AdminAppointmentsPage() {
                         <input
                           type="checkbox"
                           checked={isSelected}
-                          aria-label={`Select appointment for ${appointment.patient?.name}`}
+                          aria-label={`Select appointment for ${appointment.patients?.full_name}`}
                           onChange={(e) => {
                             if (e.target.checked) {
                               setSelectedAppointments([...selectedAppointments, appointment.id])
@@ -1006,7 +1007,7 @@ export default function AdminAppointmentsPage() {
                         />
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            <h3 className="font-medium">{appointment.patient?.name}</h3>
+                            <h3 className="font-medium">{appointment.patients?.full_name}</h3>
                             <Badge className={statusInfo.color}>
                               {statusInfo.label}
                             </Badge>
@@ -1024,7 +1025,7 @@ export default function AdminAppointmentsPage() {
                               </span>
                               <span className="flex items-center gap-1">
                                 <StethoscopeIcon className="h-3 w-3" />
-                                Dr. {appointment.doctor?.full_name}
+                                Dr. {appointment.users?.full_name}
                               </span>
                               <span className="flex items-center gap-1">
                                 <UserIcon className="h-3 w-3" />
@@ -1034,7 +1035,7 @@ export default function AdminAppointmentsPage() {
                             <div className="flex items-center gap-4">
                               <span>{appointment.appointment_type}</span>
                               <span>{appointment.duration} minutes</span>
-                              <span>{appointment.patient?.mobile}</span>
+                              <span>{appointment.patients?.phone}</span>
                             </div>
                             
                             {(appointment.title && appointment.title !== 'Medical Appointment' && appointment.title !== 'Consultation') && (
@@ -1173,7 +1174,7 @@ export default function AdminAppointmentsPage() {
               }}
               onApproveAppointment={handleApproveAppointment}
               onCancelAppointment={(appointment) => {
-                if (confirm(`Cancel appointment for ${appointment.patient?.name}?`)) {
+                if (confirm(`Cancel appointment for ${appointment.patients?.full_name}?`)) {
                   handleCancelAppointment(appointment)
                 }
               }}
@@ -1231,7 +1232,7 @@ export default function AdminAppointmentsPage() {
                           <div className="flex-1">
                             <div className="space-y-2">
                               <div className="flex items-center gap-2">
-                                <h3 className="font-medium">{appointment.patient?.name}</h3>
+                                <h3 className="font-medium">{appointment.patients?.full_name}</h3>
                                 <Badge className={statusInfo.color}>
                                   {statusInfo.label}
                                 </Badge>
@@ -1249,7 +1250,7 @@ export default function AdminAppointmentsPage() {
                                   </span>
                                   <span className="flex items-center gap-1">
                                     <StethoscopeIcon className="h-3 w-3" />
-                                    Dr. {appointment.doctor?.full_name}
+                                    Dr. {appointment.users?.full_name}
                                   </span>
                                   <span className="flex items-center gap-1">
                                     <UserIcon className="h-3 w-3" />
@@ -1259,7 +1260,7 @@ export default function AdminAppointmentsPage() {
                                 <div className="flex items-center gap-4">
                                   <span>{appointment.appointment_type}</span>
                                   <span>{appointment.duration} minutes</span>
-                                  <span>{appointment.patient?.mobile}</span>
+                                  <span>{appointment.patients?.phone}</span>
                                 </div>
                                 <div className="text-xs text-gray-500">
                                   Requested: {new Date(appointment.created_at).toLocaleString()}
@@ -1340,15 +1341,15 @@ export default function AdminAppointmentsPage() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <h3 className="font-semibold text-gray-700">Patient Information</h3>
-                  <p><strong>Name:</strong> {selectedAppointment.patient?.name}</p>
-                  <p><strong>Mobile:</strong> {selectedAppointment.patient?.mobile}</p>
-                  <p><strong>Email:</strong> {selectedAppointment.patient?.email}</p>
+                  <p><strong>Name:</strong> {selectedAppointment.patients?.full_name}</p>
+                  <p><strong>Mobile:</strong> {selectedAppointment.patients?.phone}</p>
+                  <p><strong>Email:</strong> {selectedAppointment.patients?.email}</p>
                 </div>
                 <div>
                   <h3 className="font-semibold text-gray-700">Doctor Information</h3>
-                  <p><strong>Name:</strong> Dr. {selectedAppointment.doctor?.full_name}</p>
+                  <p><strong>Name:</strong> Dr. {selectedAppointment.users?.full_name}</p>
                   <p><strong>Department:</strong> {selectedAppointment.department}</p>
-                  <p><strong>Specialization:</strong> {selectedAppointment.doctor?.specialization}</p>
+                  <p><strong>Specialization:</strong> {selectedAppointment.users?.specialization}</p>
                 </div>
               </div>
               

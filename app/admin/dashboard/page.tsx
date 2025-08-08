@@ -458,7 +458,7 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </button>
-            <a href="/admin/documentation" className="w-full text-left p-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors block">
+            <a href="/documentation" className="w-full text-left p-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors block">
               <div className="flex items-center gap-3">
                 <BookOpen className="h-5 w-5 text-amber-600" />
                 <div>

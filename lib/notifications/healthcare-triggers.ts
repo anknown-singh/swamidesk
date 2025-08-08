@@ -28,7 +28,7 @@ export class HealthcareNotificationTriggers {
             label: 'View Patient',
             action: 'navigate',
             url: `/patients/${patientId}`,
-            style: 'primary' as 'primary'
+            style: 'primary' as const
           }
         ]
       }
@@ -52,7 +52,7 @@ export class HealthcareNotificationTriggers {
             id: 'check_in',
             label: 'Check In',
             action: 'check_in',
-            style: 'primary' as 'primary'
+            style: 'primary' as const
           }
         ]
       }
@@ -76,7 +76,7 @@ export class HealthcareNotificationTriggers {
               label: 'Start Consultation',
               action: 'navigate',
               url: `/doctor/consultations?patient=${patientId}`,
-              style: 'primary' as 'primary'
+              style: 'primary' as const
             }
           ]
         }
@@ -103,7 +103,7 @@ export class HealthcareNotificationTriggers {
             label: 'View Calendar',
             action: 'navigate',
             url: `/doctor/calendar`,
-            style: 'primary' as 'primary'
+            style: 'primary' as const
           }
         ]
       }
@@ -173,7 +173,7 @@ export class HealthcareNotificationTriggers {
             label: 'View Results',
             action: 'navigate',
             url: `/doctor/patients/${patientId}/lab-results`,
-            style: 'primary' as 'primary'
+            style: 'primary' as const
           }
         ]
       }
@@ -201,7 +201,7 @@ export class HealthcareNotificationTriggers {
               label: 'Review Patient',
               action: 'navigate',
               url: `/doctor/patients/${patientId}`,
-              style: 'danger' as 'danger'
+              style: 'danger' as const
             }
           ]
         }
@@ -242,7 +242,7 @@ export class HealthcareNotificationTriggers {
             label: 'Dispense',
             action: 'navigate',
             url: `/pharmacy/prescriptions/${prescriptionId}`,
-            style: 'primary' as 'primary'
+            style: 'primary' as const
           }
         ]
       }
@@ -263,7 +263,7 @@ export class HealthcareNotificationTriggers {
             id: 'notify_patient',
             label: 'Notify Patient',
             action: 'notify_patient',
-            style: 'primary' as 'primary'
+            style: 'primary' as const
           }
         ]
       }
@@ -287,7 +287,7 @@ export class HealthcareNotificationTriggers {
             id: 'reorder',
             label: 'Reorder Now',
             action: 'reorder',
-            style: 'primary' as 'primary'
+            style: 'primary' as const
           }
         ]
       }
@@ -327,7 +327,7 @@ export class HealthcareNotificationTriggers {
             label: 'Review Stock',
             action: 'navigate',
             url: `/pharmacy/inventory?expiring=true`,
-            style: 'primary' as 'primary'
+            style: 'primary' as const
           }
         ]
       }
@@ -387,14 +387,14 @@ export class HealthcareNotificationTriggers {
               id: 'acknowledge',
               label: 'Acknowledge',
               action: 'acknowledge',
-              style: 'danger' as 'danger'
+              style: 'danger' as const
             },
             ...(patientId ? [{
               id: 'view_patient',
               label: 'View Patient',
               action: 'navigate',
               url: `/patients/${patientId}`,
-              style: 'primary' as 'primary' as const
+              style: 'primary' as const as const
             }] : [])
           ]
         }
@@ -468,7 +468,7 @@ export class HealthcareNotificationTriggers {
               id: 'call_next',
               label: 'Call Patient',
               action: 'call_patient',
-              style: 'primary' as 'primary'
+              style: 'primary' as const
             }
           ]
         }

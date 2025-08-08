@@ -285,7 +285,7 @@ export default function AttendantDashboard() {
                 <div className="font-medium">View Service History</div>
                 <div className="text-sm text-muted-foreground">Review completed procedures</div>
               </button>
-              <a href="/attendant/documentation" className="text-left p-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors flex items-center justify-between">
+              <a href="/documentation" className="text-left p-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors flex items-center justify-between">
                 <div>
                   <div className="font-medium">Help & Documentation</div>
                   <div className="text-sm text-muted-foreground">Procedure guides & service workflow</div>
