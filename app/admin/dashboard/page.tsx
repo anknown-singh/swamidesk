@@ -43,6 +43,17 @@ export default function AdminDashboard() {
   const [activities, setActivities] = useState<RecentActivity[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Check if mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
   
   const supabase = createClient()
 
@@ -206,6 +217,12 @@ export default function AdminDashboard() {
     if (diffInMinutes < 60) return `${diffInMinutes} min ago`
     if (diffInMinutes < 1440) return `${Math.floor(diffInMinutes / 60)} hr ago`
     return `${Math.floor(diffInMinutes / 1440)} days ago`
+  }
+
+  // Mobile optimization - use mobile component if screen is small
+  if (isMobile) {
+    const { MobileOptimizedAdminDashboard } = require('@/components/mobile/mobile-optimized-admin-dashboard')
+    return <MobileOptimizedAdminDashboard />
   }
 
   if (error) {

@@ -34,6 +34,17 @@ export default function DoctorDashboard() {
   const [queue, setQueue] = useState<QueuePatient[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [isMobile, setIsMobile] = useState(false)
+
+  // Check if mobile
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024)
+    }
+    checkMobile()
+    window.addEventListener('resize', checkMobile)
+    return () => window.removeEventListener('resize', checkMobile)
+  }, [])
   
   const { user } = useUser()
 
@@ -157,6 +168,12 @@ export default function DoctorDashboard() {
     if (diffInMinutes < 1) return 'Just now'
     if (diffInMinutes < 60) return `${diffInMinutes} min ago`
     return `${Math.floor(diffInMinutes / 60)} hr ago`
+  }
+
+  // Mobile optimization - use mobile component if screen is small
+  if (isMobile) {
+    const { MobileOptimizedDoctorDashboard } = require('@/components/mobile/mobile-optimized-doctor-dashboard')
+    return <MobileOptimizedDoctorDashboard />
   }
 
   if (error) {

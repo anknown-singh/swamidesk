@@ -1,13 +1,42 @@
 import { type NextRequest, NextResponse } from 'next/server'
 import { updateSession } from './lib/supabase/middleware'
+import { securityHeaders, ROUTE_SECURITY_CONFIGS } from '@/lib/security/headers'
 
 export async function middleware(request: NextRequest) {
+  const { pathname } = request.nextUrl
+
   // Skip middleware for test routes
-  if (request.nextUrl.pathname.startsWith('/admin/test')) {
+  if (pathname.startsWith('/admin/test')) {
     return NextResponse.next()
   }
-  
-  return await updateSession(request)
+
+  // Apply route-specific security configurations
+  if (pathname.startsWith('/api/auth/')) {
+    securityHeaders.updateRateLimitConfig(ROUTE_SECURITY_CONFIGS.auth.rateLimitConfig)
+  } else if (pathname.startsWith('/api/')) {
+    securityHeaders.updateRateLimitConfig(ROUTE_SECURITY_CONFIGS.api.rateLimitConfig)
+  } else if (pathname.startsWith('/admin/')) {
+    securityHeaders.updateRateLimitConfig(ROUTE_SECURITY_CONFIGS.admin.rateLimitConfig)
+    securityHeaders.updateConfig({ 
+      customHeaders: ROUTE_SECURITY_CONFIGS.admin.customHeaders 
+    })
+  } else if (pathname.includes('/patient')) {
+    securityHeaders.updateConfig({ 
+      customHeaders: ROUTE_SECURITY_CONFIGS.patient.customHeaders 
+    })
+  }
+
+  // Run security middleware checks first
+  const securityResult = securityHeaders.securityMiddleware(request)
+  if (securityResult) {
+    return securityResult // Return error response if security check fails
+  }
+
+  // Continue with existing Supabase session handling
+  const response = await updateSession(request)
+
+  // Apply security headers to the response
+  return securityHeaders.applyHeaders(response)
 }
 
 export const config = {

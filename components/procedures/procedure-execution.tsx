@@ -138,7 +138,7 @@ export function ProcedureExecution() {
           visit_services: visitServices?.filter(vs => vs.visits.patient_id === patient.patient_id) || []
         }))
 
-        setPendingPatients(patientsWithServices as PatientWithProcedures[])
+        setPendingPatients(patientsWithServices as unknown as PatientWithProcedures[])
         return
       }
 
