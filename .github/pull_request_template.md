@@ -1,39 +1,64 @@
-## Description
-Brief description of what this PR does
+# SwamIDesk Pull Request
 
-## Type of Change
-- [ ] Bug fix (non-breaking change which fixes an issue)
-- [ ] New feature (non-breaking change which adds functionality)
-- [ ] Breaking change (fix or feature that would cause existing functionality to not work as expected)
-- [ ] Documentation update
-- [ ] Code refactoring
-- [ ] Performance improvement
+## 🏥 Healthcare Context
+- **Department Affected**: (e.g., Pharmacy, Doctor, Admin, All)
+- **User Role Impact**: (e.g., Doctor, Pharmacist, Admin, Patient)
+- **Workflow Stage**: (e.g., Registration, Consultation, Billing, Reporting)
 
-## User Roles Affected
-- [ ] Admin
-- [ ] Doctor
-- [ ] Patient
-- [ ] Receptionist
-- [ ] All roles
+## 📋 Description
+Brief description of the changes and why they are needed.
 
-## Testing
-- [ ] I have tested this change locally
-- [ ] I have tested in all affected user roles
-- [ ] I have tested on mobile devices
+## 🎯 Type of Change
+- [ ] 🐛 Bug fix (non-breaking change which fixes an issue)
+- [ ] ✨ New feature (non-breaking change which adds functionality)
+- [ ] 💥 Breaking change (fix or feature that would cause existing functionality to not work as expected)
+- [ ] 📝 Documentation update
+- [ ] 🔧 Refactoring (no functional changes)
+- [ ] 🔒 Security improvement
+- [ ] ⚡ Performance improvement
+
+## 🧪 Testing
+- [ ] Unit tests added/updated
+- [ ] Integration tests added/updated
+- [ ] Manual testing completed
+- [ ] Healthcare workflow tested end-to-end
+- [ ] Database changes tested
 - [ ] All existing tests pass
-- [ ] Build passes successfully
 
-## Screenshots (if applicable)
-Add screenshots of the changes
+## 📸 Screenshots (if applicable)
+Add screenshots to help explain your changes.
 
-## Checklist
-- [ ] My code follows the style guidelines of this project
-- [ ] I have performed a self-review of my own code
-- [ ] I have commented my code, particularly in hard-to-understand areas
-- [ ] I have made corresponding changes to the documentation
-- [ ] My changes generate no new warnings
-- [ ] I have added tests that prove my fix is effective or that my feature works
-- [ ] New and existing unit tests pass locally with my changes
+## 📊 Database Changes
+- [ ] No database changes
+- [ ] New tables/columns added
+- [ ] Existing tables/columns modified
+- [ ] Data migration required
+- [ ] Database changes documented
 
-## Additional Notes
-Any additional information or context about the PR
+## 🔒 Security Considerations
+- [ ] No sensitive data exposed
+- [ ] Authentication/authorization properly implemented
+- [ ] Input validation added
+- [ ] SQL injection protection verified
+- [ ] HIPAA compliance maintained
+
+## 📝 Checklist
+- [ ] Code follows style guidelines
+- [ ] Self-review completed
+- [ ] Comments added for complex logic
+- [ ] Documentation updated
+- [ ] No breaking changes or they are documented
+- [ ] Healthcare-specific requirements met
+
+## 🔗 Related Issues
+Closes #(issue_number)
+
+## 📋 Deployment Notes
+Any special deployment considerations or requirements.
+
+## 🏥 Clinical Impact
+How does this change affect patient care or clinic operations?
+
+## 👀 Reviewers
+@username - Please review for [specific aspect]
+EOF < /dev/null
