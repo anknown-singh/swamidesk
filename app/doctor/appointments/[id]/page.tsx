@@ -6,13 +6,39 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Calendar, Clock, User, FileText, Phone, Edit, Pill } from 'lucide-react'
-import type { Appointment } from '@/lib/types'
+import { ArrowLeft, Calendar, Clock, User, FileText, Phone, Pill, Stethoscope } from 'lucide-react'
 
 export default function DoctorAppointmentDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const [appointment, setAppointment] = useState<any>(null)
+  const [appointment, setAppointment] = useState<{
+    id: string
+    scheduled_date: string
+    scheduled_time: string
+    status: string
+    duration: number
+    appointment_type: string
+    patients?: {
+      full_name: string
+      phone?: string
+      date_of_birth?: string
+      gender?: string
+    }
+    opd_records?: Array<{
+      id: string
+      consultation_notes?: string
+      diagnosis?: string
+      opd_status: string
+      prescriptions?: Array<{
+        id: string
+        dosage: string
+        frequency: string
+        duration: string
+        instructions?: string
+        medicines?: { name: string; dosage_form: string }
+      }>
+    }>
+  } | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -26,7 +52,7 @@ export default function DoctorAppointmentDetailPage() {
           .from('appointments')
           .select(`
             *,
-            patients(name, mobile, email, dob, gender, address),
+            patients(full_name, phone, email, date_of_birth, gender, address),
             opd_records(
               id, consultation_notes, diagnosis, opd_status,
               prescriptions(
@@ -114,7 +140,7 @@ export default function DoctorAppointmentDetailPage() {
               </div>
               <div>
                 <CardTitle className="text-xl">
-                  {appointment.patients?.name}
+                  {appointment.patients?.full_name}
                 </CardTitle>
                 <CardDescription>
                   {new Date(appointment.scheduled_date).toLocaleDateString()} at {appointment.scheduled_time}
@@ -136,10 +162,10 @@ export default function DoctorAppointmentDetailPage() {
               <FileText className="h-4 w-4 text-gray-500" />
               <span>Type: {appointment.appointment_type}</span>
             </div>
-            {appointment.patients?.dob && (
+            {appointment.patients?.date_of_birth && (
               <div className="flex items-center space-x-3">
                 <User className="h-4 w-4 text-gray-500" />
-                <span>Age: {Math.floor((Date.now() - new Date(appointment.patients.dob).getTime()) / (365.25 * 24 * 60 * 60 * 1000))} years</span>
+                <span>Age: {Math.floor((Date.now() - new Date(appointment.patients.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))} years</span>
               </div>
             )}
           </div>
@@ -147,10 +173,10 @@ export default function DoctorAppointmentDetailPage() {
           {/* Patient Contact */}
           {appointment.patients && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4 border-t">
-              {appointment.patients.mobile && (
+              {appointment.patients.phone && (
                 <div className="flex items-center space-x-3">
                   <Phone className="h-4 w-4 text-gray-500" />
-                  <span>{appointment.patients.mobile}</span>
+                  <span>{appointment.patients.phone}</span>
                 </div>
               )}
               {appointment.patients.gender && (
@@ -172,7 +198,7 @@ export default function DoctorAppointmentDetailPage() {
             <CardTitle>Consultation Records</CardTitle>
           </CardHeader>
           <CardContent className="space-y-4">
-            {appointment.opd_records.map((record: any) => (
+            {appointment.opd_records.map((record) => (
               <div key={record.id} className="p-4 bg-blue-50 rounded-lg">
                 <div className="flex items-center justify-between mb-3">
                   <Badge variant={record.opd_status === 'completed' ? 'default' : 'secondary'}>
@@ -199,7 +225,7 @@ export default function DoctorAppointmentDetailPage() {
                   <div>
                     <h5 className="font-medium text-blue-800 mb-2">Prescriptions</h5>
                     <div className="space-y-2">
-                      {record.prescriptions.map((prescription: any) => (
+                      {record.prescriptions.map((prescription) => (
                         <div key={prescription.id} className="p-3 bg-white rounded border-l-4 border-green-400">
                           <p className="font-medium text-sm">{prescription.medicines?.name}</p>
                           <div className="text-xs text-gray-600 space-x-4">
@@ -243,27 +269,68 @@ export default function DoctorAppointmentDetailPage() {
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
             <Button className="w-full" onClick={() => {
-              // Handle start consultation
-              console.log('Start consultation')
+              if (appointment.status === 'completed') {
+                router.push(`/doctor/patients/${appointment.patients?.id || appointment.patient_id}/records`)
+              } else {
+                router.push(`/doctor/consultations/${appointment.id}`)
+              }
             }}>
               <FileText className="h-4 w-4 mr-2" />
               {appointment.status === 'completed' ? 'View Records' : 'Start Consultation'}
             </Button>
             <Button variant="outline" className="w-full" onClick={() => {
-              // Handle prescribe medicine
-              console.log('Prescribe medicine')
+              router.push(`/doctor/prescriptions/new?appointment_id=${appointment.id}&patient_id=${appointment.patient_id}`)
             }}>
               <Pill className="h-4 w-4 mr-2" />
               Add Prescription
             </Button>
             <Button variant="outline" className="w-full" onClick={() => {
-              // Handle reschedule
-              console.log('Reschedule appointment')
+              router.push(`/doctor/appointments/${appointment.id}/reschedule`)
             }}>
               <Calendar className="h-4 w-4 mr-2" />
               Reschedule
+            </Button>
+          </div>
+          
+          {/* Additional Actions */}
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 pt-4 border-t">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => router.push(`/doctor/patients/${appointment.patients?.id || appointment.patient_id}`)}
+            >
+              <User className="h-4 w-4 mr-2" />
+              Patient Profile
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => router.push(`/doctor/treatments/new?patient_id=${appointment.patient_id}`)}
+            >
+              <Stethoscope className="h-4 w-4 mr-2" />
+              Treatment Plan
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => {
+                if (appointment.patients?.phone) {
+                  window.open(`tel:${appointment.patients.phone}`)
+                }
+              }}
+            >
+              <Phone className="h-4 w-4 mr-2" />
+              Call Patient
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => window.print()}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Print Notes
             </Button>
           </div>
         </CardContent>

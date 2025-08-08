@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { FileTextIcon, WorkflowIcon, BookOpenIcon, UsersIcon, BarChart3Icon } from 'lucide-react'
+import { FileTextIcon, WorkflowIcon, BookOpenIcon, UsersIcon, BarChart3Icon, DatabaseIcon } from 'lucide-react'
 
 export default function DocumentationPage() {
   return (
@@ -19,7 +19,7 @@ export default function DocumentationPage() {
         </div>
 
         {/* Navigation Cards */}
-        <div className="grid md:grid-cols-3 gap-6">
+        <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
           <Link href="/documentation/patient-journey">
             <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-blue-300">
               <CardHeader className="text-center pb-4">
@@ -90,6 +90,31 @@ export default function DocumentationPage() {
                 </div>
                 <div className="mt-4 px-4 py-2 bg-green-100 text-green-800 rounded-full inline-block">
                   View Implementation →
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/documentation/management-data">
+            <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-purple-300">
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto w-16 h-16 bg-purple-500 rounded-full flex items-center justify-center mb-4">
+                  <DatabaseIcon className="w-8 h-8 text-white" />
+                </div>
+                <CardTitle className="text-2xl text-purple-900">Management Data</CardTitle>
+                <CardDescription className="text-lg">
+                  Real-time management dashboard showing live data from all systems
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-center">
+                <div className="space-y-2 text-sm text-gray-600">
+                  <p>📋 Live consultation data</p>
+                  <p>💊 Real prescription management</p>
+                  <p>⚕️ Active treatment plans</p>
+                  <p>🏥 Complete workflow tracking</p>
+                </div>
+                <div className="mt-4 px-4 py-2 bg-purple-100 text-purple-800 rounded-full inline-block">
+                  View Live Data →
                 </div>
               </CardContent>
             </Card>

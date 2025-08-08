@@ -6,13 +6,42 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Calendar, Clock, User, Stethoscope, FileText, Phone } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, User, Stethoscope, FileText, Phone, CreditCard } from 'lucide-react'
 import type { Appointment } from '@/lib/types'
 
 interface AppointmentWithDetails extends Appointment {
-  patients?: any
-  users?: any
-  services?: any[]
+  patients?: {
+    id: string
+    full_name: string
+    phone?: string
+    email?: string
+    date_of_birth?: string
+    gender?: string
+    address?: string
+    emergency_contact_name?: string
+    emergency_contact_phone?: string
+  }
+  users?: {
+    full_name: string
+    phone?: string
+    specialization?: string
+    department?: string
+  }
+  services?: Array<{
+    id: string
+    name: string
+    price: number
+    category: string
+  }>
+  visit_services?: Array<{
+    id: string
+    status: string
+    notes?: string
+    services?: {
+      name: string
+      category: string
+    }
+  }>
 }
 
 export default function AppointmentDetailPage() {
@@ -32,7 +61,7 @@ export default function AppointmentDetailPage() {
           .from('appointments')
           .select(`
             *,
-            patients(name, mobile, email, dob, gender),
+            patients(full_name, phone, email, date_of_birth, gender),
             users(full_name, phone, specialization, department),
             visit_services(
               id, quantity, unit_price, total_price, status, notes,
@@ -206,17 +235,17 @@ export default function AppointmentDetailPage() {
             {appointment.patients && (
               <>
                 <div>
-                  <p className="font-medium text-lg">{appointment.patients.name}</p>
-                  {appointment.patients.dob && (
+                  <p className="font-medium text-lg">{appointment.patients.full_name}</p>
+                  {appointment.patients.date_of_birth && (
                     <p className="text-sm text-gray-600">
-                      Age: {Math.floor((Date.now() - new Date(appointment.patients.dob).getTime()) / (365.25 * 24 * 60 * 60 * 1000))} years
+                      Age: {Math.floor((Date.now() - new Date(appointment.patients.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))} years
                     </p>
                   )}
                 </div>
-                {appointment.patients.mobile && (
+                {appointment.patients.phone && (
                   <div className="flex items-center space-x-2">
                     <Phone className="h-4 w-4 text-gray-500" />
-                    <span>{appointment.patients.mobile}</span>
+                    <span>{appointment.patients.phone}</span>
                   </div>
                 )}
                 {appointment.patients.gender && (
@@ -271,7 +300,7 @@ export default function AppointmentDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {appointment.visit_services.map((visitService: any) => (
+              {appointment.visit_services.map((visitService) => (
                 <div key={visitService.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div>
                     <p className="font-medium">{visitService.services?.name}</p>
@@ -297,6 +326,52 @@ export default function AppointmentDetailPage() {
           </CardContent>
         </Card>
       )}
+
+      {/* Quick Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Quick Actions</CardTitle>
+          <CardDescription>Administrative actions for this appointment</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Button 
+              className="w-full" 
+              onClick={() => router.push(`/admin/patients/${appointment.patients?.id || appointment.patient_id}`)}
+            >
+              <User className="h-4 w-4 mr-2" />
+              View Patient
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => router.push(`/admin/appointments/${appointment.id}/edit`)}
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Edit Appointment
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => {
+                // Navigate to billing
+                router.push(`/admin/billing?patient_id=${appointment.patient_id}&appointment_id=${appointment.id}`)
+              }}
+            >
+              <CreditCard className="h-4 w-4 mr-2" />
+              Generate Bill
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => window.print()}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Print Details
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
     </div>
   )
 }

@@ -520,13 +520,27 @@ export default function MedicinesPage() {
                       )}
                     </div>
                     
-                    <div className="flex gap-2 ml-4">
+                    <div className="flex flex-wrap gap-2 ml-4">
+                      <Button
+                        size="sm"
+                        onClick={() => window.location.href = `/pharmacy/medicines/${medicine.id}`}
+                      >
+                        View Details
+                      </Button>
                       <Button
                         size="sm"
                         variant="outline"
-                        onClick={() => toggleMedicineStatus(medicine.id, medicine.is_active)}
+                        onClick={() => window.location.href = `/pharmacy/medicines/${medicine.id}/edit`}
                       >
-                        {medicine.is_active ? 'Deactivate' : 'Activate'}
+                        Edit
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={!medicine.is_active || medicine.stock_quantity <= 0}
+                        onClick={() => window.location.href = `/pharmacy/dispense?medicine_id=${medicine.id}`}
+                      >
+                        Dispense
                       </Button>
                       <Button
                         size="sm"
@@ -539,6 +553,13 @@ export default function MedicinesPage() {
                         }}
                       >
                         Update Stock
+                      </Button>
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={() => toggleMedicineStatus(medicine.id, medicine.is_active)}
+                      >
+                        {medicine.is_active ? 'Deactivate' : 'Activate'}
                       </Button>
                     </div>
                   </div>

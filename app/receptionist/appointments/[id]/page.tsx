@@ -6,13 +6,37 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Calendar, Clock, User, Phone, Edit, CreditCard, CheckCircle } from 'lucide-react'
+import { ArrowLeft, Calendar, Clock, User, Phone, CreditCard, CheckCircle } from 'lucide-react'
 import type { Appointment } from '@/lib/types'
+
+interface AppointmentWithDetails extends Appointment {
+  patients?: {
+    full_name: string
+    phone?: string
+    email?: string
+    date_of_birth?: string
+    gender?: string
+    address?: string
+    emergency_contact_name?: string
+  }
+  users?: {
+    full_name: string
+    phone?: string
+    specialization?: string
+    department?: string
+  }
+  invoices?: Array<{
+    id: string
+    total_amount: number
+    payment_status: string
+    balance_amount: number
+  }>
+}
 
 export default function ReceptionistAppointmentDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const [appointment, setAppointment] = useState<any>(null)
+  const [appointment, setAppointment] = useState<AppointmentWithDetails | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -26,7 +50,7 @@ export default function ReceptionistAppointmentDetailPage() {
           .from('appointments')
           .select(`
             *,
-            patients(name, mobile, email, dob, gender, address, emergency_contact),
+            patients(full_name, phone, email, date_of_birth, gender, address, emergency_contact_name),
             users(full_name, phone, specialization, department),
             invoices(id, total_amount, payment_status, balance_amount)
           `)
@@ -54,7 +78,7 @@ export default function ReceptionistAppointmentDetailPage() {
 
   const handleStatusUpdate = async (newStatus: string) => {
     try {
-      const updateData: any = { status: newStatus }
+      const updateData: Record<string, any> = { status: newStatus }
       
       // Add timestamp based on status
       switch (newStatus) {
@@ -139,7 +163,7 @@ export default function ReceptionistAppointmentDetailPage() {
               Mark Arrived
             </Button>
             <Button variant="outline" size="sm">
-              <Edit className="h-4 w-4 mr-2" />
+              <Calendar className="h-4 w-4 mr-2" />
               Reschedule
             </Button>
           </>
@@ -185,7 +209,7 @@ export default function ReceptionistAppointmentDetailPage() {
             </div>
             <div>
               <CardTitle className="text-xl">
-                {appointment.patients?.name} with Dr. {appointment.users?.full_name}
+                {appointment.patients?.full_name} with Dr. {appointment.users?.full_name}
               </CardTitle>
               <CardDescription>
                 {new Date(appointment.scheduled_date).toLocaleDateString()} at {appointment.scheduled_time}
@@ -229,29 +253,29 @@ export default function ReceptionistAppointmentDetailPage() {
             {appointment.patients && (
               <>
                 <div>
-                  <p className="font-medium text-lg">{appointment.patients.name}</p>
-                  {appointment.patients.dob && (
+                  <p className="font-medium text-lg">{appointment.patients.full_name}</p>
+                  {appointment.patients.date_of_birth && (
                     <p className="text-sm text-gray-600">
-                      Age: {Math.floor((Date.now() - new Date(appointment.patients.dob).getTime()) / (365.25 * 24 * 60 * 60 * 1000))} years old
+                      Age: {Math.floor((Date.now() - new Date(appointment.patients.date_of_birth).getTime()) / (365.25 * 24 * 60 * 60 * 1000))} years old
                     </p>
                   )}
                 </div>
 
                 <div className="space-y-2">
-                  {appointment.patients.mobile && (
+                  {appointment.patients.phone && (
                     <div className="flex items-center space-x-2">
                       <Phone className="h-4 w-4 text-gray-500" />
-                      <span>{appointment.patients.mobile}</span>
+                      <span>{appointment.patients.phone}</span>
                       <Button size="sm" variant="outline" className="h-6 text-xs">
                         Call
                       </Button>
                     </div>
                   )}
                   
-                  {appointment.patients.emergency_contact && (
+                  {appointment.patients.emergency_contact_name && (
                     <div className="p-3 bg-red-50 rounded-lg">
                       <p className="text-sm font-medium text-red-800">Emergency Contact</p>
-                      <p className="text-sm text-red-600">{appointment.patients.emergency_contact}</p>
+                      <p className="text-sm text-red-600">{appointment.patients.emergency_contact_name}</p>
                     </div>
                   )}
                 </div>
@@ -311,7 +335,7 @@ export default function ReceptionistAppointmentDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {appointment.invoices.map((invoice: any) => (
+              {appointment.invoices.map((invoice) => (
                 <div key={invoice.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div>
                     <p className="font-medium">Invoice #{invoice.id.slice(0, 8)}...</p>
@@ -345,7 +369,7 @@ export default function ReceptionistAppointmentDetailPage() {
         <CardContent>
           <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
             <Button variant="outline" className="w-full">
-              <Edit className="h-4 w-4 mr-2" />
+              <User className="h-4 w-4 mr-2" />
               Edit Details
             </Button>
             <Button variant="outline" className="w-full">

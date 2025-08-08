@@ -6,14 +6,32 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { Separator } from '@/components/ui/separator'
-import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, Heart } from 'lucide-react'
+import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, Heart, FileText, CreditCard, Printer } from 'lucide-react'
 import type { Patient } from '@/lib/types'
 
 interface PatientWithDetails extends Patient {
-  appointments?: any[]
-  prescriptions?: any[]
-  invoices?: any[]
+  appointments?: Array<{
+    id: string
+    scheduled_date: string
+    scheduled_time: string
+    status: string
+    appointment_type: string
+    users?: { full_name: string }
+  }>
+  prescriptions?: Array<{
+    id: string
+    created_at: string
+    status: string
+    medicines?: { name: string }
+    users?: { full_name: string }
+  }>
+  invoices?: Array<{
+    id: string
+    total_amount: number
+    payment_status: string
+    created_at: string
+    balance_amount: number
+  }>
 }
 
 export default function PatientDetailPage() {
@@ -33,7 +51,7 @@ export default function PatientDetailPage() {
         const { data: patientData, error: patientError } = await supabase
           .from('patients')
           .select('*')
-          .eq('patient_id', patientId)
+          .eq('id', patientId)
           .single()
 
         if (patientError) {
@@ -134,18 +152,18 @@ export default function PatientDetailPage() {
               <User className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <CardTitle className="text-xl">{patient.name}</CardTitle>
-              <CardDescription>Patient ID: {patient.patient_id}</CardDescription>
+              <CardTitle className="text-xl">{patient.full_name}</CardTitle>
+              <CardDescription>Patient ID: {patient.id}</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Contact Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {patient.mobile && (
+            {patient.phone && (
               <div className="flex items-center space-x-3">
                 <Phone className="h-4 w-4 text-gray-500" />
-                <span>{patient.mobile}</span>
+                <span>{patient.phone}</span>
               </div>
             )}
             {patient.email && (
@@ -154,10 +172,10 @@ export default function PatientDetailPage() {
                 <span>{patient.email}</span>
               </div>
             )}
-            {patient.dob && (
+            {patient.date_of_birth && (
               <div className="flex items-center space-x-3">
                 <Calendar className="h-4 w-4 text-gray-500" />
-                <span>Born: {new Date(patient.dob).toLocaleDateString()}</span>
+                <span>Born: {new Date(patient.date_of_birth).toLocaleDateString()}</span>
               </div>
             )}
             {patient.gender && (
@@ -175,10 +193,10 @@ export default function PatientDetailPage() {
             </div>
           )}
 
-          {patient.emergency_contact && (
+          {patient.emergency_contact_name && (
             <div className="p-4 bg-red-50 rounded-lg">
               <h4 className="font-medium text-red-800 mb-2">Emergency Contact</h4>
-              <p className="text-red-600">{patient.emergency_contact}</p>
+              <p className="text-red-600">{patient.emergency_contact_name} - {patient.emergency_contact_phone}</p>
             </div>
           )}
         </CardContent>
@@ -214,20 +232,105 @@ export default function PatientDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {patient.appointments.slice(0, 5).map((appointment: any) => (
+              {patient.appointments.slice(0, 5).map((appointment) => (
                 <div key={appointment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div>
-                    <p className="font-medium">{(appointment.users as any)?.full_name || 'Unknown Doctor'}</p>
+                    <p className="font-medium">{appointment.users?.full_name || 'Unknown Doctor'}</p>
                     <p className="text-sm text-gray-600">
                       {new Date(appointment.scheduled_date).toLocaleDateString()} at {appointment.scheduled_time}
                     </p>
-                    <p className="text-xs text-gray-500">{(appointment.users as any)?.specialization}</p>
+                    <p className="text-xs text-gray-500">{appointment.users?.full_name}</p>
                   </div>
                   <Badge variant={appointment.status === 'completed' ? 'default' : 'secondary'}>
                     {appointment.status}
                   </Badge>
                 </div>
               ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Patient Management Actions */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Patient Management</CardTitle>
+          <CardDescription>Administrative actions for this patient</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+            <Button 
+              className="w-full"
+              onClick={() => router.push(`/admin/appointments/new?patient_id=${patient.id}`)}
+            >
+              <Calendar className="h-4 w-4 mr-2" />
+              Book Appointment
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => router.push(`/admin/patients/${patient.id}/edit`)}
+            >
+              <User className="h-4 w-4 mr-2" />
+              Edit Patient
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => router.push(`/admin/patients/${patient.id}/medical-history`)}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Medical History
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => router.push(`/admin/billing?patient_id=${patient.id}`)}
+            >
+              <CreditCard className="h-4 w-4 mr-2" />
+              View Billing
+            </Button>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Emergency Actions */}
+      {patient.emergency_contact_name && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-red-600">Emergency Actions</CardTitle>
+            <CardDescription>Quick access for emergency situations</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <Button 
+                variant="destructive" 
+                className="w-full"
+                onClick={() => {
+                  if (patient.emergency_contact_phone) {
+                    window.open(`tel:${patient.emergency_contact_phone}`)
+                  }
+                }}
+              >
+                <Phone className="h-4 w-4 mr-2" />
+                Call Emergency Contact
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full border-red-500 text-red-600"
+                onClick={() => router.push(`/admin/patients/${patient.id}/emergency-notes`)}
+              >
+                <FileText className="h-4 w-4 mr-2" />
+                Emergency Notes
+              </Button>
+              <Button 
+                variant="outline" 
+                className="w-full border-red-500 text-red-600"
+                onClick={() => window.print()}
+              >
+                <Printer className="h-4 w-4 mr-2" />
+                Print Emergency Info
+              </Button>
             </div>
           </CardContent>
         </Card>

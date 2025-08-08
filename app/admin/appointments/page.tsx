@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -39,6 +40,7 @@ interface Patient {
 }
 
 export default function AdminAppointmentsPage() {
+  const router = useRouter()
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [doctors, setDoctors] = useState<Doctor[]>([])
   const [patients, setPatients] = useState<Patient[]>([])
@@ -306,7 +308,6 @@ export default function AdminAppointmentsPage() {
 
   // Handle bulk operations
   const [selectedAppointments, setSelectedAppointments] = useState<string[]>([])
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [showDetailsModal, setShowDetailsModal] = useState(false)
   const [showEditModal, setShowEditModal] = useState(false)
   const [editAppointment, setEditAppointment] = useState({
@@ -338,8 +339,7 @@ export default function AdminAppointmentsPage() {
   }, [dropdownOpen])
 
   const handleViewDetails = (appointment: Appointment) => {
-    setSelectedAppointment(appointment)
-    setShowDetailsModal(true)
+    router.push(`/admin/appointments/${appointment.id}`)
   }
 
   const handleAppointmentAction = (appointment: Appointment, action: string) => {

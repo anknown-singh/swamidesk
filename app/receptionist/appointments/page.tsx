@@ -317,7 +317,7 @@ export default function AppointmentsPage() {
                 </div>
               ) : upcomingAppointments.length > 0 ? (
                 upcomingAppointments.map((appointment) => (
-                  <div key={appointment.id} className="text-sm border-l-2 border-blue-200 pl-3">
+                  <div key={appointment.id} className="text-sm border-l-2 border-blue-200 pl-3 pb-2">
                     <div className="flex justify-between items-center">
                       <span className="font-medium">
                         {appointment.scheduled_date === new Date().toISOString().split('T')[0] ? 'Today' : 
@@ -337,6 +337,39 @@ export default function AppointmentsPage() {
                     </div>
                     <div className="text-xs text-muted-foreground capitalize">
                       {appointment.appointment_type} • {appointment.duration}min
+                    </div>
+                    <div className="flex gap-1 mt-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-xs h-6"
+                        onClick={() => window.location.href = `/receptionist/appointments/${appointment.id}`}
+                      >
+                        View
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-xs h-6"
+                        onClick={() => window.location.href = `/receptionist/appointments/${appointment.id}/edit`}
+                      >
+                        Edit
+                      </Button>
+                      {appointment.patient && (
+                        <Button 
+                          size="sm" 
+                          variant="outline" 
+                          className="text-xs h-6"
+                          onClick={() => {
+                            if (appointment.patient?.mobile) {
+                              window.open(`tel:${appointment.patient.mobile}`)
+                            }
+                          }}
+                          disabled={!appointment.patient.mobile}
+                        >
+                          Call
+                        </Button>
+                      )}
                     </div>
                   </div>
                 ))

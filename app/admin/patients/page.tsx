@@ -346,6 +346,45 @@ export default function AdminPatientsPage() {
                       </div>
                     </div>
                   )}
+
+                  {/* Action Buttons */}
+                  <div className="border-t pt-4 mt-4">
+                    <div className="flex items-center gap-3">
+                      <Button 
+                        size="sm"
+                        onClick={() => window.location.href = `/admin/patients/${patient.id}`}
+                      >
+                        View Profile
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => window.location.href = `/admin/appointments/new?patient_id=${patient.id}`}
+                      >
+                        Book Appointment
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => window.location.href = `/admin/patients/${patient.id}/edit`}
+                      >
+                        Edit
+                      </Button>
+                      <Button 
+                        variant="outline" 
+                        size="sm"
+                        onClick={() => {
+                          if (patient.phone) {
+                            window.open(`tel:${patient.phone}`)
+                          }
+                        }}
+                        disabled={!patient.phone}
+                      >
+                        <Phone className="h-3 w-3 mr-1" />
+                        Call
+                      </Button>
+                    </div>
+                  </div>
                 </CardContent>
               </Card>
             ))}

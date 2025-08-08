@@ -57,18 +57,18 @@ export default function AdminAnalyticsPage() {
   const [error, setError] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState('overview')
   const [refreshing, setRefreshing] = useState(false)
-  const [isMobile, setIsMobile] = useState(false)
-  const [timeRange, setTimeRange] = useState('30')
+  // const [isMobile, setIsMobile] = useState(false)
+  // const [timeRange, setTimeRange] = useState('30')
 
-  // Check if mobile
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 1024)
-    }
-    checkMobile()
-    window.addEventListener('resize', checkMobile)
-    return () => window.removeEventListener('resize', checkMobile)
-  }, [])
+  // Check if mobile (disabled for now)
+  // useEffect(() => {
+  //   const checkMobile = () => {
+  //     setIsMobile(window.innerWidth < 1024)
+  //   }
+  //   checkMobile()
+  //   window.addEventListener('resize', checkMobile)
+  //   return () => window.removeEventListener('resize', checkMobile)
+  // }, [])
 
   useEffect(() => {
     fetchDashboardOverview()
@@ -152,10 +152,10 @@ export default function AdminAnalyticsPage() {
   }
 
   const processOverviewData = (
-    revenueData: any[],
-    patientData: any[],
-    appointmentData: any[],
-    serviceData: any[]
+    revenueData: Array<{ created_at: string; total_amount: number }>,
+    patientData: Array<{ created_at: string }>,
+    appointmentData: Array<{ created_at: string; status: string }>,
+    serviceData: Array<{ id: string; name: string }>
   ): DashboardOverview => {
     
     // Calculate revenue metrics
@@ -250,7 +250,7 @@ export default function AdminAnalyticsPage() {
       .filter(r => new Date(r.created_at) >= new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
       .forEach(invoice => {
         if (invoice.bill_items && Array.isArray(invoice.bill_items)) {
-          invoice.bill_items.forEach((item: any) => {
+          invoice.bill_items.forEach((item: { category: string; total: number }) => {
             switch (item.category) {
               case 'consultation':
                 departments['General Medicine']!.revenue += item.total || 0
@@ -325,15 +325,10 @@ export default function AdminAnalyticsPage() {
   }
 
   // Mobile optimization - use mobile component if screen is small
-  if (isMobile) {
-    const { MobileAnalytics } = require('@/components/mobile/mobile-analytics')
-    return (
-      <MobileAnalytics 
-        timeRange={timeRange} 
-        onTimeRangeChange={setTimeRange}
-      />
-    )
-  }
+  // TODO: Implement mobile analytics component
+  // if (isMobile) {
+  //   return <div>Mobile analytics view coming soon</div>
+  // }
 
   if (loading) {
     return (

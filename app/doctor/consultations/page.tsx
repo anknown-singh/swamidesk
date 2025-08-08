@@ -451,7 +451,7 @@ export default function ConsultationsPage() {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {completedVisits.map((visit) => (
                 <div key={visit.id} className="border rounded-lg p-3 bg-green-50">
-                  <div className="space-y-1">
+                  <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="bg-green-500 text-white px-2 py-1 rounded text-sm font-bold">
                         #{visit.queue_number}
@@ -466,6 +466,32 @@ export default function ConsultationsPage() {
                     <p className="text-xs text-gray-500">
                       Completed: {visit.actual_end_time ? new Date(visit.actual_end_time).toLocaleTimeString() : 'N/A'}
                     </p>
+                    <div className="flex gap-1 mt-2">
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-xs h-6"
+                        onClick={() => router.push(`/doctor/patients/${visit.patients.id}`)}
+                      >
+                        View Patient
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-xs h-6"
+                        onClick={() => router.push(`/doctor/prescriptions/new?patient_id=${visit.patients.id}&visit_id=${visit.id}`)}
+                      >
+                        Prescribe
+                      </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline" 
+                        className="text-xs h-6"
+                        onClick={() => router.push(`/doctor/consultations/${visit.id}/notes`)}
+                      >
+                        View Notes
+                      </Button>
+                    </div>
                   </div>
                 </div>
               ))}

@@ -10,8 +10,26 @@ import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, Heart, CreditCard, File
 import type { Patient } from '@/lib/types'
 
 interface PatientWithDetails extends Patient {
-  appointments?: any[]
-  invoices?: any[]
+  appointments?: Array<{
+    id: string
+    scheduled_date: string
+    scheduled_time: string
+    status: string
+    estimated_cost?: number
+    users?: {
+      full_name: string
+      specialization?: string
+    }
+  }>
+  invoices?: Array<{
+    id: string
+    invoice_number: string
+    total_amount: number
+    amount_paid: number
+    balance_amount: number
+    payment_status: string
+    created_at: string
+  }>
 }
 
 export default function ReceptionistPatientDetailPage() {
@@ -31,7 +49,7 @@ export default function ReceptionistPatientDetailPage() {
         const { data: patientData, error: patientError } = await supabase
           .from('patients')
           .select('*')
-          .eq('patient_id', patientId)
+          .eq('id', patientId)
           .single()
 
         if (patientError) {
@@ -136,18 +154,18 @@ export default function ReceptionistPatientDetailPage() {
               <User className="h-6 w-6 text-blue-600" />
             </div>
             <div>
-              <CardTitle className="text-xl">{patient.name}</CardTitle>
-              <CardDescription>Patient ID: {patient.patient_id}</CardDescription>
+              <CardTitle className="text-xl">{patient.full_name}</CardTitle>
+              <CardDescription>Patient ID: {patient.id}</CardDescription>
             </div>
           </div>
         </CardHeader>
         <CardContent className="space-y-6">
           {/* Contact Information */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {patient.mobile && (
+            {patient.phone && (
               <div className="flex items-center space-x-3">
                 <Phone className="h-4 w-4 text-gray-500" />
-                <span>{patient.mobile}</span>
+                <span>{patient.phone}</span>
               </div>
             )}
             {patient.email && (
@@ -156,10 +174,10 @@ export default function ReceptionistPatientDetailPage() {
                 <span>{patient.email}</span>
               </div>
             )}
-            {patient.dob && (
+            {patient.date_of_birth && (
               <div className="flex items-center space-x-3">
                 <Calendar className="h-4 w-4 text-gray-500" />
-                <span>Born: {new Date(patient.dob).toLocaleDateString()}</span>
+                <span>Born: {new Date(patient.date_of_birth).toLocaleDateString()}</span>
               </div>
             )}
             {patient.gender && (
@@ -177,10 +195,10 @@ export default function ReceptionistPatientDetailPage() {
             </div>
           )}
 
-          {patient.emergency_contact && (
+          {patient.emergency_contact_name && (
             <div className="p-4 bg-red-50 rounded-lg">
               <h4 className="font-medium text-red-800 mb-2">Emergency Contact</h4>
-              <p className="text-red-600">{patient.emergency_contact}</p>
+              <p className="text-red-600">{patient.emergency_contact_name}</p>
             </div>
           )}
         </CardContent>
@@ -224,14 +242,14 @@ export default function ReceptionistPatientDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {patient.appointments.slice(0, 5).map((appointment: any) => (
+              {patient.appointments.slice(0, 5).map((appointment) => (
                 <div key={appointment.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div>
-                    <p className="font-medium">{(appointment.users as any)?.full_name || 'Unknown Doctor'}</p>
+                    <p className="font-medium">{appointment.users?.full_name || 'Unknown Doctor'}</p>
                     <p className="text-sm text-gray-600">
                       {new Date(appointment.scheduled_date).toLocaleDateString()} at {appointment.scheduled_time}
                     </p>
-                    <p className="text-xs text-gray-500">{(appointment.users as any)?.specialization}</p>
+                    <p className="text-xs text-gray-500">{appointment.users?.specialization}</p>
                   </div>
                   <div className="flex items-center space-x-2">
                     <Badge variant={appointment.status === 'completed' ? 'default' : 'secondary'}>
@@ -258,7 +276,7 @@ export default function ReceptionistPatientDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {patient.invoices.slice(0, 5).map((invoice: any) => (
+              {patient.invoices.slice(0, 5).map((invoice) => (
                 <div key={invoice.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div>
                     <p className="font-medium">Invoice #{invoice.invoice_number}</p>

@@ -256,6 +256,43 @@ export default function PrescriptionsPage() {
                       </span>
                     </div>
                   </div>
+                  
+                  <div className="flex flex-wrap gap-2 ml-4">
+                    <Button
+                      size="sm"
+                      onClick={() => router.push(`/doctor/prescriptions/${prescription.id}`)}
+                    >
+                      View Details
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => router.push(`/doctor/patients/${prescription.visits.patients.id}`)}
+                    >
+                      View Patient
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => router.push(`/doctor/prescriptions/${prescription.id}/edit`)}
+                    >
+                      Edit
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => router.push(`/pharmacy/dispense?prescription_id=${prescription.id}`)}
+                    >
+                      Send to Pharmacy
+                    </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => window.print()}
+                    >
+                      Print
+                    </Button>
+                  </div>
                 </div>
               </div>
             ))}

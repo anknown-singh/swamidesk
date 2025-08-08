@@ -6,11 +6,23 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Pill, Package, Calendar, DollarSign, AlertTriangle, Plus, Minus } from 'lucide-react'
+import { ArrowLeft, Pill, Package, Calendar, DollarSign, AlertTriangle, Plus, Minus, BarChart3, FileText } from 'lucide-react'
 import type { Medicine } from '@/lib/types'
 
 interface MedicineWithDetails extends Medicine {
-  prescriptions?: any[]
+  prescriptions?: Array<{
+    id: string
+    dosage: string
+    frequency: string
+    duration: string
+    created_at: string
+    patients?: {
+      full_name: string
+    }
+    users?: {
+      full_name: string
+    }
+  }>
 }
 
 export default function MedicineDetailPage() {
@@ -32,7 +44,7 @@ export default function MedicineDetailPage() {
             *,
             prescriptions(
               id, dosage, frequency, duration, created_at,
-              patients(name),
+              patients(full_name),
               users(full_name)
             )
           `)
@@ -257,10 +269,10 @@ export default function MedicineDetailPage() {
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {medicine.prescriptions.slice(0, 10).map((prescription: any) => (
+              {medicine.prescriptions.slice(0, 10).map((prescription) => (
                 <div key={prescription.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
                   <div>
-                    <p className="font-medium">{prescription.patients?.name || 'Unknown Patient'}</p>
+                    <p className="font-medium">{prescription.patients?.full_name || 'Unknown Patient'}</p>
                     <p className="text-sm text-gray-600">
                       Prescribed by: {prescription.users?.full_name || 'Unknown Doctor'}
                     </p>
@@ -288,22 +300,67 @@ export default function MedicineDetailPage() {
           <CardTitle>Quick Actions</CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
-            <Button variant="outline" className="w-full">
+          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => router.push(`/pharmacy/medicines/${medicine.id}/stock`)}
+            >
               <Package className="h-4 w-4 mr-2" />
               Update Stock
             </Button>
-            <Button variant="outline" className="w-full">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => router.push(`/pharmacy/medicines/${medicine.id}/expiry`)}
+            >
               <Calendar className="h-4 w-4 mr-2" />
               Check Expiry
             </Button>
-            <Button variant="outline" className="w-full">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => router.push(`/pharmacy/medicines/${medicine.id}/pricing`)}
+            >
               <DollarSign className="h-4 w-4 mr-2" />
               Update Price
             </Button>
-            <Button variant="outline" className="w-full" disabled={!medicine.is_active}>
+            <Button 
+              variant="outline" 
+              className="w-full" 
+              disabled={!medicine.is_active || medicine.stock_quantity <= 0}
+              onClick={() => router.push(`/pharmacy/dispense?medicine_id=${medicine.id}`)}
+            >
               <Pill className="h-4 w-4 mr-2" />
               Dispense
+            </Button>
+          </div>
+
+          {/* Additional Actions */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => router.push(`/pharmacy/medicines/${medicine.id}/edit`)}
+            >
+              <Package className="h-4 w-4 mr-2" />
+              Edit Medicine
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => router.push(`/pharmacy/reports?medicine_id=${medicine.id}`)}
+            >
+              <BarChart3 className="h-4 w-4 mr-2" />
+              Usage Report
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => window.print()}
+            >
+              <FileText className="h-4 w-4 mr-2" />
+              Print Label
             </Button>
           </div>
         </CardContent>

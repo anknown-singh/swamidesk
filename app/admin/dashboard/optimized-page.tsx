@@ -45,7 +45,7 @@ const MetricCard = React.memo(function MetricCard({
   title: string
   value: string | number
   subtitle: string
-  icon: React.ComponentType<any>
+  icon: React.ComponentType<{ className?: string }>
   isLoading?: boolean
 }) {
   if (isLoading) {
@@ -79,7 +79,7 @@ const DepartmentPerformance = React.memo(function DepartmentPerformance() {
       <CardHeader className="flex flex-row items-center justify-between">
         <div>
           <CardTitle>Department Performance</CardTitle>
-          <CardDescription>Today's activity by department</CardDescription>
+          <CardDescription>Today&apos;s activity by department</CardDescription>
         </div>
         <RefreshButton 
           onRefresh={refresh} 

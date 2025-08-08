@@ -37,16 +37,71 @@ export interface UserProfile {
 
 export interface Patient {
   id: string
-  name: string
-  mobile: string | null
-  dob: string | null
+  full_name: string
+  phone: string | null
+  date_of_birth: string | null
   gender: 'male' | 'female' | 'other' | null
   address: string | null
   email: string | null
-  emergency_contact: string | null
+  emergency_contact_name: string | null
+  emergency_contact_phone: string | null
+  medical_history: string | null
+  allergies: string | null
+  notes: string | null
   created_by: string | null
   created_at: string
   updated_at: string
+}
+
+export interface Appointment {
+  id: string
+  appointment_number: string | null
+  patient_id: string
+  doctor_id: string
+  department: string | null
+  appointment_type: AppointmentType
+  status: AppointmentStatus
+  scheduled_date: string
+  scheduled_time: string
+  duration: number | null
+  estimated_end_time: string | null
+  title: string | null
+  description: string | null
+  chief_complaint: string | null
+  notes: string | null
+  patient_notes: string | null
+  priority: boolean
+  is_recurring: boolean
+  recurrence_type: RecurrenceType | null
+  recurrence_end_date: string | null
+  parent_appointment_id: string | null
+  reminder_sent: boolean
+  confirmation_sent: boolean
+  confirmed_at: string | null
+  estimated_cost: number | null
+  actual_cost: number | null
+  arrived_at: string | null
+  started_at: string | null
+  completed_at: string | null
+  cancelled_at: string | null
+  cancellation_reason: string | null
+  created_by: string | null
+  created_at: string
+  updated_at: string
+  // Relations
+  patients?: Patient
+  users?: UserProfile
+  services?: AppointmentService[]
+}
+
+export interface AppointmentService {
+  appointment_id: string
+  service_id: string
+  quantity: number
+  estimated_duration: number | null
+  created_at: string
+  // Relations
+  service?: Service
 }
 
 export interface Visit {
@@ -220,50 +275,6 @@ export interface Invoice {
 }
 
 // Appointment Management Entities
-export interface Appointment {
-  id: string
-  patient_id: string
-  doctor_id: string
-  department: string
-  appointment_type: AppointmentType
-  status: AppointmentStatus
-  scheduled_date: string
-  scheduled_time: string
-  duration: number // in minutes
-  title?: string | undefined
-  description?: string | undefined
-  notes?: string | undefined
-  patient_notes?: string | undefined // notes from patient during booking
-  priority: boolean
-  is_recurring: boolean
-  recurrence_type?: RecurrenceType | undefined
-  recurrence_end_date?: string | undefined
-  parent_appointment_id?: string | undefined // for recurring appointments
-  reminder_sent: boolean
-  confirmation_sent: boolean
-  estimated_cost?: number | undefined
-  actual_cost?: number | undefined
-  created_by: string
-  confirmed_at?: string | undefined
-  arrived_at?: string | undefined
-  started_at?: string | undefined
-  completed_at?: string | undefined
-  cancelled_at?: string | undefined
-  cancellation_reason?: string | undefined
-  no_show_at?: string | undefined
-  rescheduled_from?: string | undefined
-  rescheduled_to?: string | undefined
-  rescheduled_reason?: string | undefined
-  created_at: string
-  updated_at: string
-  // Relations
-  patient?: Patient | undefined
-  doctor?: UserProfile | undefined
-  created_by_user?: UserProfile | undefined
-  visit?: Visit | undefined // linked when appointment converts to visit
-  services?: AppointmentService[] | undefined
-  reminders?: AppointmentReminder[] | undefined
-}
 
 export interface DoctorAvailability {
   id: string
