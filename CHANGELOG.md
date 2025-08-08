@@ -5,6 +5,27 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.0.0](https://github.com/anknown-singh/swamidesk/compare/v1.8.0...v2.0.0) (2025-08-08)
+
+
+### ⚠ BREAKING CHANGES
+
+* Package name changed from swamidesk to swamicare and application branding updated throughout UI components.
+
+### Features
+
+* add real-time notification system and global search ([5674a96](https://github.com/anknown-singh/swamidesk/commit/5674a96749ab9b948cc457720bb204d301a7cffb))
+* complete phase 2 typescript fixes and system improvements ([42e0898](https://github.com/anknown-singh/swamidesk/commit/42e08986a1bbbf3e34d11f126bac5cc8d7a63087))
+* complete rebrand from swamidesk to swamicare v1.8.0 ([2117fea](https://github.com/anknown-singh/swamidesk/commit/2117fea8df7d3ab423a167830971e86feaa0aa5b))
+* remove all test files and dependencies as requested ([96c97e8](https://github.com/anknown-singh/swamidesk/commit/96c97e8baa72df216ae277f742ff29bd368051a9))
+* update domain from swamidesk.vercel.app to swamicare.in ([977d988](https://github.com/anknown-singh/swamidesk/commit/977d988a058e4e974ce8a561c0061d7e6d109334))
+
+
+### Bug Fixes
+
+* resolve typescript errors and enable successful build ([e7e68aa](https://github.com/anknown-singh/swamidesk/commit/e7e68aaeb7ce0d8056567b88b2430c7542396e6d))
+* typescript errors and warnings in main application files ([c474047](https://github.com/anknown-singh/swamidesk/commit/c474047472806a0a629cc43c2ecf207194f1df77))
+
 ## [1.8.0](https://github.com/anknown-singh/swamidesk/compare/v1.7.0...v1.8.0) (2025-08-08)
 
 
