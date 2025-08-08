@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Pill, Package, AlertTriangle, TrendingDown } from 'lucide-react'
+import { Pill, Package, AlertTriangle, TrendingDown, BookOpen, ExternalLink } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
+import { WorkflowStatusIndicator } from '@/components/workflow/workflow-status-indicator'
 
 interface PharmacyStats {
   pendingPrescriptions: number
@@ -318,7 +319,7 @@ export default function PharmacyDashboard() {
           <CardDescription>Pharmacy management shortcuts</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
             <button className="text-left p-4 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
               <div className="flex items-center gap-3">
                 <Pill className="h-5 w-5 text-blue-600" />
@@ -346,9 +347,67 @@ export default function PharmacyDashboard() {
                 </div>
               </div>
             </button>
+            <a href="/pharmacy/documentation" className="text-left p-4 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors">
+              <div className="flex items-center gap-3">
+                <BookOpen className="h-5 w-5 text-amber-600" />
+                <div>
+                  <div className="font-medium">Help & Documentation</div>
+                  <div className="text-sm text-muted-foreground">Inventory & dispensing guides</div>
+                </div>
+                <ExternalLink className="h-3 w-3 text-amber-600 ml-auto" />
+              </div>
+            </a>
           </div>
         </CardContent>
       </Card>
+
+      {/* Workflow Status Warning */}
+      <Card className="mt-6 border-red-200 bg-red-50">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-red-600" />
+            <CardTitle className="text-red-900">⚠️ Pharmacy Module Status</CardTitle>
+          </div>
+          <CardDescription className="text-red-700">
+            Current pharmacy workflow is incomplete and requires development
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <div className="grid md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <h4 className="font-medium text-red-800 mb-2">🔴 Missing Features:</h4>
+                <ul className="space-y-1 text-red-700">
+                  <li>• Medicine dispensing logic</li>
+                  <li>• Prescription-to-inventory linking</li>
+                  <li>• Automatic stock deduction</li>
+                  <li>• Medicine cost calculation</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-medium text-green-800 mb-2">✅ Working Features:</h4>
+                <ul className="space-y-1 text-green-700">
+                  <li>• Dashboard interface</li>
+                  <li>• Basic prescription viewing</li>
+                  <li>• Inventory status indicators</li>
+                  <li>• Navigation structure</li>
+                </ul>
+              </div>
+            </div>
+            <div className="flex items-center justify-between bg-white p-3 rounded border border-red-200">
+              <span className="text-red-800 font-medium">Implementation Status: 40% Complete</span>
+              <a href="/documentation/status" className="text-red-600 hover:text-red-800 underline text-sm">
+                View detailed status →
+              </a>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* General Workflow Status */}
+      <div className="mt-6">
+        <WorkflowStatusIndicator compact={true} />
+      </div>
     </div>
   )
 }

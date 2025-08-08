@@ -23,6 +23,7 @@ import {
   UserCog,
   Pill,
   ShoppingCart,
+  BookOpen,
 } from 'lucide-react'
 
 interface SidebarItem {
@@ -170,6 +171,12 @@ const sidebarItems: SidebarItem[] = [
     label: 'Doctor Availability',
     icon: Clock,
     roles: ['admin'],
+  },
+  {
+    href: '/documentation',
+    label: 'Help & Documentation',
+    icon: BookOpen,
+    roles: ['admin', 'doctor', 'receptionist', 'attendant', 'pharmacist'],
   },
   {
     href: '/settings',

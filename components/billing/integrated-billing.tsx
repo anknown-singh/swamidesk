@@ -20,6 +20,7 @@ import {
 } from 'lucide-react'
 import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
 import { toast } from '@/lib/toast'
+import { workflowManager } from '@/lib/workflow-manager'
 
 interface Patient {
   id: string
@@ -44,7 +45,12 @@ interface BillablePatient {
   treatment_plan: string
   requires_procedures: boolean
   requires_medicines: boolean
-  procedure_quotes: unknown[]
+  procedure_quotes: Array<{
+    status?: string
+    service_name?: string
+    diagnosis_reason?: string
+    custom_price?: number
+  }>
   prescription_notes: string
   consultation_fee: number
   created_at: string

@@ -72,6 +72,16 @@ interface PatientTrackerProps {
   department?: string
 }
 
+interface WorkflowSummary {
+  waiting: number
+  in_consultation: number
+  admin_review: number
+  procedures_pending: number
+  pharmacy_pending: number
+  completed: number
+  billed: number
+}
+
 export function PatientTracker({
   userRole,
   showAllPatients = false,
@@ -79,7 +89,15 @@ export function PatientTracker({
   department
 }: PatientTrackerProps) {
   const [patients, setPatients] = useState<PatientTrackingData[]>([])
-  const [workflowSummary, setWorkflowSummary] = useState<Record<string, unknown>>({})
+  const [workflowSummary, setWorkflowSummary] = useState<WorkflowSummary>({
+    waiting: 0,
+    in_consultation: 0,
+    admin_review: 0,
+    procedures_pending: 0,
+    pharmacy_pending: 0,
+    completed: 0,
+    billed: 0
+  })
   const [loading, setLoading] = useState(true)
   const [selectedPatient, setSelectedPatient] = useState<PatientTrackingData | null>(null)
 
@@ -343,7 +361,7 @@ export function PatientTracker({
               <ClockIcon className="h-4 w-4 text-yellow-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-yellow-600">{workflowSummary.waiting || 0}</div>
+              <div className="text-2xl font-bold text-yellow-600">{workflowSummary.waiting}</div>
             </CardContent>
           </Card>
 
@@ -353,7 +371,7 @@ export function PatientTracker({
               <StethoscopeIcon className="h-4 w-4 text-blue-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-blue-600">{workflowSummary.in_consultation || 0}</div>
+              <div className="text-2xl font-bold text-blue-600">{workflowSummary.in_consultation}</div>
             </CardContent>
           </Card>
 
@@ -363,7 +381,7 @@ export function PatientTracker({
               <AlertTriangleIcon className="h-4 w-4 text-orange-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-orange-600">{workflowSummary.admin_review || 0}</div>
+              <div className="text-2xl font-bold text-orange-600">{workflowSummary.admin_review}</div>
             </CardContent>
           </Card>
 
@@ -373,7 +391,7 @@ export function PatientTracker({
               <ActivityIcon className="h-4 w-4 text-purple-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-purple-600">{workflowSummary.procedures_pending || 0}</div>
+              <div className="text-2xl font-bold text-purple-600">{workflowSummary.procedures_pending}</div>
             </CardContent>
           </Card>
 
@@ -383,7 +401,7 @@ export function PatientTracker({
               <PillIcon className="h-4 w-4 text-green-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-green-600">{workflowSummary.pharmacy_pending || 0}</div>
+              <div className="text-2xl font-bold text-green-600">{workflowSummary.pharmacy_pending}</div>
             </CardContent>
           </Card>
 
@@ -393,7 +411,7 @@ export function PatientTracker({
               <CheckCircleIcon className="h-4 w-4 text-gray-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-gray-600">{workflowSummary.completed || 0}</div>
+              <div className="text-2xl font-bold text-gray-600">{workflowSummary.completed}</div>
             </CardContent>
           </Card>
 
@@ -403,7 +421,7 @@ export function PatientTracker({
               <IndianRupeeIcon className="h-4 w-4 text-emerald-500" />
             </CardHeader>
             <CardContent>
-              <div className="text-2xl font-bold text-emerald-600">{workflowSummary.billed || 0}</div>
+              <div className="text-2xl font-bold text-emerald-600">{workflowSummary.billed}</div>
             </CardContent>
           </Card>
         </div>

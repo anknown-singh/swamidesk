@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Activity, Clock, CheckCircle, AlertCircle, AlertTriangle } from 'lucide-react'
+import { Activity, Clock, CheckCircle, AlertCircle, AlertTriangle, BookOpen, ExternalLink } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useUser } from '@/hooks/use-user'
+import { WorkflowStatusIndicator } from '@/components/workflow/workflow-status-indicator'
 
 interface AttendantStats {
   assignedServices: number
@@ -284,9 +285,67 @@ export default function AttendantDashboard() {
                 <div className="font-medium">View Service History</div>
                 <div className="text-sm text-muted-foreground">Review completed procedures</div>
               </button>
+              <a href="/attendant/documentation" className="text-left p-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors flex items-center justify-between">
+                <div>
+                  <div className="font-medium">Help & Documentation</div>
+                  <div className="text-sm text-muted-foreground">Procedure guides & service workflow</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <BookOpen className="h-4 w-4 text-amber-600" />
+                  <ExternalLink className="h-3 w-3 text-amber-600" />
+                </div>
+              </a>
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Procedure Execution Status Warning */}
+      <Card className="mt-6 border-yellow-200 bg-yellow-50">
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-600" />
+            <CardTitle className="text-yellow-900">⚠️ Procedure Execution Status</CardTitle>
+          </div>
+          <CardDescription className="text-yellow-700">
+            Procedure execution workflow is 60% complete - core functionality missing
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-3">
+            <div className="grid md:grid-cols-2 gap-4 text-sm">
+              <div>
+                <h4 className="font-medium text-red-800 mb-2">🔴 Missing Features:</h4>
+                <ul className="space-y-1 text-red-700">
+                  <li>• Actual procedure execution workflow</li>
+                  <li>• Procedure completion tracking</li>
+                  <li>• Time/duration logging</li>
+                  <li>• Integration with billing system</li>
+                </ul>
+              </div>
+              <div>
+                <h4 className="font-medium text-green-800 mb-2">✅ Working Features:</h4>
+                <ul className="space-y-1 text-green-700">
+                  <li>• Service attendant dashboard</li>
+                  <li>• Patient queue viewing</li>
+                  <li>• Procedure assignment tracking</li>
+                  <li>• Priority indicators</li>
+                </ul>
+              </div>
+            </div>
+            <div className="flex items-center justify-between bg-white p-3 rounded border border-yellow-200">
+              <span className="text-yellow-800 font-medium">Implementation Status: 60% Complete</span>
+              <a href="/documentation/todo" className="text-yellow-600 hover:text-yellow-800 underline text-sm">
+                View action items →
+              </a>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* General Workflow Status */}
+      <div className="mt-6">
+        <WorkflowStatusIndicator compact={true} />
       </div>
     </div>
   )

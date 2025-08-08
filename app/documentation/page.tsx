@@ -2,7 +2,7 @@
 
 import Link from 'next/link'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { FileTextIcon, WorkflowIcon, BookOpenIcon, UsersIcon } from 'lucide-react'
+import { FileTextIcon, WorkflowIcon, BookOpenIcon, UsersIcon, BarChart3Icon } from 'lucide-react'
 
 export default function DocumentationPage() {
   return (
@@ -19,7 +19,7 @@ export default function DocumentationPage() {
         </div>
 
         {/* Navigation Cards */}
-        <div className="grid md:grid-cols-2 gap-6">
+        <div className="grid md:grid-cols-3 gap-6">
           <Link href="/documentation/patient-journey">
             <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-blue-300">
               <CardHeader className="text-center pb-4">
@@ -40,6 +40,31 @@ export default function DocumentationPage() {
                 </div>
                 <div className="mt-4 px-4 py-2 bg-blue-100 text-blue-800 rounded-full inline-block">
                   View Complete Workflow →
+                </div>
+              </CardContent>
+            </Card>
+          </Link>
+
+          <Link href="/documentation/status">
+            <Card className="h-full hover:shadow-lg transition-shadow cursor-pointer border-2 hover:border-orange-300">
+              <CardHeader className="text-center pb-4">
+                <div className="mx-auto w-16 h-16 bg-orange-500 rounded-full flex items-center justify-center mb-4">
+                  <BarChart3Icon className="w-8 h-8 text-white" />
+                </div>
+                <CardTitle className="text-2xl text-orange-900">Implementation Status</CardTitle>
+                <CardDescription className="text-lg">
+                  Honest assessment of completed vs pending work with priority action items
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="text-center">
+                <div className="space-y-2 text-sm text-gray-600">
+                  <p>📊 Realistic progress tracking</p>
+                  <p>🚨 Critical gap analysis</p>
+                  <p>🎯 Priority action items</p>
+                  <p>🔄 End-to-end workflow status</p>
+                </div>
+                <div className="mt-4 px-4 py-2 bg-orange-100 text-orange-800 rounded-full inline-block">
+                  View Current Status →
                 </div>
               </CardContent>
             </Card>
@@ -158,7 +183,12 @@ export default function DocumentationPage() {
 
         {/* Footer */}
         <div className="text-center text-gray-500 text-sm">
-          <p>Complete patient workflow system - Production ready ✅</p>
+          <p>Complete patient workflow system - <strong>70% implemented</strong> with solid foundation</p>
+          <p className="mt-1">
+            <Link href="/documentation/status" className="text-blue-600 hover:text-blue-800 underline">
+              View detailed implementation status →
+            </Link>
+          </p>
         </div>
       </div>
     </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, Clock, Calendar, CreditCard, AlertTriangle } from 'lucide-react'
+import { Users, Clock, Calendar, CreditCard, AlertTriangle, BookOpen, ExternalLink } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -240,6 +240,16 @@ export default function ReceptionistDashboard() {
                 <div className="font-medium">View Queue Status</div>
                 <div className="text-sm text-muted-foreground">Monitor doctor queues and waiting times</div>
               </button>
+              <a href="/receptionist/documentation" className="text-left p-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors flex items-center justify-between">
+                <div>
+                  <div className="font-medium">Help & Documentation</div>
+                  <div className="text-sm text-muted-foreground">Registration guides & queue management</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <BookOpen className="h-4 w-4 text-amber-600" />
+                  <ExternalLink className="h-3 w-3 text-amber-600" />
+                </div>
+              </a>
             </div>
           </CardContent>
         </Card>

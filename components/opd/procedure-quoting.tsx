@@ -73,7 +73,6 @@ export function ProcedureQuoting({
 
   // Fetch available services
   const fetchServices = useCallback(async () => {
-    setLoading(true)
     try {
       const supabase = createAuthenticatedClient()
       const { data, error } = await supabase
@@ -89,8 +88,6 @@ export function ProcedureQuoting({
     } catch (error) {
       console.error('Error fetching services:', error)
       toast.error('Failed to load services')
-    } finally {
-      setLoading(false)
     }
   }, [])
 

@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, Clock, FileText, Activity, AlertTriangle } from 'lucide-react'
+import { Users, Clock, FileText, Activity, AlertTriangle, BookOpen, ExternalLink } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
 import { Skeleton } from '@/components/ui/skeleton'
 import { useUser } from '@/hooks/use-user'
+import { WorkflowStatusIndicator } from '@/components/workflow/workflow-status-indicator'
 
 interface DoctorStats {
   todayPatients: {
@@ -326,9 +327,24 @@ export default function DoctorDashboard() {
                 <div className="font-medium">Prescription History</div>
                 <div className="text-sm text-muted-foreground">Review recent prescriptions</div>
               </button>
+              <a href="/doctor/documentation" className="text-left p-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors flex items-center justify-between">
+                <div>
+                  <div className="font-medium">Help & Documentation</div>
+                  <div className="text-sm text-muted-foreground">Patient workflow guides & OPD help</div>
+                </div>
+                <div className="flex items-center gap-1">
+                  <BookOpen className="h-4 w-4 text-amber-600" />
+                  <ExternalLink className="h-3 w-3 text-amber-600" />
+                </div>
+              </a>
             </div>
           </CardContent>
         </Card>
+      </div>
+
+      {/* Workflow Status */}
+      <div className="mt-6">
+        <WorkflowStatusIndicator compact={true} />
       </div>
     </div>
   )

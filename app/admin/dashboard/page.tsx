@@ -2,8 +2,10 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, CreditCard, TrendingUp, UserCheck, Package, BarChart3, AlertTriangle } from 'lucide-react'
+import { Users, CreditCard, TrendingUp, UserCheck, Package, BarChart3, AlertTriangle, BookOpen, ExternalLink } from 'lucide-react'
 import { VersionInfo } from '@/components/admin/version-info'
+import { ReleaseNotes } from '@/components/admin/release-notes'
+import { WorkflowStatusIndicator } from '@/components/workflow/workflow-status-indicator'
 import { createClient } from '@/lib/supabase/client'
 import { Skeleton } from '@/components/ui/skeleton'
 
@@ -311,6 +313,16 @@ export default function AdminDashboard() {
         </Card>
       </div>
 
+      {/* Workflow Status */}
+      <div className="grid gap-4 lg:grid-cols-3">
+        <div className="lg:col-span-2">
+          <WorkflowStatusIndicator />
+        </div>
+        <div>
+          <WorkflowStatusIndicator compact={true} showDetails={false} />
+        </div>
+      </div>
+
       {/* Department Performance & Quick Stats */}
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
         <Card>
@@ -429,11 +441,21 @@ export default function AdminDashboard() {
                 </div>
               </div>
             </button>
+            <a href="/admin/documentation" className="w-full text-left p-3 bg-amber-50 hover:bg-amber-100 rounded-lg transition-colors block">
+              <div className="flex items-center gap-3">
+                <BookOpen className="h-5 w-5 text-amber-600" />
+                <div>
+                  <div className="font-medium">Help & Documentation</div>
+                  <div className="text-sm text-muted-foreground">System guides & release notes</div>
+                </div>
+                <ExternalLink className="h-4 w-4 text-amber-600 ml-auto" />
+              </div>
+            </a>
           </CardContent>
         </Card>
       </div>
 
-      {/* Recent Activity */}
+      {/* Recent Activity & System Info */}
       <div className="grid gap-6 lg:grid-cols-3">
         <div className="lg:col-span-2">
           <Card>
@@ -479,9 +501,14 @@ export default function AdminDashboard() {
           </Card>
         </div>
         
-        <div>
+        <div className="space-y-6">
           <VersionInfo />
         </div>
+      </div>
+
+      {/* Release Notes Section */}
+      <div className="mt-6">
+        <ReleaseNotes />
       </div>
     </div>
   )
