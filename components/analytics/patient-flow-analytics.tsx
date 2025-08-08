@@ -249,7 +249,7 @@ export function PatientFlowAnalytics() {
       pharmacy: opdRecords.filter(r => r.pharmacy_completed_at).length
     }
 
-    const bottleneckStage = Object.entries(stageCompletions)
+    const bottleneckStage = Object!.entries(stageCompletions)
       .sort((a, b) => a[1] - b[1])[0][0] // Stage with lowest completion
 
     // Calculate completion rate

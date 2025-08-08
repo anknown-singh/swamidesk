@@ -206,7 +206,7 @@ export function HelpCenter({
     }
   }
 
-  const getArticlesByCategory = () => {
+  const // getArticlesByCategory = () => {
     const categories = Object.values(HelpCategory)
     const articlesByCategory: Record<string, HelpContent[]> = {}
 

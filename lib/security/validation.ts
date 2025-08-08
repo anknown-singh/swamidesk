@@ -185,7 +185,7 @@ export class InputValidator {
   }
 
   // Email validation
-  private validateEmail(value: any, rule: ValidationRule, fieldName: string, errors: string[]): string {
+  private validateEmail(value: any, _rule: ValidationRule, fieldName: string, errors: string[]): string {
     const emailValue = String(value).toLowerCase().trim()
 
     if (!validator.isEmail(emailValue)) {
@@ -201,7 +201,7 @@ export class InputValidator {
   }
 
   // Phone validation
-  private validatePhone(value: any, rule: ValidationRule, fieldName: string, errors: string[]): string {
+  private validatePhone(value: any, _rule: ValidationRule, fieldName: string, errors: string[]): string {
     let phoneValue = String(value).replace(/\D/g, '') // Remove non-digits
 
     // Basic phone validation (adjust for your region)
@@ -213,7 +213,7 @@ export class InputValidator {
   }
 
   // Date validation
-  private validateDate(value: any, rule: ValidationRule, fieldName: string, errors: string[]): string {
+  private validateDate(value: any, _rule: ValidationRule, fieldName: string, errors: string[]): string {
     const dateValue = String(value)
 
     if (!validator.isISO8601(dateValue) && !validator.isDate(dateValue)) {
@@ -242,7 +242,7 @@ export class InputValidator {
   }
 
   // Object validation
-  private validateObject(value: any, rule: ValidationRule, fieldName: string, errors: string[]): any {
+  private validateObject(value: any, _rule: ValidationRule, fieldName: string, errors: string[]): any {
     if (typeof value !== 'object' || value === null) {
       errors.push(`${fieldName} must be an object`)
       return {}

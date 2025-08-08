@@ -450,8 +450,8 @@ export function AppointmentCalendar({
 
   const getWeekRange = () => {
     const weekDays = getWeekDays(currentDate)
-    const firstDay = weekDays[0].date
-    const lastDay = weekDays[6].date
+    const firstDay = weekDays[0]!.date
+    const lastDay = weekDays[6]!.date
     
     if (firstDay.getMonth() === lastDay.getMonth()) {
       return `${firstDay.getDate()} - ${lastDay.getDate()} ${firstDay.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`

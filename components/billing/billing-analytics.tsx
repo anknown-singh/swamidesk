@@ -331,7 +331,7 @@ export function BillingAnalytics() {
                   fill="#8884d8"
                   dataKey="revenue"
                 >
-                  {analytics.departmentRevenue.map((entry, index) => (
+                  {analytics.departmentRevenue.map((_entry, index) => (
                     <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                   ))}
                 </Pie>

@@ -558,11 +558,11 @@ export function AvailableToursMenu({ userId, userRole, className = '' }: {
     setTours(availableTours)
   }, [userRole])
 
-  const startTour = (tourId: string) => {
+  const // startTour = (tourId: string) => {
     setActiveTour(tourId)
   }
 
-  const completeTour = (tourId: string) => {
+  const completeTour = (// tourId: string) => {
     setActiveTour(null)
     // Refresh tours list to reflect completion
     const availableTours = helpSystem.getTours(userRole)
@@ -599,7 +599,7 @@ export function AvailableToursMenu({ userId, userRole, className = '' }: {
 }
 
 // Page-specific contextual help provider
-export function PageContextualHelp({ userId, userRole, currentPath }: {
+export function PageContextualHelp({ _userId, userRole, currentPath }: {
   userId: string
   userRole: UserRole
   currentPath: string
@@ -616,7 +616,7 @@ export function PageContextualHelp({ userId, userRole, currentPath }: {
     contextHelp.forEach(help => {
       if (help.element) {
         const elements = document.querySelectorAll(help.element)
-        elements.forEach(element => {
+        elements.forEach(_element => {
           // Add help trigger based on type and trigger
           if (help.trigger === 'auto' && help.type === 'tooltip') {
             // Auto-show tooltip once

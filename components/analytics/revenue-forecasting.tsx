@@ -222,7 +222,7 @@ export function RevenueForecasting() {
     // Determine seasonal trend
     const recentTrend = data.slice(-14).reduce((sum, d, index, arr) => {
       if (index > 0) {
-        return sum + (d.actual - arr[index - 1].actual)
+        return sum + (d!.actual - arr[index - 1].actual)
       }
       return sum
     }, 0)

@@ -266,7 +266,7 @@ export function PatientAppointmentBooking({
     ? doctors.filter(doc => doc.department === selectedDepartment)
     : doctors
   const availableTimesForDate = formData.scheduled_date && realAvailableSlots[formData.scheduled_date]
-    ? realAvailableSlots[formData.scheduled_date].filter(slot => slot.is_available).map(slot => slot.start_time)
+    ? realAvailableSlots[formData!.scheduled_date].filter(slot => slot.is_available).map(slot => slot.start_time)
     : []
 
   useEffect(() => {

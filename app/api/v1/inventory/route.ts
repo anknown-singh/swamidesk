@@ -288,7 +288,7 @@ export async function POST(request: NextRequest) {
  * GET /api/v1/inventory/alerts
  * Get inventory alerts for low stock and expiring medicines
  */
-async function getInventoryAlerts(request: NextRequest) {
+async function _getInventoryAlerts(_request: NextRequest) {
   try {
     const supabase = await createClient()
     

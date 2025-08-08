@@ -260,7 +260,7 @@ export default function DoctorAppointmentManagementPage() {
   const stats = {
     today: appointments.filter(apt => apt.scheduled_date === new Date().toISOString().split('T')[0]).length,
     upcoming: appointments.filter(apt => 
-      apt.scheduled_date > new Date().toISOString().split('T')[0] || 
+      apt!.scheduled_date > new Date().toISOString().split('T')[0] || 
       (apt.scheduled_date === new Date().toISOString().split('T')[0] && ['scheduled', 'confirmed'].includes(apt.status))
     ).length,
     completed: appointments.filter(apt => apt.status === 'completed').length,

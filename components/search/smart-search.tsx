@@ -102,7 +102,7 @@ export function SmartSearch({
     }
   })
 
-  const [recentSearches, setRecentSearches] = useState<string[]>([])
+  const [// recentSearches, setRecentSearches] = useState<string[]>([])
   const [showAdvanced, setShowAdvanced] = useState(false)
   const searchInputRef = useRef<HTMLInputElement>(null)
   const searchTimeoutRef = useRef<NodeJS.Timeout | undefined>()

@@ -95,7 +95,7 @@ export async function GET(request: NextRequest) {
           by_status: statusCounts,
           by_type: typeCounts,
           appointment_trend: groupByPeriod(appointmentData, 'appointment_date', group_by || 'day'),
-          completion_rate: statusCounts.completed / appointmentData.length * 100 || 0
+          completion_rate: (statusCounts.completed || 0) / appointmentData.length * 100 || 0
         }
       }
     }

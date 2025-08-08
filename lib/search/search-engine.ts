@@ -177,7 +177,7 @@ class SearchEngine {
   }
 
   // Search patients with fuzzy matching
-  private async searchPatients(query: string, filters: SearchFilters, config: SearchConfig): Promise<SearchResult[]> {
+  private async searchPatients(query: string, filters: SearchFilters, _config: SearchConfig): Promise<SearchResult[]> {
     const searchTerms = this.parseSearchQuery(query)
     let queryBuilder = supabase
       .from('patients')
@@ -223,7 +223,7 @@ class SearchEngine {
   }
 
   // Search appointments
-  private async searchAppointments(query: string, filters: SearchFilters, config: SearchConfig): Promise<SearchResult[]> {
+  private async searchAppointments(query: string, filters: SearchFilters, _config: SearchConfig): Promise<SearchResult[]> {
     const searchTerms = this.parseSearchQuery(query)
     
     let queryBuilder = supabase
@@ -274,7 +274,7 @@ class SearchEngine {
   }
 
   // Search medicines
-  private async searchMedicines(query: string, filters: SearchFilters, config: SearchConfig): Promise<SearchResult[]> {
+  private async searchMedicines(query: string, filters: SearchFilters, _config: SearchConfig): Promise<SearchResult[]> {
     const searchTerms = this.parseSearchQuery(query)
     
     let queryBuilder = supabase
@@ -323,7 +323,7 @@ class SearchEngine {
   }
 
   // Search services
-  private async searchServices(query: string, filters: SearchFilters, config: SearchConfig): Promise<SearchResult[]> {
+  private async searchServices(query: string, filters: SearchFilters, _config: SearchConfig): Promise<SearchResult[]> {
     const searchTerms = this.parseSearchQuery(query)
     
     let queryBuilder = supabase
@@ -363,7 +363,7 @@ class SearchEngine {
   }
 
   // Search invoices
-  private async searchInvoices(query: string, filters: SearchFilters, config: SearchConfig): Promise<SearchResult[]> {
+  private async searchInvoices(query: string, filters: SearchFilters, _config: SearchConfig): Promise<SearchResult[]> {
     const searchTerms = this.parseSearchQuery(query)
     
     let queryBuilder = supabase
@@ -412,7 +412,7 @@ class SearchEngine {
   }
 
   // Search users/staff
-  private async searchUsers(query: string, filters: SearchFilters, config: SearchConfig): Promise<SearchResult[]> {
+  private async searchUsers(query: string, filters: SearchFilters, _config: SearchConfig): Promise<SearchResult[]> {
     const searchTerms = this.parseSearchQuery(query)
     
     let queryBuilder = supabase
@@ -556,7 +556,7 @@ class SearchEngine {
   }
 
   // Get search facets for filtering
-  private async getFacets(query: string, filters: SearchFilters): Promise<Record<string, Array<{ value: string; count: number }>>> {
+  private async getFacets(_query: string, _filters: SearchFilters): Promise<Record<string, Array<{ value: string; count: number }>>> {
     const facets: Record<string, Array<{ value: string; count: number }>> = {}
 
     // Type facets
@@ -691,7 +691,7 @@ class SearchEngine {
   }
 
   // Get search analytics
-  async getSearchAnalytics(dateRange?: { start: string; end: string }): Promise<SearchAnalytics> {
+  async getSearchAnalytics(_dateRange?: { start: string; end: string }): Promise<SearchAnalytics> {
     // Mock analytics data - in real app would query from database
     return {
       totalSearches: 1247,

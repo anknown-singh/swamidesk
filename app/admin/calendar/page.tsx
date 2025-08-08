@@ -96,7 +96,7 @@ export default function AdminCalendarPage() {
             if (!doctorCounts[apt.doctor_id]) {
               doctorCounts[apt.doctor_id] = { count: 0, name: doctorName }
             }
-            doctorCounts[apt.doctor_id].count++
+            doctorCounts[apt.doctor_id]!.count++
           }
         })
 

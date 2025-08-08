@@ -103,7 +103,7 @@ export default function ReceptionistCalendarPage() {
             }
           })
 
-        // Mock revenue calculation (in real app, this would come from billing data)
+        //Mock revenue calculation (in real app, this would come from billing data)
         const totalRevenue = completedToday * 500 // Assuming average 500 per appointment
 
         setStats({
@@ -211,7 +211,7 @@ export default function ReceptionistCalendarPage() {
   }
 
   const handleCallPatient = (phone: string, name: string) => {
-    // In a real app, this might integrate with a phone system
+    //In a real app, this might integrate with a phone system
     window.open(`tel:${phone}`)
     console.log(`Calling ${name} at ${phone}`)
   }

@@ -40,8 +40,8 @@ const normalizeTime = (time: string): string => {
   // Remove seconds if present (HH:MM:SS -> HH:MM)
   const timeParts = time.split(':')
   if (timeParts.length >= 2) {
-    const hours = timeParts[0].padStart(2, '0')
-    const minutes = timeParts[1].padStart(2, '0')
+    const hours = timeParts[0]!.padStart(2, '0')
+    const minutes = timeParts[1]!.padStart(2, '0')
     return `${hours}:${minutes}`
   }
   

@@ -61,7 +61,7 @@ interface SearchMetrics {
   averageResponseTime: number
 }
 
-export function SearchAnalyticsComponent({ userId, className = '', dateRange }: SearchAnalyticsProps) {
+export function SearchAnalyticsComponent({ _userId, className = '', dateRange }: SearchAnalyticsProps) {
   const [analytics, setAnalytics] = useState<SearchAnalytics | null>(null)
   const [metrics, setMetrics] = useState<SearchMetrics | null>(null)
   const [loading, setLoading] = useState(true)
@@ -390,11 +390,11 @@ export function SearchAnalyticsComponent({ userId, className = '', dateRange }: 
                       paddingAngle={5}
                       dataKey="count"
                     >
-                      {metrics.resultTypeDistribution.map((entry, index) => (
+                      {metrics.resultTypeDistribution.map((_entry, index) => (
                         <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                       ))}
                     </Pie>
-                    <Tooltip formatter={(value: any, name: string, props: any) => [
+                    <Tooltip formatter={(value: any, _name: string, props: any) => [
                       `${value} (${props.payload.percentage}%)`,
                       props.payload.type
                     ]} />
@@ -618,7 +618,7 @@ export function SearchAnalyticsComponent({ userId, className = '', dateRange }: 
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {analytics.noResultsQueries.slice(0, 8).map((query, index) => (
+                  {analytics.noResultsQueries.slice(0, 8).map((query, _index) => (
                     <div key={query} className="flex items-center justify-between p-3 bg-red-50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <AlertTriangle className="h-4 w-4 text-red-500" />

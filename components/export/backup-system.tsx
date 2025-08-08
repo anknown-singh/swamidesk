@@ -73,7 +73,7 @@ export function BackupSystem() {
 
   const fetchBackupConfig = async () => {
     try {
-      const supabase = createAuthenticatedClient()
+      const // supabase = createAuthenticatedClient()
       
       // In a real implementation, this would fetch from a backup_config table
       // For now, we'll simulate with localStorage

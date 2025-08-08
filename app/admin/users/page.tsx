@@ -176,7 +176,7 @@ export default function UsersPage() {
           role: formData.role as "admin" | "doctor" | "receptionist" | "attendant" | "pharmacist",
           department: formData.department,
           employee_id: formData.employee_id,
-          hire_date: formData.hire_date || undefined,
+          ...(formData.hire_date ? { hire_date: formData.hire_date } : {}),
           updated_by: currentUser?.id
         }
 
@@ -282,7 +282,7 @@ export default function UsersPage() {
       role: user.role,
       department: user.department || '',
       employee_id: user.employee_id || '',
-      hire_date: user.hire_date ? user.hire_date.split('T')[0] : '',
+      hire_date: user.hire_date ? user.hire_date.split('T')[0]! : '',
       password: ''
     })
     setShowForm(true)

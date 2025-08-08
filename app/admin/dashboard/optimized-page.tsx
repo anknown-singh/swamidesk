@@ -268,9 +268,9 @@ export default function OptimizedAdminDashboard() {
     return (
       <AsyncErrorBoundary>
         <Suspense fallback={<DashboardSkeleton />}>
-          {React.lazy(() => import('@/components/mobile/mobile-optimized-admin-dashboard').then(module => ({
+          {React.createElement(React.lazy(() => import('@/components/mobile/mobile-optimized-admin-dashboard').then(module => ({
             default: module.MobileOptimizedAdminDashboard
-          })))}
+          }))), {})}
         </Suspense>
       </AsyncErrorBoundary>
     )

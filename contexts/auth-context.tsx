@@ -107,8 +107,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
     const createSupabaseSessionFromLocal = async (userData: any) => {
       try {
-        // For the demo, we'll create a temporary Supabase user session
-        // In production, you'd want to handle this more securely
+        //For the demo, we'll create a temporary Supabase user session
+        //In production, you'd want to handle this more securely
         
         // Verify user still exists in database
         const { data: profile } = await supabase
@@ -138,7 +138,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(fakeUser as User)
           setUserProfile(profile as UserProfile)
         } else {
-          // User no longer exists, clear localStorage
+          //User no longer exists, clear localStorage
           localStorage.removeItem('swamicare_user')
         }
       } catch (error) {

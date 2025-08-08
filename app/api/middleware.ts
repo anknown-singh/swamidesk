@@ -121,12 +121,12 @@ function getClientIdentifier(request: NextRequest): string {
  */
 function checkRateLimit(clientId: string, config: { windowMs: number; maxRequests: number }): boolean {
   const now = Date.now()
-  const _windowStart = now - config.windowMs
+  const windowStart = now - config.windowMs
 
   // Get or create rate limit data for client
   let clientData = rateLimitMap.get(clientId)
   
-  if (!clientData || clientData.resetTime <= now) {
+  if (!clientData || clientData.resetTime <= windowStart) {
     // Reset window
     clientData = {
       count: 0,
@@ -208,8 +208,8 @@ async function authenticateRequest(request: NextRequest): Promise<{
         success: true, 
         user: {
           id: apiKey.user_id,
-          role: Array.isArray(apiKey.users) ? apiKey.users[0]?.role || 'unknown' : apiKey.users?.role || 'unknown',
-          email: Array.isArray(apiKey.users) ? apiKey.users[0]?.email || 'unknown' : apiKey.users?.email || 'unknown',
+          role: Array.isArray(apiKey.users) ? (apiKey.users[0] as any)?.role || 'unknown' : (apiKey.users as any)?.role || 'unknown',
+          email: Array.isArray(apiKey.users) ? (apiKey.users[0] as any)?.email || 'unknown' : (apiKey.users as any)?.email || 'unknown',
           permissions: apiKey.permissions || []
         }
       }

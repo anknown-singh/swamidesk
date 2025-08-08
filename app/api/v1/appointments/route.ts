@@ -11,7 +11,7 @@ const AppointmentSchema = z.object({
   estimated_duration: z.number().min(15).max(240).default(30) // minutes
 })
 
-const AppointmentUpdateSchema = AppointmentSchema.partial()
+// const AppointmentUpdateSchema = AppointmentSchema.partial()
 
 const AppointmentQuerySchema = z.object({
   page: z.coerce.number().min(1).default(1),
@@ -140,7 +140,7 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    if (!patient.is_active) {
+    if (!patient?.is_active) {
       return NextResponse.json(
         { error: 'Cannot book appointment for inactive patient' },
         { status: 400 }
@@ -162,7 +162,7 @@ export async function POST(request: NextRequest) {
       )
     }
     
-    if (!doctor.is_active) {
+    if (!doctor!.is_active) {
       return NextResponse.json(
         { error: 'Cannot book appointment with inactive doctor' },
         { status: 400 }

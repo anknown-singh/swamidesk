@@ -20,13 +20,13 @@ const WebhookSchema = z.object({
   secret: z.string().min(16).optional() // For webhook signature verification
 })
 
-const WebhookUpdateSchema = WebhookSchema.partial()
+// const WebhookUpdateSchema = WebhookSchema.partial()
 
 /**
  * GET /api/v1/webhooks
  * List all registered webhooks
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const supabase = await createClient()
     
@@ -134,7 +134,7 @@ function generateWebhookSecret(): string {
  * Webhook delivery system
  * This would be called internally when events occur
  */
-async function triggerWebhook(eventType: string, payload: any) {
+async function _triggerWebhook(eventType: string, payload: any) {
   try {
     const supabase = await createClient()
     

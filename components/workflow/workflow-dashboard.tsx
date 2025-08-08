@@ -66,7 +66,7 @@ interface BottleneckAnalysis {
   stateDistribution: Record<string, number>
 }
 
-export function WorkflowDashboard({ userId, userRole, className = '' }: WorkflowDashboardProps) {
+export function WorkflowDashboard({ userId, _userRole, className = '' }: WorkflowDashboardProps) {
   const [activeWorkflows, setActiveWorkflows] = useState<WorkflowInstance[]>([])
   const [workflowStats, setWorkflowStats] = useState<WorkflowStats | null>(null)
   const [bottleneckAnalysis, setBottleneckAnalysis] = useState<BottleneckAnalysis | null>(null)

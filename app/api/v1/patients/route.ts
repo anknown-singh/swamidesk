@@ -17,7 +17,7 @@ const PatientSchema = z.object({
   medical_history: z.string().optional()
 })
 
-const PatientUpdateSchema = PatientSchema.partial()
+// const PatientUpdateSchema = PatientSchema.partial()
 
 const PaginationSchema = z.object({
   page: z.coerce.number().min(1).default(1),

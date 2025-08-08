@@ -733,7 +733,7 @@ export class RBACService {
     try {
       const supabase = createClient()
 
-      for (const [key, roleData] of Object.entries(SYSTEM_ROLES)) {
+      for (const [_key, roleData] of Object.entries(SYSTEM_ROLES)) {
         // Check if role already exists
         const { data: existing } = await supabase
           .from('roles')
@@ -864,7 +864,7 @@ export function usePermission(userId: string, permission: string) {
   return { hasPermission, loading }
 }
 
-export function usePermissions(userId: string, permissions: string[]) {
+export function usePermissions(userId: string, _permissions: string[]) {
   const [userPermissions, setUserPermissions] = useState<string[]>([])
   const [loading, setLoading] = useState(true)
 

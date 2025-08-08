@@ -171,7 +171,7 @@ export class MFAService {
   }
 
   // Disable MFA (requires password confirmation)
-  async disableMFA(userId: string, password: string): Promise<boolean> {
+  async disableMFA(userId: string, _password: string): Promise<boolean> {
     try {
       const supabase = createClient()
 

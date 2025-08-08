@@ -73,7 +73,7 @@ interface SecurityIncident {
   metadata?: any
 }
 
-export function SecurityDashboard({ userId, isAdmin }: SecurityDashboardProps) {
+export function SecurityDashboard({ _userId, isAdmin }: SecurityDashboardProps) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string>('')
   const [securitySummary, setSecuritySummary] = useState<any>(null)
@@ -81,7 +81,7 @@ export function SecurityDashboard({ userId, isAdmin }: SecurityDashboardProps) {
   const [activeIncidents, setActiveIncidents] = useState<SecurityIncident[]>([])
   const [auditLogs, setAuditLogs] = useState<any[]>([])
   const [selectedTab, setSelectedTab] = useState('overview')
-  const [refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null)
+  const [// refreshInterval, setRefreshInterval] = useState<NodeJS.Timeout | null>(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
 
   useEffect(() => {

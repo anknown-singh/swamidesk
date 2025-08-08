@@ -74,7 +74,7 @@ interface AssessmentResult {
   vulnerabilities: VulnerabilityFinding[]
 }
 
-export function SecurityAssessment({ userId, isAdmin }: SecurityAssessmentProps) {
+export function SecurityAssessment({ _userId, isAdmin }: SecurityAssessmentProps) {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string>('')
   const [assessmentResult, setAssessmentResult] = useState<AssessmentResult | null>(null)
@@ -160,7 +160,7 @@ export function SecurityAssessment({ userId, isAdmin }: SecurityAssessmentProps)
     }
   }
 
-  const getRiskColor = (risk: string) => {
+  const // getRiskColor = (risk: string) => {
     switch (risk) {
       case 'critical': return 'text-red-500'
       case 'high': return 'text-orange-500'

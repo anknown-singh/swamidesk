@@ -24,7 +24,7 @@ interface RouteParams {
  * GET /api/v1/patients/[id]
  * Retrieve a specific patient by ID
  */
-export async function GET(request: NextRequest, { params }: RouteParams) {
+export async function GET(_request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
     const supabase = await createClient()
@@ -148,7 +148,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
  * DELETE /api/v1/patients/[id]
  * Delete a specific patient (soft delete by marking as inactive)
  */
-export async function DELETE(request: NextRequest, { params }: RouteParams) {
+export async function DELETE(_request: NextRequest, { params }: RouteParams) {
   try {
     const { id } = await params
     const supabase = await createClient()
@@ -209,7 +209,7 @@ export async function DELETE(request: NextRequest, { params }: RouteParams) {
     
     return NextResponse.json({
       message: 'Patient deleted successfully',
-      data: { patient_id: id, full_name: existingPatient.full_name }
+      data: { patient_id: id, full_name: existingPatient!.full_name }
     })
     
   } catch (error) {
