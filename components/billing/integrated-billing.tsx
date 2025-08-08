@@ -128,7 +128,7 @@ export function IntegratedBilling() {
     fetchBillablePatients()
   }, [fetchBillablePatients])
 
-  const generateInvoice = useCallback((patient: BillablePatient): Invoice => {
+  const generateInvoice = useCallback(async (patient: BillablePatient): Promise<Invoice> => {
     const items: BillItem[] = []
 
     // Add consultation fee
@@ -141,20 +141,87 @@ export function IntegratedBilling() {
       category: 'consultation'
     })
 
-    // Add approved procedures
-    if (patient.procedure_quotes && patient.procedure_quotes.length > 0) {
-      patient.procedure_quotes
-        .filter(quote => quote.status === 'approved')
-        .forEach((quote, index) => {
+    // Add completed procedures from visit_services
+    try {
+      const supabase = createAuthenticatedClient()
+      const { data: visitServices, error: servicesError } = await supabase
+        .from('visit_services')
+        .select(`
+          *,
+          services (name, description, category),
+          visits!inner (patient_id)
+        `)
+        .eq('visits.patient_id', patient.patient_id)
+        .eq('status', 'completed')
+        .gte('created_at', patient.visit_date) // Only procedures from this visit
+        .lte('created_at', new Date(new Date(patient.visit_date).getTime() + 24 * 60 * 60 * 1000).toISOString()) // Within 24 hours
+
+      if (servicesError) throw servicesError
+
+      // Add completed procedures to bill
+      if (visitServices && visitServices.length > 0) {
+        visitServices.forEach((service, index) => {
           items.push({
             id: `procedure_${index}`,
-            description: `${quote.service_name} - ${quote.diagnosis_reason}`,
-            quantity: 1,
-            unit_price: quote.custom_price,
-            total: quote.custom_price,
+            description: `${service.services.name} - ${service.services.description}`,
+            quantity: service.quantity,
+            unit_price: service.unit_price,
+            total: service.total_price,
             category: 'procedure'
           })
         })
+      }
+    } catch (error) {
+      console.error('Error fetching completed procedures for billing:', error)
+      // Continue without procedure costs if there's an error
+    }
+
+    // Add dispensed medicines from pharmacy
+    try {
+      const supabase = createAuthenticatedClient()
+      
+      // Get dispensed medicines for this patient's visit
+      const { data: pharmacyIssues, error } = await supabase
+        .from('pharmacy_issues')
+        .select(`
+          *,
+          prescriptions!inner (
+            medicine_id,
+            visits!inner (
+              patient_id
+            ),
+            medicines!inner (
+              name,
+              generic_name,
+              dosage_form,
+              strength
+            )
+          )
+        `)
+        .eq('prescriptions.visits.patient_id', patient.patient_id)
+        .eq('status', 'dispensed')
+        .gte('issued_at', patient.visit_date) // Only medicines from this visit
+        .lte('issued_at', new Date(new Date(patient.visit_date).getTime() + 24 * 60 * 60 * 1000).toISOString()) // Within 24 hours
+
+      if (error) throw error
+
+      // Add dispensed medicines to bill
+      if (pharmacyIssues && pharmacyIssues.length > 0) {
+        pharmacyIssues.forEach((issue, index) => {
+          const medicine = issue.prescriptions.medicines
+          items.push({
+            id: `medicine_${index}`,
+            description: `${medicine.name} (${medicine.generic_name}) - ${medicine.strength} ${medicine.dosage_form}`,
+            quantity: issue.issued_quantity,
+            unit_price: issue.unit_price,
+            total: issue.total_price,
+            category: 'medicine'
+          })
+        })
+      }
+    } catch (error) {
+      console.error('Error fetching dispensed medicines for billing:', error)
+      // Continue without medicine costs if there's an error
     }
 
     // Calculate totals
@@ -180,10 +247,19 @@ export function IntegratedBilling() {
     }
   }, [discount, paymentMethod, paymentReference, notes])
 
-  const handleGenerateBill = (patient: BillablePatient) => {
+  const handleGenerateBill = async (patient: BillablePatient) => {
     setSelectedPatient(patient)
-    const generatedInvoice = generateInvoice(patient)
-    setInvoice(generatedInvoice)
+    setGenerating(true)
+    try {
+      const generatedInvoice = await generateInvoice(patient)
+      setInvoice(generatedInvoice)
+    } catch (error) {
+      console.error('Error generating invoice:', error)
+      toast.error('Failed to generate invoice')
+      setSelectedPatient(null)
+    } finally {
+      setGenerating(false)
+    }
   }
 
   const handleProcessPayment = async () => {
@@ -595,12 +671,18 @@ export function IntegratedBilling() {
             <div className="text-2xl font-bold text-green-600">
               {formatCurrency(
                 billablePatients.reduce((sum, patient) => {
-                  const invoice = generateInvoice(patient)
-                  return sum + invoice.total_amount
+                  // Basic calculation without medicines for preview
+                  let total = CONSULTATION_FEE
+                  if (patient.procedure_quotes) {
+                    total += patient.procedure_quotes
+                      .filter(quote => quote.status === 'approved')
+                      .reduce((sum, quote) => sum + (quote.custom_price || 0), 0)
+                  }
+                  return sum + (total * (1 - discount/100) * (1 + TAX_RATE))
                 }, 0)
               )}
             </div>
-            <p className="text-xs text-muted-foreground">pending revenue</p>
+            <p className="text-xs text-muted-foreground">estimated revenue (excl. medicines)</p>
           </CardContent>
         </Card>
 
@@ -642,7 +724,14 @@ export function IntegratedBilling() {
         <CardContent>
           <div className="space-y-4">
             {billablePatients.map((patient) => {
-              const previewInvoice = generateInvoice(patient)
+              // Basic preview calculation without async call
+              const consultationFee = CONSULTATION_FEE
+              const procedureTotal = patient.procedure_quotes
+                ?.filter(quote => quote.status === 'approved')
+                .reduce((sum, quote) => sum + (quote.custom_price || 0), 0) || 0
+              const subtotal = consultationFee + procedureTotal
+              const previewTotal = subtotal * (1 + TAX_RATE) // Simplified preview without medicines
+              
               const procedureCount = patient.procedure_quotes?.filter(q => q.status === 'approved').length || 0
 
               return (
@@ -675,7 +764,7 @@ export function IntegratedBilling() {
                       <div className="flex items-center gap-4">
                         <span className="flex items-center gap-1">
                           <IndianRupeeIcon className="h-3 w-3" />
-                          Total: {formatCurrency(previewInvoice.total_amount)}
+                          Est. Total: {formatCurrency(previewTotal)} <span className="text-xs">(+ medicines)</span>
                         </span>
                         <span className="text-xs">
                           Created: {new Date(patient.created_at).toLocaleString()}

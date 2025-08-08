@@ -2,6 +2,7 @@
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { PatientTracker } from '@/components/workflow/patient-tracker'
+import { ProcedureExecution } from '@/components/procedures/procedure-execution'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { ActivityIcon, ClockIcon, CheckCircleIcon, AlertTriangleIcon } from 'lucide-react'
 
@@ -17,11 +18,16 @@ export default function AttendantProceduresPage() {
         </div>
       </div>
 
-      <Tabs defaultValue="tracker" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs defaultValue="execution" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="execution">Procedure Execution</TabsTrigger>
           <TabsTrigger value="tracker">Patient Tracker</TabsTrigger>
-          <TabsTrigger value="overview">Procedure Overview</TabsTrigger>
+          <TabsTrigger value="overview">Workflow Guide</TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="execution" className="space-y-6">
+          <ProcedureExecution />
+        </TabsContent>
         
         <TabsContent value="tracker" className="space-y-6">
           <PatientTracker 

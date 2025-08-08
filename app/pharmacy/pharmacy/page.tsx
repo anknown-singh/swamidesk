@@ -1,9 +1,16 @@
 'use client'
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { PatientTracker } from '@/components/workflow/patient-tracker'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { PillIcon, ClockIcon, CheckCircleIcon, PackageIcon, AlertTriangleIcon } from 'lucide-react'
+import { PatientTracker } from '@/components/workflow/patient-tracker'
+import { MedicineDispensing } from '@/components/pharmacy/medicine-dispensing'
+import { 
+  ClockIcon, 
+  PackageIcon, 
+  CheckCircleIcon, 
+  AlertTriangleIcon,
+  PillIcon
+} from 'lucide-react'
 
 export default function PharmacyPage() {
   return (
@@ -12,16 +19,21 @@ export default function PharmacyPage() {
         <div>
           <h1 className="text-3xl font-bold tracking-tight">Pharmacy Management</h1>
           <p className="text-muted-foreground">
-            Dispense medications and manage prescription workflow
+            Dispense medications and manage prescription workflow with inventory tracking
           </p>
         </div>
       </div>
 
-      <Tabs defaultValue="tracker" className="w-full">
-        <TabsList className="grid w-full grid-cols-2">
+      <Tabs defaultValue="dispensing" className="w-full">
+        <TabsList className="grid w-full grid-cols-3">
+          <TabsTrigger value="dispensing">Medicine Dispensing</TabsTrigger>
           <TabsTrigger value="tracker">Patient Tracker</TabsTrigger>
-          <TabsTrigger value="overview">Pharmacy Overview</TabsTrigger>
+          <TabsTrigger value="workflow">Workflow Guide</TabsTrigger>
         </TabsList>
+        
+        <TabsContent value="dispensing" className="space-y-6">
+          <MedicineDispensing />
+        </TabsContent>
         
         <TabsContent value="tracker" className="space-y-6">
           <PatientTracker 
@@ -31,7 +43,7 @@ export default function PharmacyPage() {
           />
         </TabsContent>
         
-        <TabsContent value="overview" className="space-y-6">
+        <TabsContent value="workflow" className="space-y-6">
           <div className="grid gap-4 md:grid-cols-4">
             <Card>
               <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
