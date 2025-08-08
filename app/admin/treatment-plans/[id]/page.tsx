@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -62,11 +62,7 @@ export default function TreatmentPlanDetailPage() {
 
   const supabase = createClient()
 
-  useEffect(() => {
-    fetchTreatmentPlanDetails()
-  }, [planId])
-
-  const fetchTreatmentPlanDetails = async () => {
+  const fetchTreatmentPlanDetails = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('treatment_plans')
@@ -93,7 +89,11 @@ export default function TreatmentPlanDetailPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [planId, supabase])
+
+  useEffect(() => {
+    fetchTreatmentPlanDetails()
+  }, [fetchTreatmentPlanDetails])
 
   const saveTreatmentPlanDetails = async () => {
     if (!treatmentPlan) return
@@ -132,7 +132,7 @@ export default function TreatmentPlanDetailPage() {
     if (!treatmentPlan) return
 
     try {
-      const updateData: any = { status: newStatus }
+      const updateData: Partial<TreatmentPlan> = { status: newStatus }
       
       // If marking as completed, set the actual end date
       if (newStatus === 'completed' && !treatmentPlan.actual_end_date) {

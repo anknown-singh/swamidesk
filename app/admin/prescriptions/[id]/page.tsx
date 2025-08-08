@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useRouter, useParams } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
@@ -77,11 +77,7 @@ export default function PrescriptionDetailPage() {
 
   const supabase = createClient()
 
-  useEffect(() => {
-    fetchPrescriptionDetails()
-  }, [prescriptionId])
-
-  const fetchPrescriptionDetails = async () => {
+  const fetchPrescriptionDetails = useCallback(async () => {
     try {
       const { data, error } = await supabase
         .from('prescriptions')
@@ -128,7 +124,11 @@ export default function PrescriptionDetailPage() {
     } finally {
       setLoading(false)
     }
-  }
+  }, [prescriptionId, supabase])
+
+  useEffect(() => {
+    fetchPrescriptionDetails()
+  }, [fetchPrescriptionDetails])
 
   const savePrescriptionDetails = async () => {
     if (!prescription) return
@@ -206,7 +206,6 @@ export default function PrescriptionDetailPage() {
     )
   }
 
-  const totalCost = prescription.quantity * (prescription.medicines?.unit_price || 0)
 
   return (
     <div className="space-y-6">
@@ -494,7 +493,7 @@ export default function PrescriptionDetailPage() {
                 <div className="flex justify-between font-semibold text-lg pt-2 border-t">
                   <span>Total Cost:</span>
                   <span className="text-green-600">
-                    ₹{totalCost.toFixed(2)}
+                    ₹{((editedPrescription.quantity || prescription.quantity) * prescription.medicines.unit_price).toFixed(2)}
                   </span>
                 </div>
               </div>
