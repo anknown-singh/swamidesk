@@ -5,6 +5,20 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [1.8.0](https://github.com/anknown-singh/swamidesk/compare/v1.7.0...v1.8.0) (2025-08-08)
+
+
+### Features
+
+* add comprehensive documentation organization with realistic status assessment ([496177b](https://github.com/anknown-singh/swamidesk/commit/496177b521bb09636c972610b8fa1237cf3c6577))
+* add comprehensive github ci/cd pipeline and templates ([ef5f76a](https://github.com/anknown-singh/swamidesk/commit/ef5f76a114889292c25017aa4f5309cfe0350d19))
+* complete core workflow implementation and integrations ([2bc996f](https://github.com/anknown-singh/swamidesk/commit/2bc996f4e5bb1a4b6f12518c4167918031e4832a))
+
+
+### Bug Fixes
+
+* resolve all eslint warnings and typescript compilation errors ([453594c](https://github.com/anknown-singh/swamidesk/commit/453594c322bf0ede32954e1b38184026e8b9f3f3))
+
 ## [1.7.0](https://github.com/anknown-singh/swamidesk/compare/v1.6.1...v1.7.0) (2025-08-07)
 
 
