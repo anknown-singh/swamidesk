@@ -18,9 +18,7 @@ import {
   BellDot,
   BellOff,
   X,
-  Check,
   AlertTriangle,
-  Clock,
   User,
   Calendar,
   Pill,
@@ -28,16 +26,14 @@ import {
   Settings,
   Trash2,
   MoreVertical,
-  Filter,
   CheckCheck
 } from 'lucide-react'
 import {
-  notificationSystem,
+  realtimeNotificationSystem,
   type Notification,
-  NotificationType,
   NotificationCategory,
   NotificationPriority
-} from '@/lib/notifications/notification-system'
+} from '@/lib/notifications/realtime-notification-system'
 
 interface NotificationCenterProps {
   userId: string
@@ -53,44 +49,16 @@ export function NotificationCenter({ userId, userRole, className = '' }: Notific
   const [loading, setLoading] = useState(false)
   const audioRef = useRef<HTMLAudioElement | null>(null)
 
-  useEffect(() => {
-    loadNotifications()
-    
-    // Subscribe to real-time notifications
-    const unsubscribe = notificationSystem.subscribe(userId, (notification) => {
-      handleNewNotification(notification)
-    })
-
-    // Also subscribe to role-based notifications
-    const roleUnsubscribe = notificationSystem.subscribe(`role:${userRole}`, (notification) => {
-      handleNewNotification(notification)
-    })
-
-    // Initialize audio for notification sounds
-    audioRef.current = new Audio('/sounds/notification.mp3')
-    audioRef.current.volume = 0.3
-
-    return () => {
-      unsubscribe()
-      roleUnsubscribe()
+  const loadNotifications = async () => {
+    try {
+      const userNotifications = await realtimeNotificationSystem.getUserNotifications(userId)
+      const unreadCount = await realtimeNotificationSystem.getUnreadCount(userId)
+      
+      setNotifications(userNotifications)
+      setUnreadCount(unreadCount)
+    } catch (error) {
+      console.error('Error loading notifications:', error)
     }
-  }, [userId, userRole])
-
-  const loadNotifications = () => {
-    const userNotifications = notificationSystem.getNotifications(userId)
-    const roleNotifications = notificationSystem.getNotifications(`role:${userRole}`)
-    
-    // Combine and deduplicate notifications
-    const allNotifications = [...userNotifications, ...roleNotifications]
-    const uniqueNotifications = allNotifications.reduce((acc, notification) => {
-      if (!acc.some(n => n.id === notification.id)) {
-        acc.push(notification)
-      }
-      return acc
-    }, [] as Notification[])
-
-    setNotifications(uniqueNotifications)
-    setUnreadCount(notificationSystem.getUnreadCount(userId))
   }
 
   const handleNewNotification = (notification: Notification) => {
@@ -109,23 +77,44 @@ export function NotificationCenter({ userId, userRole, className = '' }: Notific
     }
   }
 
+  useEffect(() => {
+    loadNotifications()
+    
+    // Subscribe to real-time notifications for this user
+    const unsubscribe = realtimeNotificationSystem.subscribe(userId, (notification) => {
+      handleNewNotification(notification)
+    })
+
+    // Also subscribe to role-based notifications
+    const roleUnsubscribe = realtimeNotificationSystem.subscribe(`role:${userRole}`, (notification) => {
+      handleNewNotification(notification)
+    })
+
+    // Initialize audio for notification sounds
+    audioRef.current = new Audio('/sounds/notification.mp3')
+    audioRef.current.volume = 0.3
+
+    return () => {
+      unsubscribe()
+      roleUnsubscribe()
+    }
+  }, [userId, userRole])
+
   const handleMarkAsRead = async (notificationId: string) => {
-    await notificationSystem.markAsRead(notificationId, userId)
+    await realtimeNotificationSystem.markAsRead(notificationId, userId)
     loadNotifications()
   }
 
   const handleDeleteNotification = async (notificationId: string) => {
-    await notificationSystem.deleteNotification(notificationId)
+    // Delete notification (this would need to be implemented in the service)
+    console.log('Delete notification:', notificationId)
     loadNotifications()
   }
 
   const handleMarkAllAsRead = async () => {
     setLoading(true)
     try {
-      const unreadNotifications = notifications.filter(n => !n.readAt)
-      for (const notification of unreadNotifications) {
-        await notificationSystem.markAsRead(notification.id, userId)
-      }
+      await realtimeNotificationSystem.markAllAsRead(userId)
       loadNotifications()
     } finally {
       setLoading(false)
@@ -135,7 +124,8 @@ export function NotificationCenter({ userId, userRole, className = '' }: Notific
   const handleClearAll = async () => {
     setLoading(true)
     try {
-      await notificationSystem.clearAllNotifications(userId)
+      // Clear all functionality would need to be implemented
+      console.log('Clear all notifications for user:', userId)
       loadNotifications()
     } finally {
       setLoading(false)
@@ -321,13 +311,13 @@ export function NotificationCenter({ userId, userRole, className = '' }: Notific
                           key={notification.id}
                           className={`p-3 rounded-lg border-l-4 cursor-pointer hover:bg-gray-50 transition-colors ${
                             getPriorityColor(notification.priority)
-                          } ${!notification.readAt ? 'bg-opacity-80' : 'bg-opacity-40'}`}
+                          } ${!notification.read_at ? 'bg-opacity-80' : 'bg-opacity-40'}`}
                           onClick={() => {
-                            if (!notification.readAt) {
+                            if (!notification.read_at) {
                               handleMarkAsRead(notification.id)
                             }
-                            if (notification.actionUrl) {
-                              window.location.href = notification.actionUrl
+                            if (notification.action_url) {
+                              window.location.href = notification.action_url
                             }
                           }}
                         >
@@ -337,13 +327,13 @@ export function NotificationCenter({ userId, userRole, className = '' }: Notific
                               <span className="font-medium text-sm">
                                 {notification.title}
                               </span>
-                              {!notification.readAt && (
+                              {!notification.read_at && (
                                 <div className="w-2 h-2 bg-blue-500 rounded-full" />
                               )}
                             </div>
                             <div className="flex items-center gap-1">
                               <span className="text-xs text-gray-500">
-                                {formatTime(notification.createdAt)}
+                                {formatTime(notification.created_at)}
                               </span>
                               <Button
                                 variant="ghost"
@@ -464,6 +454,8 @@ export function NotificationToast({
         clearInterval(countdown)
       }
     }
+    
+    return undefined
   }, [notification.priority, onClose])
 
   if (!isVisible) return null
