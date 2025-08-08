@@ -82,7 +82,7 @@ npm run version:major
 1. Connect your GitHub repository to Vercel
 2. Vercel will automatically detect Next.js
 3. Deploy with default settings
-4. Your app will be available at `https://swamidesk.vercel.app`
+4. Your app will be available at `https://swamicare.in`
 
 ### Option 2: Netlify
 

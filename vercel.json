@@ -4,6 +4,19 @@
   "framework": "nextjs",
   "installCommand": "npm install",
   "devCommand": "npm run dev",
+  "domains": ["swamicare.in", "www.swamicare.in"],
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "destination": "https://swamicare.in/$1",
+      "has": [
+        {
+          "type": "host",
+          "value": "www.swamicare.in"
+        }
+      ]
+    }
+  ],
   "env": {
     "NODE_ENV": "production"
   },

@@ -22,7 +22,7 @@
 - **📞 Receptionist Dashboard**: Appointment management, patient registration
 
 ### 🚀 **Deployment & Hosting** ✅
-- **Vercel Production Deployment**: https://swamidesk-oo10xe5ab-anknownsinghs-projects.vercel.app
+- **Vercel Production Deployment**: https://swamicare.in
 - **Zero-downtime deployments** configured
 - **Global CDN distribution** active
 - **SSL certificates** automatically provisioned
@@ -97,7 +97,7 @@
 - **Branch**: main (clean working tree)
 
 ### **Deployed Version**
-- **Production URL**: https://swamidesk-oo10xe5ab-anknownsinghs-projects.vercel.app
+- **Production URL**: https://swamicare.in
 - **Status**: ✅ Live and functional
 - **Last Deploy**: 50 minutes ago
 - **Sync Status**: ✅ Git and deployment perfectly synced

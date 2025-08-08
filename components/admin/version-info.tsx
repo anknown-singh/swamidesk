@@ -14,7 +14,7 @@ export function VersionInfo() {
     environment: process.env.NODE_ENV || 'development',
     buildDate: new Date().toLocaleDateString(),
     repository: 'https://github.com/yourusername/swamidesk',
-    deploymentUrl: process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://swamidesk.vercel.app'
+    deploymentUrl: process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : 'https://swamicare.in'
   }
 
   const getEnvironmentBadgeColor = (env: string) => {

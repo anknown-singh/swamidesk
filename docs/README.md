@@ -8,7 +8,7 @@ This directory contains all project documentation organized for easy access by d
 
 **SwamIDesk** is a modern, comprehensive healthcare management system designed to streamline clinic operations and improve patient care. It features role-based interfaces, real-time workflow management, and complete integration from patient registration to billing.
 
-**🌐 Live System**: https://swamidesk-ij5v81eh7-anknownsinghs-projects.vercel.app
+**🌐 Live System**: https://swamicare.in
 
 ### Key Features
 - 🏥 **Complete Patient Management** - Electronic health records and patient portal
@@ -152,7 +152,7 @@ This documentation is regularly updated with:
 
 ## 📚 Additional Resources
 
-- **Live Demo**: https://swamidesk-ij5v81eh7-anknownsinghs-projects.vercel.app
+- **Live Demo**: https://swamicare.in
 - **GitHub Repository**: [SwamIDesk on GitHub](https://github.com/your-username/swamidesk)
 - **Issue Tracking**: Submit issues via GitHub or admin panel
 - **Community**: Join discussions for updates and support

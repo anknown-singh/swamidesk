@@ -7,7 +7,7 @@
 [![CI/CD Pipeline](https://github.com/anknown-singh/swamidesk/actions/workflows/ci.yml/badge.svg)](https://github.com/anknown-singh/swamidesk/actions/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-1.8.0-blue.svg)](https://github.com/anknown-singh/swamidesk/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
-[![Live Demo](https://img.shields.io/badge/demo-live-success.svg)](https://swamidesk-ij5v81eh7-anknownsinghs-projects.vercel.app)
+[![Live Demo](https://img.shields.io/badge/Live%20Demo-swamicare.in-blue?style=for-the-badge&logo=globe)](https://swamicare.in)
 
 ## 🏥 Overview
 
@@ -188,7 +188,7 @@ swamidesk/
 ## 🚀 Quick Start
 
 ### Live Demo
-**🌐 [Try SwamIDesk Live](https://swamidesk-ij5v81eh7-anknownsinghs-projects.vercel.app)**
+**🌐 [Try SwamIDesk Live](https://swamicare.in)**
 
 ### Prerequisites
 - Node.js 18+ and npm
@@ -316,7 +316,7 @@ npx shadcn@latest add [component-name]
 ## 🚀 **Deployment**
 
 ### **Production Environment**
-- **Live System**: [SwamIDesk Production](https://swamidesk-ij5v81eh7-anknownsinghs-projects.vercel.app)
+- **Live System**: [SwamIDesk Production](https://swamicare.in)
 - **Platform**: Vercel with automatic deployments
 - **Database**: Supabase PostgreSQL with real-time features
 - **CDN**: Global edge distribution for optimal performance

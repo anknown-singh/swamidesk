@@ -3,7 +3,7 @@
 ## ✅ Current Status
 
 Your SwamIDesk application is now deployed and accessible at:
-**https://swamidesk-oo10xe5ab-anknownsinghs-projects.vercel.app**
+**https://swamicare.in**
 
 ## 🔧 Next Steps: GitHub Actions Integration
 

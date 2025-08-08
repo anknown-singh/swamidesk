@@ -21,7 +21,7 @@ After running the script, you should see output like:
 ```
 
 ### Step 3: Test Authentication Immediately
-1. Go to https://swamidesk.vercel.app/login
+1. Go to https://swamicare.in/login
 2. Try logging in with: `admin@swamicare.com` / `password123`
 3. **Should work without errors**
 

@@ -59,7 +59,7 @@ jobs:
         with:
           script: |
             const { tag_name } = context.payload.release || { tag_name: '${{ needs.release-please.outputs.tag_name }}' };
-            const deploymentUrl = '${{ steps.vercel-deploy.outputs.deployment_url }}' || 'https://swamidesk.vercel.app';
+            const deploymentUrl = '${{ steps.vercel-deploy.outputs.deployment_url }}' || 'https://swamicare.in';
             
             github.rest.repos.createCommitComment({
               owner: context.repo.owner,

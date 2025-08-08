@@ -93,7 +93,7 @@ Release Please automatically maintains:
 
 ### Production
 - **Trigger**: Release created (merge Release PR)
-- **URL**: https://swamidesk.vercel.app (dynamic)
+- **URL**: https://swamicare.in (dynamic)
 - **Environment**: Production
 - **Branch**: main
 
@@ -120,7 +120,7 @@ git log --oneline --grep="release" -5
 ### Deployment Status
 - **GitHub Actions**: Monitor workflow runs
 - **Vercel Dashboard**: Check deployment status
-- **Live Site**: https://swamidesk.vercel.app
+- **Live Site**: https://swamicare.in
 
 ## 🐛 Troubleshooting
 

@@ -76,7 +76,7 @@
 ## 📊 **CURRENT PROJECT STATUS**
 
 ### **Live Deployment**
-- **Production URL**: https://swamidesk-oo10xe5ab-anknownsinghs-projects.vercel.app
+- **Production URL**: https://swamicare.in
 - **Status**: ✅ Live and accessible
 - **Version**: v1.0.0 (first official release)
 - **Last Updated**: Released moments ago

@@ -2,7 +2,7 @@
 
 ## ✅ **Your Application is LIVE!**
 
-**Production URL**: https://swamidesk-oo10xe5ab-anknownsinghs-projects.vercel.app
+**Production URL**: https://swamicare.in
 
 ## 🚀 **What's Been Accomplished**
 
@@ -210,4 +210,4 @@ Your **SwamIDesk** clinic management system is now:
 
 **Your application is production-ready and ready for real-world use!** 🚀
 
-Test it out: **https://swamidesk-oo10xe5ab-anknownsinghs-projects.vercel.app**
+Test it out: **https://swamicare.in**

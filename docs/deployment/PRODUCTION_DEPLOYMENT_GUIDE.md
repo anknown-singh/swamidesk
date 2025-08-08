@@ -18,7 +18,7 @@ SwamIDesk is **production-ready** and can be deployed on multiple platforms. Thi
 
 ### Vercel (One-Click)
 
-**Already Deployed**: https://swamidesk-oo10xe5ab-anknownsinghs-projects.vercel.app
+**Already Deployed**: https://swamicare.in
 
 1. **Fork the repository**
 2. **Connect to Vercel**:

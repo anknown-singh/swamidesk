@@ -37,7 +37,7 @@ SwamIDesk clinic management system has successfully passed all pre-deployment ve
 ## 🌐 Current Deployment Status
 
 ### **Live Production Instance**
-- **URL**: https://swamidesk-oo10xe5ab-anknownsinghs-projects.vercel.app
+- **URL**: https://swamicare.in
 - **Platform**: Vercel (Serverless)
 - **Status**: ✅ **ACTIVE AND OPERATIONAL**
 - **SSL**: ✅ Automatic HTTPS with valid certificate
@@ -215,9 +215,9 @@ All role dashboards now use **real-time database queries**:
 ## 📞 Support & Maintenance
 
 ### **Production URLs**
-- **Main Application**: https://swamidesk-oo10xe5ab-anknownsinghs-projects.vercel.app
-- **Health Check**: https://swamidesk-oo10xe5ab-anknownsinghs-projects.vercel.app/api/health
-- **Status Check**: https://swamidesk-oo10xe5ab-anknownsinghs-projects.vercel.app/api/status
+- **Main Application**: https://swamicare.in
+- **Health Check**: https://swamicare.in/api/health
+- **Status Check**: https://swamicare.in/api/status
 
 ### **Demo Accounts** (for initial testing)
 | Role | Email | Password |
