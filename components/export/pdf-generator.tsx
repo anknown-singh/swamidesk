@@ -482,7 +482,7 @@ export function PDFGenerator() {
     `
   }
 
-  const createAndDownloadPDF = async (htmlContent: string, // filename: string) => {
+  const createAndDownloadPDF = async (htmlContent: string, filename: string) => {
     // Create a new window for printing
     const printWindow = window.open('', '_blank')
     if (!printWindow) {

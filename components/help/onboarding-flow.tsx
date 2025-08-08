@@ -72,7 +72,7 @@ export function OnboardingFlowComponent({
     estimatedTimeRemaining: 0
   })
 
-  const [// userProgress, setUserProgress] = useState<UserProgress | null>(null)
+  const [userProgress, setUserProgress] = useState<UserProgress | null>(null)
   const overlayRef = useRef<HTMLDivElement>(null)
   const targetElementRef = useRef<HTMLElement | null>(null)
 
@@ -198,7 +198,7 @@ export function OnboardingFlowComponent({
     }
   }
 
-  const // clearTargetHighlight = () => {
+  const clearTargetHighlight = () => {
     if (targetElementRef.current) {
       const element = targetElementRef.current
       element.style.position = ''
@@ -575,3 +575,5 @@ export function OnboardingProgress({ userId, userRole, className = '' }: {
     </Card>
   )
 }
+
+export default OnboardingFlow;

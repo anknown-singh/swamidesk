@@ -218,7 +218,7 @@ export function WorkflowProgress({
     return completionTime
   }
 
-  const // getActionPriority = (action: WorkflowAction) => {
+  const getActionPriority = (action: WorkflowAction) => {
     if (action.required && !action.completed) return 'high'
     if (!action.completed) return 'medium'
     return 'low'
@@ -485,3 +485,4 @@ export function WorkflowWidget({ workflowId, userId, className = '' }: {
     />
   )
 }
+export default WorkflowProgress;

@@ -130,7 +130,7 @@ export function WorkflowTimeline({
     return events.sort((a, b) => new Date(a.timestamp).getTime() - new Date(b.timestamp).getTime())
   }
 
-  const // getUserName = async (userId: string): Promise<string> => {
+  const getUserName = async (userId: string): Promise<string> => {
     // In a real app, this would fetch user data from the API
     // For now, we'll return a placeholder
     return `User ${userId.slice(-4)}`
@@ -476,3 +476,4 @@ export function WorkflowTimeline({
     </div>
   )
 }
+export default WorkflowTimeline;

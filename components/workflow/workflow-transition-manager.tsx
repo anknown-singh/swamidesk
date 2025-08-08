@@ -96,7 +96,7 @@ export function WorkflowTransitionManager({
     }
   }
 
-  const getStateDefinition = (// workflowType: string, state: string): WorkflowState | null => {
+  const getStateDefinition = (workflowType: string, state: string): WorkflowState | null => {
     // Mock implementation - in a real app, this would fetch from the workflow engine
     const patientStates = {
       [PatientWorkflowState.REGISTRATION]: {
@@ -272,7 +272,7 @@ export function WorkflowTransitionManager({
     }
   }
 
-  const // getActionPriority = (action: WorkflowAction) => {
+  const getActionPriority = (action: WorkflowAction) => {
     if (action.required && !action.completed) return 'high'
     if (!action.completed) return 'medium'
     return 'low'
@@ -564,3 +564,4 @@ export function WorkflowTransitionManager({
     </>
   )
 }
+export default WorkflowTransitionManager;

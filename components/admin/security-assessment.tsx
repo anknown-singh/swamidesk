@@ -160,7 +160,7 @@ export function SecurityAssessment({ _userId, isAdmin }: SecurityAssessmentProps
     }
   }
 
-  const // getRiskColor = (risk: string) => {
+  const getRiskColor = (risk: string) => {
     switch (risk) {
       case 'critical': return 'text-red-500'
       case 'high': return 'text-orange-500'
@@ -720,3 +720,5 @@ export function SecurityAssessment({ _userId, isAdmin }: SecurityAssessmentProps
     </div>
   )
 }
+
+export default SecurityAssessment;

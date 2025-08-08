@@ -558,11 +558,11 @@ export function AvailableToursMenu({ userId, userRole, className = '' }: {
     setTours(availableTours)
   }, [userRole])
 
-  const // startTour = (tourId: string) => {
+  const startTour = (tourId: string) => {
     setActiveTour(tourId)
   }
 
-  const completeTour = (// tourId: string) => {
+  const completeTour = (tourId: string) => {
     setActiveTour(null)
     // Refresh tours list to reflect completion
     const availableTours = helpSystem.getTours(userRole)

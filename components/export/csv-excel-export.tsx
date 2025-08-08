@@ -299,7 +299,7 @@ export function CSVExcelExport() {
 
   const exportAllData = async (supabase: any, dateFilter: any): Promise<ExportData> => {
     // This would create multiple sheets/files, for now we'll create a summary
-    const [patients, billing, // services, medicines] = await Promise.all([
+    const [patients, billing, services, medicines] = await Promise.all([
       exportPatientData(supabase, dateFilter),
       exportBillingData(supabase, dateFilter),
       exportAnalyticsData(supabase, dateFilter),
