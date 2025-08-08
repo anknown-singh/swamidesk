@@ -104,28 +104,59 @@ export function GlobalSearch({ userProfile, className = '' }: GlobalSearchProps)
         title: patient.full_name,
         subtitle: patient.phone || patient.email || '',
         description: patient.date_of_birth ? `Born: ${new Date(patient.date_of_birth).toLocaleDateString()}` : '',
-        url: `/patients/${patient.id}`,
+        url: `/${userProfile.role}/patients/${patient.id}`,
         metadata: patient
       })
     })
   }
 
   const searchAppointments = async (query: string, results: SearchResult[]) => {
-    // First search appointments by ID or status
-    const { data: appointments } = await supabase
+    // Search appointments by status first, then by ID if no results
+    let appointments: any[] = []
+    
+    // Try status search
+    const { data: statusResults } = await supabase
       .from('appointments')
-      .select('id, appointment_date, appointment_time, status, patient_id, doctor_id')
-      .or(`id.ilike.%${query}%,status.ilike.%${query}%`)
-      .limit(3)
+      .select(`
+        id, scheduled_date, scheduled_time, status, patient_id, doctor_id,
+        patients(full_name),
+        doctor:users!doctor_id(full_name)
+      `)
+      .ilike('status', `%${query}%`)
+      .limit(2)
+    
+    if (statusResults?.length) {
+      appointments = appointments.concat(statusResults)
+    }
+    
+    // Try ID search if we need more results
+    if (appointments.length < 3) {
+      const { data: idResults } = await supabase
+        .from('appointments')
+        .select(`
+          id, scheduled_date, scheduled_time, status, patient_id, doctor_id,
+          patients(full_name),
+          doctor:users!doctor_id(full_name)
+        `)
+        .ilike('id', `%${query}%`)
+        .limit(3 - appointments.length)
+      
+      if (idResults?.length) {
+        appointments = appointments.concat(idResults)
+      }
+    }
 
     appointments?.forEach(apt => {
+      const patientName = (apt.patients as any)?.full_name || 'Unknown Patient'
+      const doctorName = (apt.doctor as any)?.full_name || 'Unknown Doctor'
+      
       results.push({
         id: apt.id,
         type: 'appointment',
-        title: `Appointment ${apt.id.slice(0, 8)}...`,
+        title: `${patientName} - ${doctorName}`,
         subtitle: `Status: ${apt.status}`,
-        description: `${new Date(apt.appointment_date).toLocaleDateString()} at ${apt.appointment_time}`,
-        url: `/appointments/${apt.id}`,
+        description: `${new Date(apt.scheduled_date).toLocaleDateString()} at ${apt.scheduled_time}`,
+        url: `/${userProfile.role}/appointments/${apt.id}`,
         metadata: { status: apt.status }
       })
     })
@@ -170,7 +201,7 @@ export function GlobalSearch({ userProfile, className = '' }: GlobalSearchProps)
         title: `Prescription - ${patientName}`,
         subtitle: `Status: ${prescription.status}`,
         description: `Created: ${new Date(prescription.created_at).toLocaleDateString()}`,
-        url: `/doctor/prescriptions/${prescription.id}`,
+        url: `/${userProfile.role}/prescriptions/${prescription.id}`,
         metadata: prescription
       })
     })
@@ -195,7 +226,7 @@ export function GlobalSearch({ userProfile, className = '' }: GlobalSearchProps)
         title: `Invoice - ${patientName}`,
         subtitle: `₹${invoice.total_amount} - ${invoice.payment_status}`,
         description: `Created: ${new Date(invoice.created_at).toLocaleDateString()}`,
-        url: `/billing/invoices/${invoice.id}`,
+        url: `/${userProfile.role}/billing/invoices/${invoice.id}`,
         metadata: invoice
       })
     })
@@ -216,7 +247,7 @@ export function GlobalSearch({ userProfile, className = '' }: GlobalSearchProps)
         title: service.name,
         subtitle: service.category,
         description: `₹${service.price}`,
-        url: `/services/${service.id}`,
+        url: `/${userProfile.role}/services/${service.id}`,
         metadata: service
       })
     })

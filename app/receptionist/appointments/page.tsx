@@ -147,7 +147,7 @@ export default function AppointmentsPage() {
   }
 
   const handleSlotSelect = (date: string, time: string, doctorId?: string) => {
-    setSelectedSlot({ date, time, doctorId })
+    setSelectedSlot({ date, time, doctorId: doctorId || undefined })
     setShowBookingForm(true)
   }
 

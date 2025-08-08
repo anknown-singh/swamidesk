@@ -9,13 +9,11 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Textarea } from '@/components/ui/textarea'
 import { 
-  Settings, 
   Clipboard, 
   Bell, 
   UserCog,
   Save,
-  Activity,
-  Timer
+  Activity
 } from 'lucide-react'
 
 interface AttendantSettings {

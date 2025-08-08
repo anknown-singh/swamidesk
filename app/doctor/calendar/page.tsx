@@ -58,7 +58,7 @@ export default function DoctorCalendarPage() {
     const fetchStats = async () => {
       const supabase = createAuthenticatedClient()
       try {
-        const today = new Date().toISOString().split('T')[0]
+        const today = new Date().toISOString().split('T')[0]!
         const now = new Date()
         const currentTime = now.toTimeString().slice(0, 5)
 

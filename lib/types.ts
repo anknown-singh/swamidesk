@@ -230,39 +230,39 @@ export interface Appointment {
   scheduled_date: string
   scheduled_time: string
   duration: number // in minutes
-  title?: string
-  description?: string
-  notes?: string
-  patient_notes?: string // notes from patient during booking
+  title?: string | undefined
+  description?: string | undefined
+  notes?: string | undefined
+  patient_notes?: string | undefined // notes from patient during booking
   priority: boolean
   is_recurring: boolean
-  recurrence_type?: RecurrenceType
-  recurrence_end_date?: string
-  parent_appointment_id?: string // for recurring appointments
+  recurrence_type?: RecurrenceType | undefined
+  recurrence_end_date?: string | undefined
+  parent_appointment_id?: string | undefined // for recurring appointments
   reminder_sent: boolean
   confirmation_sent: boolean
-  estimated_cost?: number
-  actual_cost?: number
+  estimated_cost?: number | undefined
+  actual_cost?: number | undefined
   created_by: string
-  confirmed_at?: string
-  arrived_at?: string
-  started_at?: string
-  completed_at?: string
-  cancelled_at?: string
-  cancellation_reason?: string
-  no_show_at?: string
-  rescheduled_from?: string
-  rescheduled_to?: string
-  rescheduled_reason?: string
+  confirmed_at?: string | undefined
+  arrived_at?: string | undefined
+  started_at?: string | undefined
+  completed_at?: string | undefined
+  cancelled_at?: string | undefined
+  cancellation_reason?: string | undefined
+  no_show_at?: string | undefined
+  rescheduled_from?: string | undefined
+  rescheduled_to?: string | undefined
+  rescheduled_reason?: string | undefined
   created_at: string
   updated_at: string
   // Relations
-  patient?: Patient
-  doctor?: UserProfile
-  created_by_user?: UserProfile
-  visit?: Visit // linked when appointment converts to visit
-  services?: AppointmentService[]
-  reminders?: AppointmentReminder[]
+  patient?: Patient | undefined
+  doctor?: UserProfile | undefined
+  created_by_user?: UserProfile | undefined
+  visit?: Visit | undefined // linked when appointment converts to visit
+  services?: AppointmentService[] | undefined
+  reminders?: AppointmentReminder[] | undefined
 }
 
 export interface DoctorAvailability {

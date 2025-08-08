@@ -246,7 +246,7 @@ export async function POST(request: NextRequest) {
         data: {
           payment_id: payment.id,
           invoice_number: invoice.invoice_number,
-          patient_name: Array.isArray(invoice.patients) ? invoice.patients[0]?.full_name || 'Unknown Patient' : invoice.patients?.full_name || 'Unknown Patient',
+          patient_name: (invoice as any).patients?.full_name || 'Unknown Patient',
           payment_amount: validatedData.amount,
           new_balance: newBalanceDue,
           payment_status: newPaymentStatus

@@ -297,13 +297,13 @@ function groupByPeriod(
       case 'week':
         const weekStart = new Date(date)
         weekStart.setDate(date.getDate() - date.getDay())
-        key = weekStart.toISOString().split('T')[0]
+        key = weekStart.toISOString().split('T')[0]!
         break
       case 'month':
         key = `${date.getFullYear()}-${(date.getMonth() + 1).toString().padStart(2, '0')}`
         break
       default: // day
-        key = date.toISOString().split('T')[0]
+        key = date.toISOString().split('T')[0]!
     }
     
     if (!acc[key]) {

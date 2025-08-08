@@ -37,6 +37,11 @@ export default function LoginPage() {
       }
 
       const userProfile = userProfiles[0]
+      
+      if (!userProfile) {
+        setError('Invalid email or password')
+        return
+      }
 
       // For demo purposes, we'll accept 'password123' for all users
       // In production, you'd verify the password hash properly

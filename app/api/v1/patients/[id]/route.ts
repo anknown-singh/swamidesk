@@ -85,7 +85,7 @@ export async function PUT(request: NextRequest, { params }: RouteParams) {
     const validatedData = PatientUpdateSchema.parse(body)
     
     // Check if patient exists
-    const { data: existingPatient, error: fetchError } = await supabase
+    const { error: fetchError } = await supabase
       .from('patients')
       .select('patient_id')
       .eq('patient_id', id)

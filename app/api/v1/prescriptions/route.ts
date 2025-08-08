@@ -142,7 +142,7 @@ export async function POST(request: NextRequest) {
     const validatedData = PrescriptionSchema.parse(body)
     
     // Verify patient exists
-    const { data: patient, error: patientError } = await supabase
+    const { error: patientError } = await supabase
       .from('patients')
       .select('patient_id, full_name')
       .eq('patient_id', validatedData.patient_id)
@@ -156,7 +156,7 @@ export async function POST(request: NextRequest) {
     }
     
     // Verify doctor exists
-    const { data: doctor, error: doctorError } = await supabase
+    const { error: doctorError } = await supabase
       .from('users')
       .select('id, full_name')
       .eq('id', validatedData.doctor_id)

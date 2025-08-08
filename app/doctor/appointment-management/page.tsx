@@ -240,8 +240,8 @@ export default function DoctorAppointmentManagementPage() {
   }
 
   // Filter appointments based on active view
+  const today = new Date().toISOString().split('T')[0]!
   const filteredAppointments = appointments.filter(appointment => {
-    const today = new Date().toISOString().split('T')[0]
     const appointmentDate = appointment.scheduled_date
 
     switch (activeView) {
@@ -257,11 +257,12 @@ export default function DoctorAppointmentManagementPage() {
   })
 
   // Calculate stats for doctor view
+  const todayDate = new Date().toISOString().split('T')[0]!
   const stats = {
-    today: appointments.filter(apt => apt.scheduled_date === new Date().toISOString().split('T')[0]).length,
+    today: appointments.filter(apt => apt.scheduled_date === todayDate).length,
     upcoming: appointments.filter(apt => 
-      apt!.scheduled_date > new Date().toISOString().split('T')[0] || 
-      (apt.scheduled_date === new Date().toISOString().split('T')[0] && ['scheduled', 'confirmed'].includes(apt.status))
+      apt.scheduled_date > todayDate || 
+      (apt.scheduled_date === todayDate && ['scheduled', 'confirmed'].includes(apt.status))
     ).length,
     completed: appointments.filter(apt => apt.status === 'completed').length,
     in_progress: appointments.filter(apt => apt.status === 'in_progress').length,
@@ -389,7 +390,7 @@ export default function DoctorAppointmentManagementPage() {
             <CardContent>
               <RoleBasedCalendar
                 userRole="doctor"
-                userId={currentDoctorId}
+                userId={currentDoctorId || ''}
                 onAppointmentSelect={(appointment) => setSelectedAppointment(appointment)}
                 onSlotSelect={(date, time, doctorId) => {
                   console.log('Selected slot:', { date, time, doctorId })
@@ -406,7 +407,7 @@ export default function DoctorAppointmentManagementPage() {
                 onCancelAppointment={async (appointment) => {
                   await handleStatusUpdate(appointment.id, 'cancelled')
                 }}
-                selectedDoctorId={currentDoctorId}
+                selectedDoctorId={currentDoctorId || ''}
                 viewMode="week"
                 readonly={false}
               />
