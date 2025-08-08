@@ -10,7 +10,6 @@ import { RevenueForecasting } from '@/components/analytics/revenue-forecasting'
 import { PatientFlowAnalytics } from '@/components/analytics/patient-flow-analytics'
 import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
 import { 
-  TrendingUp, 
   Users, 
   DollarSign, 
   Activity, 
@@ -237,12 +236,12 @@ export default function AdminAnalyticsPage() {
 
     // Simplified department calculation
     patientData.forEach(patient => {
-      departments['General Medicine'].patients++
+      departments['General Medicine']!.patients++
       if (patient.procedures_completed_at) {
-        departments['Procedures'].patients++
+        departments['Procedures']!.patients++
       }
       if (patient.pharmacy_completed_at) {
-        departments['Pharmacy'].patients++
+        departments['Pharmacy']!.patients++
       }
     })
 
@@ -254,13 +253,13 @@ export default function AdminAnalyticsPage() {
           invoice.bill_items.forEach((item: any) => {
             switch (item.category) {
               case 'consultation':
-                departments['General Medicine'].revenue += item.total || 0
+                departments['General Medicine']!.revenue += item.total || 0
                 break
               case 'procedure':
-                departments['Procedures'].revenue += item.total || 0
+                departments['Procedures']!.revenue += item.total || 0
                 break
               case 'medicine':
-                departments['Pharmacy'].revenue += item.total || 0
+                departments['Pharmacy']!.revenue += item.total || 0
                 break
             }
           })

@@ -121,7 +121,7 @@ function getClientIdentifier(request: NextRequest): string {
  */
 function checkRateLimit(clientId: string, config: { windowMs: number; maxRequests: number }): boolean {
   const now = Date.now()
-  const windowStart = now - config.windowMs
+  const _windowStart = now - config.windowMs
 
   // Get or create rate limit data for client
   let clientData = rateLimitMap.get(clientId)

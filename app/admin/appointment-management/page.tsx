@@ -133,7 +133,7 @@ export default function AdminAppointmentManagementPage() {
         } : undefined
       }))
 
-      setAppointments(mappedAppointments)
+      setAppointments(mappedAppointments as Appointment[])
     } catch (error) {
       console.error('Error fetching appointments:', error)
     } finally {

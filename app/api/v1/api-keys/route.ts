@@ -10,18 +10,18 @@ const ApiKeySchema = z.object({
   expires_at: z.string().datetime().optional()
 })
 
-const ApiKeyUpdateSchema = z.object({
-  name: z.string().min(1).max(100).optional(),
-  description: z.string().optional(),
-  is_active: z.boolean().optional(),
-  permissions: z.array(z.enum(['read', 'write', 'admin'])).optional()
-})
+// const ApiKeyUpdateSchema = z.object({
+//   name: z.string().min(1).max(100).optional(),
+//   description: z.string().optional(),
+//   is_active: z.boolean().optional(),
+//   permissions: z.array(z.enum(['read', 'write', 'admin'])).optional()
+// })
 
 /**
  * GET /api/v1/api-keys
  * List API keys for the authenticated user
  */
-export async function GET(request: NextRequest) {
+export async function GET(_request: NextRequest) {
   try {
     const supabase = await createClient()
     

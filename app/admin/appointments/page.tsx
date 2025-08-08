@@ -175,7 +175,7 @@ export default function AdminAppointmentsPage() {
         } : undefined
       }))
 
-      setAppointments(mappedAppointments)
+      setAppointments(mappedAppointments as Appointment[])
     } catch (error) {
       console.error('Error fetching appointments:', error)
     } finally {
@@ -562,11 +562,11 @@ export default function AdminAppointmentsPage() {
     } else if (dateFilter === 'week') {
       const weekFromNow = new Date()
       weekFromNow.setDate(weekFromNow.getDate() + 7)
-      matchesDate = appointment.scheduled_date <= weekFromNow.toISOString().split('T')[0]
+      matchesDate = appointment.scheduled_date <= (weekFromNow.toISOString().split('T')[0] || '')
     } else if (dateFilter === 'month') {
       const monthFromNow = new Date()
       monthFromNow.setMonth(monthFromNow.getMonth() + 1)
-      matchesDate = appointment.scheduled_date <= monthFromNow.toISOString().split('T')[0]
+      matchesDate = appointment.scheduled_date <= (monthFromNow.toISOString().split('T')[0] || '')
     }
     
     return matchesSearch && matchesDoctor && matchesStatus && matchesDepartment && matchesDate

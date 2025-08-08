@@ -107,7 +107,7 @@ export class WorkflowManager {
    * Get patients by department and status
    */
   async getPatientsByDepartmentAndStatus(
-    department: string, 
+    _department: string, 
     statuses: PatientStatus[]
   ): Promise<PatientWorkflowData[]> {
     try {
@@ -195,7 +195,7 @@ export class WorkflowManager {
   async handleAdminApproval(
     patientId: string,
     approvedProcedures: unknown[],
-    hasRejectedProcedures: boolean,
+    _hasRejectedProcedures: boolean,
     stillRequiresMedicines: boolean
   ): Promise<{ success: boolean; nextStep: string; message: string }> {
     try {
@@ -388,8 +388,8 @@ export class WorkflowManager {
 
       data?.forEach(record => {
         const status = record.opd_status as PatientStatus
-        if (summary.hasOwnProperty(status)) {
-          summary[status]++
+        if (status in summary) {
+          (summary as any)[status]++
         }
       })
 

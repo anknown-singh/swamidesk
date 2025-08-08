@@ -2,7 +2,7 @@
 
 import React, { Suspense, lazy } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Users, CreditCard, TrendingUp, UserCheck, Package, BarChart3, AlertTriangle, BookOpen, ExternalLink } from 'lucide-react'
+import { Users, CreditCard, TrendingUp, UserCheck, Package, BarChart3, BookOpen, ExternalLink } from 'lucide-react'
 import { 
   DashboardSkeleton, 
   MetricCardSkeleton, 

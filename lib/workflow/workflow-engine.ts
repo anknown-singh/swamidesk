@@ -290,7 +290,7 @@ export class WorkflowEngine<T = string> {
       entityId: params.entityId,
       entityType: params.entityType,
       currentState: params.initialState,
-      progress: this.calculateProgress(params.type, params.initialState),
+      progress: this.calculateProgress(params.type, params.initialState as string),
       startedAt: new Date().toISOString(),
       transitions: [],
       metadata: params.metadata
@@ -341,7 +341,7 @@ export class WorkflowEngine<T = string> {
 
     // Create transition record
     const transition: WorkflowTransition<T> = {
-      from: fromState,
+      from: fromState as T,
       to: params.toState,
       action: params.action,
       userId: params.userId,
@@ -351,8 +351,8 @@ export class WorkflowEngine<T = string> {
     }
 
     // Update workflow
-    workflow.previousState = fromState
-    workflow.currentState = params.toState
+    workflow.previousState = fromState as T
+    workflow.currentState = params.toState as T
     workflow.progress = this.calculateProgress(workflow.type, params.toState as string)
     workflow.transitions.push(transition as WorkflowTransition)
 
@@ -475,7 +475,7 @@ export class WorkflowEngine<T = string> {
   private async sendStateChangeNotifications(
     workflow: WorkflowInstance, 
     transition: WorkflowTransition, 
-    userId: string
+    _userId: string
   ): Promise<void> {
     // Example notifications based on workflow type and state
     if (workflow.type === 'patient') {
