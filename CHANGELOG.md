@@ -5,6 +5,22 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.1.0](https://github.com/anknown-singh/swamidesk/compare/v2.0.1...v2.1.0) (2025-09-03)
+
+
+### Features
+
+* add clickable management interfaces and populate billing data ([0d4fdba](https://github.com/anknown-singh/swamidesk/commit/0d4fdba879741f4cfc9021ae9c3f4583a3518d7d))
+* production release with comprehensive management system ([d6dce2a](https://github.com/anknown-singh/swamidesk/commit/d6dce2a41f42d047c3fd4ededebabaa3701d0081))
+* release v2.0.1 production ready healthcare management system ([e4ba360](https://github.com/anknown-singh/swamidesk/commit/e4ba360f0bd3c044408366be4e719fd5ab83cb42))
+* resolve typescript errors and enhance pharmacy prescriptions system ([6eb05c2](https://github.com/anknown-singh/swamidesk/commit/6eb05c26a2a37f2f8186129109ebd8fd485bac16))
+
+
+### Bug Fixes
+
+* **eslint:** resolve critical eslint errors in prescription and treatment plan pages ([c87a1e1](https://github.com/anknown-singh/swamidesk/commit/c87a1e1140ab664b0503302c447dddcbcbd55b1f))
+* resolve critical eslint errors in admin pages ([40160b8](https://github.com/anknown-singh/swamidesk/commit/40160b86130d11b7ffb9d5c258cd6e5d98e14781))
+
 ## [2.0.1](https://github.com/anknown-singh/swamidesk/compare/v2.0.0...v2.0.1) (2025-08-08)
 
 
