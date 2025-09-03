@@ -305,7 +305,7 @@ export default function ReceptionistAppointmentDetailPage() {
               <>
                 <div>
                   <p className="font-medium text-lg">Dr. {appointment.users.full_name}</p>
-                  <p className="text-sm text-gray-600">{appointment.users.user_profiles[0]?.specialization}</p>
+                  <p className="text-sm text-gray-600">{appointment.users.specialization}</p>
                 </div>
 
                 {appointment.users.phone && (
@@ -315,9 +315,9 @@ export default function ReceptionistAppointmentDetailPage() {
                   </div>
                 )}
 
-                {appointment.users.user_profiles[0]?.department && (
+                {appointment.users.department && (
                   <Badge variant="outline" className="text-xs">
-                    {appointment.users.user_profiles[0]?.department}
+                    {appointment.users.department}
                   </Badge>
                 )}
               </>

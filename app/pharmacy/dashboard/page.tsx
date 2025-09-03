@@ -188,7 +188,7 @@ export default function PharmacyDashboard() {
           .map(prescription => {
             const visit = Array.isArray(prescription.visits) ? prescription.visits[0] : prescription.visits
             const patient = Array.isArray(visit?.patients) ? visit.patients[0] : visit?.patients
-            const doctor = Array.isArray(visit?.user_profiles) ? visit.user_profiles[0] : visit?.user_profiles
+            const doctor = visit?.users
             
             return {
               id: prescription.id,
