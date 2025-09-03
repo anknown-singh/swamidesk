@@ -237,8 +237,6 @@ export function BackupSystem() {
       const { data: invoices } = await supabase.from('invoices').select('*')
       backupData.invoices = invoices || []
 
-      const { data: pharmacyIssues } = await supabase.from('pharmacy_issues').select('*')
-      backupData.pharmacy_issues = pharmacyIssues || []
     }
 
     if (config.include_inventory) {
@@ -292,7 +290,7 @@ export function BackupSystem() {
   const getIncludedTables = () => {
     const tables = []
     if (config.include_patients) tables.push('patients', 'opd_records')
-    if (config.include_billing) tables.push('invoices', 'pharmacy_issues')
+    if (config.include_billing) tables.push('invoices')
     if (config.include_inventory) tables.push('medicines')
     if (config.include_system) tables.push('users', 'services')
     return tables

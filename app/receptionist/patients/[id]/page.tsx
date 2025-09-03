@@ -6,8 +6,26 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, Heart, CreditCard, FileText } from 'lucide-react'
-import type { Patient } from '@/lib/types'
+import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, Heart, CreditCard, FileText, History } from 'lucide-react'
+interface Patient {
+  id: string
+  full_name: string
+  date_of_birth: string
+  gender: string
+  phone: string
+  email: string
+  address: string
+  emergency_contact_name: string
+  emergency_contact_phone: string
+  blood_group: string
+  allergies: string[]
+  medical_history: string
+  insurance_provider: string
+  insurance_number: string
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
 
 interface PatientWithDetails extends Patient {
   appointments?: Array<{
@@ -139,6 +157,14 @@ export default function ReceptionistPatientDetailPage() {
             <Calendar className="h-4 w-4 mr-2" />
             Book Appointment
           </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => router.push(`/admin/patients/${patient.id}/consultations-history`)}
+          >
+            <History className="h-4 w-4 mr-2" />
+            View History
+          </Button>
           <Button variant="outline" size="sm">
             <FileText className="h-4 w-4 mr-2" />
             Generate Invoice
@@ -195,10 +221,55 @@ export default function ReceptionistPatientDetailPage() {
             </div>
           )}
 
+          {/* Emergency Contact */}
           {patient.emergency_contact_name && (
             <div className="p-4 bg-red-50 rounded-lg">
               <h4 className="font-medium text-red-800 mb-2">Emergency Contact</h4>
               <p className="text-red-600">{patient.emergency_contact_name}</p>
+              {patient.emergency_contact_phone && (
+                <p className="text-red-600 text-sm">{patient.emergency_contact_phone}</p>
+              )}
+            </div>
+          )}
+
+          {/* Medical Information */}
+          {(patient.allergies?.length > 0 || patient.medical_history || patient.blood_group) && (
+            <div className="space-y-3">
+              <h4 className="font-medium text-gray-900">Medical Information</h4>
+              
+              {patient.blood_group && (
+                <div className="flex items-center space-x-3">
+                  <Heart className="h-4 w-4 text-red-500" />
+                  <span>Blood Group: <strong>{patient.blood_group}</strong></span>
+                </div>
+              )}
+              
+              {patient.allergies && patient.allergies.length > 0 && (
+                <div className="p-3 bg-red-50 border-l-2 border-red-200 rounded">
+                  <p className="text-sm font-medium text-red-800">Allergies:</p>
+                  <p className="text-sm text-red-700">{patient.allergies.join(', ')}</p>
+                </div>
+              )}
+              
+              {patient.medical_history && (
+                <div className="p-3 bg-orange-50 border-l-2 border-orange-200 rounded">
+                  <p className="text-sm font-medium text-orange-800">Medical History:</p>
+                  <p className="text-sm text-orange-700">{patient.medical_history}</p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Insurance Information */}
+          {(patient.insurance_provider || patient.insurance_number) && (
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <h4 className="font-medium text-blue-800 mb-2">Insurance Information</h4>
+              {patient.insurance_provider && (
+                <p className="text-blue-600">Provider: {patient.insurance_provider}</p>
+              )}
+              {patient.insurance_number && (
+                <p className="text-blue-600 text-sm">Number: {patient.insurance_number}</p>
+              )}
             </div>
           )}
         </CardContent>

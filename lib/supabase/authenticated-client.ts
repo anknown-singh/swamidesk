@@ -1,22 +1,34 @@
 import { createClient } from './client'
 import type { SupabaseClient } from '@supabase/supabase-js'
+import Cookies from 'js-cookie'
+
+const SESSION_COOKIE = 'swamicare_session'
+const USER_COOKIE = 'swamicare_user'
 
 /**
- * Creates an authenticated Supabase client that includes user context from localStorage
- * This is a workaround for the custom authentication system using localStorage
+ * Creates an authenticated Supabase client that includes user context from cookies
+ * This aligns with the custom authentication system using cookies (not localStorage)
  */
 export function createAuthenticatedClient(): SupabaseClient {
   const supabase = createClient()
   
-  // Get user from localStorage
+  // Get user from cookies (matching AuthProvider)
   const getAuthenticatedUserId = (): string | null => {
     try {
-      const sessionData = localStorage.getItem('swamicare_user')
-      const authToken = localStorage.getItem('swamicare_auth_token')
+      const sessionCookie = Cookies.get(SESSION_COOKIE)
+      const userCookie = Cookies.get(USER_COOKIE)
       
-      if (sessionData && authToken) {
-        const userData = JSON.parse(sessionData)
-        return userData.id || authToken
+      if (sessionCookie && userCookie) {
+        const sessionData = JSON.parse(sessionCookie)
+        const userData = JSON.parse(userCookie)
+        
+        // Check if session is expired (24 hours)
+        const SESSION_DURATION = 24 * 60 * 60 * 1000 // 24 hours
+        if (Date.now() - sessionData.timestamp > SESSION_DURATION) {
+          return null // Session expired
+        }
+        
+        return userData.id
       }
       return null
     } catch {
@@ -108,13 +120,24 @@ export function createAuthenticatedClient(): SupabaseClient {
 }
 
 /**
- * Hook to get current authenticated user from localStorage
+ * Hook to get current authenticated user from cookies (matching AuthProvider)
  */
 export function useAuthenticatedUser() {
   try {
-    const sessionData = localStorage.getItem('swamicare_user')
-    if (sessionData) {
-      return JSON.parse(sessionData)
+    const sessionCookie = Cookies.get(SESSION_COOKIE)
+    const userCookie = Cookies.get(USER_COOKIE)
+    
+    if (sessionCookie && userCookie) {
+      const sessionData = JSON.parse(sessionCookie)
+      const userData = JSON.parse(userCookie)
+      
+      // Check if session is expired (24 hours)
+      const SESSION_DURATION = 24 * 60 * 60 * 1000 // 24 hours
+      if (Date.now() - sessionData.timestamp > SESSION_DURATION) {
+        return null // Session expired
+      }
+      
+      return userData
     }
     return null
   } catch {

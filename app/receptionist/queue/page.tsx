@@ -1,208 +1,211 @@
 'use client'
 
-import { useState, useEffect } from 'react'
-// import { useRouter } from 'next/navigation'
+import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { toast } from '@/lib/toast'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Clock, User, Plus, AlertCircle, CheckCircle } from 'lucide-react'
+import { Clock, Search, Users, UserCheck, AlertCircle, RefreshCw, Stethoscope, Phone, Calendar, Plus, User, Filter } from 'lucide-react'
+import { useUser } from '@/hooks/use-user'
 
-interface Patient {
+interface QueuePatient {
   id: string
-  patient_number: string
-  first_name: string
-  last_name: string
-  phone: string
-}
-
-interface Visit {
-  id: string
-  visit_number: string
   patient_id: string
+  token_number: number
+  patient_name: string
+  patient_mobile: string
+  doctor_name: string
+  doctor_id: string
+  checked_in_at: string
+  priority: boolean
+  status: string
   visit_date: string
-  status: 'waiting' | 'in_consultation' | 'services_pending' | 'completed' | 'billed'
-  chief_complaint: string
-  queue_number: number
-  estimated_wait_time: number
-  created_at: string
-  patients: Patient
+  department?: string
+  chief_complaint?: string
 }
 
-export default function QueuePage() {
-  const [visits, setVisits] = useState<Visit[]>([])
-  const [patients, setPatients] = useState<Patient[]>([])
+interface Doctor {
+  id: string
+  full_name: string
+  department: string
+}
+
+
+export default function ReceptionistPatientQueuePage() {
+  const router = useRouter()
+  const { user } = useUser()
+  const [queue, setQueue] = useState<QueuePatient[]>([])
+  const [doctors, setDoctors] = useState<Doctor[]>([])
   const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
+  const [refreshing, setRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const [selectedPatient, setSelectedPatient] = useState('')
-  const [complaint, setComplaint] = useState('')
+  const [selectedDoctor, setSelectedDoctor] = useState<string>('all')
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
 
-  const supabase = createClient()
-  // const router = useRouter() // Reserved for future navigation features
-
-  useEffect(() => {
-    fetchTodaysQueue()
-    fetchPatients()
-  }, [])  // eslint-disable-line react-hooks/exhaustive-deps
-
-  const fetchTodaysQueue = async () => {
+  const fetchQueueData = useCallback(async () => {
+    const supabase = createClient()
     try {
-      const today = new Date().toISOString().split('T')[0]
-      
-      const { data, error } = await supabase
+      setError(null)
+
+      // Fetch doctors first
+      const { data: doctorsResult, error: doctorsError } = await supabase
+        .from('users')
+        .select('id, full_name, department')
+        .eq('role', 'doctor')
+        .order('full_name')
+
+      if (doctorsError) throw doctorsError
+      setDoctors(doctorsResult || [])
+
+      // Build queue query (without the problematic foreign key relationship)
+      let query = supabase
         .from('visits')
         .select(`
-          *,
-          patients (
-            id,
-            patient_number,
-            first_name,
-            last_name,
-            phone
-          )
+          id,
+          patient_id,
+          token_number,
+          priority,
+          status,
+          checked_in_at,
+          visit_date,
+          doctor_id,
+          chief_complaint,
+          patients!inner(full_name, phone)
         `)
-        .eq('visit_date', today)
-        .order('queue_number', { ascending: true })
+        .eq('visit_date', new Date().toISOString().split('T')[0])
+        .in('status', ['waiting', 'in_consultation'])
+        .order('priority', { ascending: false })
+        .order('checked_in_at', { ascending: true })
 
-      if (error) throw error
-      setVisits(data || [])
+      // Filter by doctor if selected
+      if (selectedDoctor !== 'all') {
+        query = query.eq('doctor_id', selectedDoctor)
+      }
+
+      const { data: queueResult, error: queueError } = await query
+
+      if (queueError) throw queueError
+
+      // Get unique doctor IDs from queue results
+      const doctorIds = [...new Set(queueResult?.map(v => v.doctor_id).filter(Boolean))] as string[]
+      
+      // Fetch doctor information separately
+      const { data: queueDoctors, error: queueDoctorsError } = await supabase
+        .from('users')
+        .select('id, full_name, department')
+        .in('id', doctorIds)
+
+      if (queueDoctorsError) throw queueDoctorsError
+
+      // Create doctor lookup map
+      const doctorMap: Record<string, any> = {}
+      queueDoctors?.forEach(doctor => {
+        doctorMap[doctor.id] = doctor
+      })
+
+      // Process queue data with doctor information
+      const queuePatients: QueuePatient[] = queueResult?.map(visit => ({
+        id: visit.id,
+        patient_id: visit.patient_id,
+        token_number: visit.token_number,
+        patient_name: visit.patients?.full_name || 'Unknown',
+        patient_mobile: visit.patients?.phone || '',
+        doctor_name: doctorMap[visit.doctor_id]?.full_name || 'Unknown Doctor',
+        doctor_id: visit.doctor_id,
+        checked_in_at: visit.checked_in_at,
+        priority: visit.priority,
+        status: visit.status,
+        visit_date: visit.visit_date,
+        department: doctorMap[visit.doctor_id]?.department,
+        chief_complaint: visit.chief_complaint
+      })) || []
+
+      setQueue(queuePatients)
+
     } catch (error) {
-      console.error('Error fetching queue:', error)
-      setError('Failed to load today&apos;s queue')
+      console.error('Error fetching queue data:', error)
+      setError('Failed to load queue data')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
+  }, [selectedDoctor])
+
+  useEffect(() => {
+    if (user) {
+      fetchQueueData()
+    }
+  }, [user, fetchQueueData])
+
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await fetchQueueData()
   }
 
-  const fetchPatients = async () => {
-    try {
-      const { data, error } = await supabase
-        .from('patients')
-        .select('id, patient_number, first_name, last_name, phone')
-        .order('first_name', { ascending: true })
-
-      if (error) throw error
-      setPatients(data || [])
-    } catch (error) {
-      console.error('Error fetching patients:', error)
-    }
-  }
-
-  const addToQueue = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setSuccess(null)
-
-    if (!selectedPatient || !complaint.trim()) {
-      setError('Please select a patient and enter chief complaint')
-      return
-    }
-
-    try {
-      // Get current user from localStorage
-      const userData = localStorage.getItem('swamicare_user')
-      const user = userData ? JSON.parse(userData) : null
-
-      // Calculate next queue number
-      const nextQueueNumber = visits.length + 1
-
-      const { error } = await supabase
-        .from('visits')
-        .insert([{
-          patient_id: selectedPatient,
-          visit_date: new Date().toISOString().split('T')[0],
-          status: 'waiting',
-          chief_complaint: complaint,
-          queue_number: nextQueueNumber,
-          estimated_wait_time: nextQueueNumber * 15, // 15 mins per patient estimate
-          created_by: user?.id
-        }])
-        .select(`
-          *,
-          patients (
-            id,
-            patient_number,
-            first_name,
-            last_name,
-            phone
-          )
-        `)
-
-      if (error) throw error
-
-      const patient = patients.find(p => p.id === selectedPatient)
-      setSuccess(`${patient?.first_name} ${patient?.last_name} added to queue at position ${nextQueueNumber}`)
-      
-      setSelectedPatient('')
-      setComplaint('')
-      setShowForm(false)
-      fetchTodaysQueue()
-    } catch (error) {
-      console.error('Error adding to queue:', error)
-      setError('Failed to add patient to queue')
-    }
-  }
 
   const updateVisitStatus = async (visitId: string, newStatus: string) => {
     try {
+      const supabase = createClient()
+      
+      // Build update object with only the fields that exist in the visits table
+      const updateData: any = { status: newStatus }
+      
+      // Use the correct column names based on the actual table schema
+      if (newStatus === 'in_consultation') {
+        updateData.actual_start_time = new Date().toISOString()
+      } else if (newStatus === 'completed') {
+        updateData.actual_end_time = new Date().toISOString()
+      }
+      
       const { error } = await supabase
         .from('visits')
-        .update({ 
-          status: newStatus,
-          actual_start_time: newStatus === 'in_consultation' ? new Date().toISOString() : undefined,
-          actual_end_time: newStatus === 'completed' ? new Date().toISOString() : undefined
-        })
+        .update(updateData)
         .eq('id', visitId)
 
       if (error) throw error
       
-      fetchTodaysQueue()
-      if (newStatus === 'in_consultation') {
-        setSuccess('Consultation started! Patient ready for doctor.')
-      } else {
-        setSuccess('Visit status updated successfully')
-      }
+      toast.success(`Visit status updated to ${newStatus.replace('_', ' ')}`)
+      await fetchQueueData()
     } catch (error) {
       console.error('Error updating visit status:', error)
-      setError('Failed to update visit status')
+      toast.error('Failed to update visit status')
     }
   }
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'waiting': return 'bg-yellow-100 text-yellow-800'
-      case 'in_consultation': return 'bg-blue-100 text-blue-800'
-      case 'services_pending': return 'bg-orange-100 text-orange-800'
-      case 'completed': return 'bg-green-100 text-green-800'
-      case 'billed': return 'bg-gray-100 text-gray-800'
-      default: return 'bg-gray-100 text-gray-800'
-    }
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+    
+    if (diffInMinutes < 1) return 'Just now'
+    if (diffInMinutes < 60) return `${diffInMinutes} min ago`
+    return `${Math.floor(diffInMinutes / 60)} hr ago`
   }
 
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'waiting': return <Clock className="h-4 w-4" />
-      case 'in_consultation': return <User className="h-4 w-4" />
-      case 'services_pending': return <AlertCircle className="h-4 w-4" />
-      case 'completed': return <CheckCircle className="h-4 w-4" />
-      default: return <Clock className="h-4 w-4" />
-    }
+  const getStatusCounts = () => {
+    const total = queue.length
+    const waiting = queue.filter(p => p.status === 'waiting').length
+    const inProgress = queue.filter(p => p.status === 'in_consultation').length
+    const highPriority = queue.filter(p => p.priority).length
+    
+    return { total, waiting, inProgress, highPriority }
   }
 
-  const filteredPatients = patients.filter(patient =>
-    patient.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    patient.patient_number.toLowerCase().includes(searchTerm.toLowerCase())
-  )
+  const filteredQueue = queue.filter(item => {
+    return (item.patient_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+           (item.patient_mobile?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+           (item.doctor_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+           item.token_number.toString().includes(searchTerm)
+  })
 
-  const waitingCount = visits.filter(v => v.status === 'waiting').length
-  const inConsultationCount = visits.filter(v => v.status === 'in_consultation').length
-  const completedCount = visits.filter(v => v.status === 'completed').length
+
+  const { total, waiting, inProgress, highPriority } = getStatusCounts()
 
   if (loading) {
     return (
@@ -219,7 +222,7 @@ export default function QueuePage() {
           <h1 className="text-3xl font-bold tracking-tight">Queue Management</h1>
           <p className="text-muted-foreground">Manage today&apos;s patient queue and appointments</p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
+        <Button onClick={() => router.push('/receptionist/queue/add')} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
           Add to Queue
         </Button>
@@ -231,11 +234,6 @@ export default function QueuePage() {
         </Alert>
       )}
 
-      {success && (
-        <Alert>
-          <AlertDescription>{success}</AlertDescription>
-        </Alert>
-      )}
 
       {/* Queue Statistics */}
       <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
@@ -244,7 +242,7 @@ export default function QueuePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Waiting</p>
-                <p className="text-2xl font-bold text-yellow-600">{waitingCount}</p>
+                <p className="text-2xl font-bold text-yellow-600">{waiting}</p>
               </div>
               <Clock className="h-8 w-8 text-yellow-600" />
             </div>
@@ -256,7 +254,7 @@ export default function QueuePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">In Consultation</p>
-                <p className="text-2xl font-bold text-blue-600">{inConsultationCount}</p>
+                <p className="text-2xl font-bold text-blue-600">{inProgress}</p>
               </div>
               <User className="h-8 w-8 text-blue-600" />
             </div>
@@ -267,10 +265,10 @@ export default function QueuePage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Completed</p>
-                <p className="text-2xl font-bold text-green-600">{completedCount}</p>
+                <p className="text-sm text-gray-600">High Priority</p>
+                <p className="text-2xl font-bold text-red-600">{highPriority}</p>
               </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
+              <AlertCircle className="h-8 w-8 text-red-600" />
             </div>
           </CardContent>
         </Card>
@@ -279,154 +277,176 @@ export default function QueuePage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Total Today</p>
-                <p className="text-2xl font-bold">{visits.length}</p>
+                <p className="text-sm text-gray-600">Total in Queue</p>
+                <p className="text-2xl font-bold">{total}</p>
               </div>
-              <AlertCircle className="h-8 w-8 text-gray-600" />
+              <Users className="h-8 w-8 text-blue-600" />
             </div>
           </CardContent>
         </Card>
       </div>
 
-      {/* Add to Queue Form */}
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Add Patient to Queue</CardTitle>
-            <CardDescription>Select a patient and add them to today&apos;s consultation queue</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={addToQueue} className="space-y-4">
-              <div>
-                <Label htmlFor="patient_search">Search Patient</Label>
-                <Input
-                  id="patient_search"
-                  placeholder="Search by name or patient number..."
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                />
-              </div>
 
-              <div>
-                <Label htmlFor="patient_select">Select Patient *</Label>
-                <select
-                  id="patient_select"
-                  value={selectedPatient}
-                  onChange={(e) => setSelectedPatient(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md"
-                  required
-                >
-                  <option value="">Choose a patient...</option>
-                  {filteredPatients.map((patient) => (
-                    <option key={patient.id} value={patient.id}>
-                      {patient.first_name} {patient.last_name} ({patient.patient_number})
-                    </option>
+      {/* Search and Filter */}
+      <Card>
+        <CardContent className="p-4">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2 flex-1 min-w-[300px]">
+              <Search className="h-5 w-5 text-gray-400" />
+              <Input
+                placeholder="Search by patient name, phone, doctor, or token number..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by doctor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Doctors</SelectItem>
+                  {doctors.map((doctor) => (
+                    <SelectItem key={doctor.id} value={doctor.id}>
+                      Dr. {doctor.full_name}
+                    </SelectItem>
                   ))}
-                </select>
-              </div>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleRefresh}
+                variant="outline"
+                size="sm"
+                disabled={refreshing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
+            <div className="text-sm text-muted-foreground ml-auto">
+              {filteredQueue.length} patients in queue
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
-              <div>
-                <Label htmlFor="complaint">Chief Complaint *</Label>
-                <textarea
-                  id="complaint"
-                  value={complaint}
-                  onChange={(e) => setComplaint(e.target.value)}
-                  className="w-full p-2 border border-gray-300 rounded-md h-20"
-                  placeholder="Main reason for visit..."
-                  required
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button type="submit">Add to Queue</Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Today's Queue */}
+      {/* Patient Queue List */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Clock className="h-5 w-5" />
-            Today&apos;s Queue ({visits.length} patients)
+            Patient Queue ({filteredQueue.length})
           </CardTitle>
           <CardDescription>
-            {new Date().toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
+            Manage patient queue and appointments for today
           </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {visits.map((visit) => (
-              <div key={visit.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                <div className="flex justify-between items-start">
-                  <div className="space-y-2">
-                    <div className="flex items-center gap-4">
-                      <div className="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold text-lg">
-                        #{visit.queue_number}
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-lg">
-                          {visit.patients.first_name} {visit.patients.last_name}
-                        </h3>
-                        <p className="text-sm text-gray-600 font-mono">{visit.patients.patient_number}</p>
-                      </div>
-                      <div className={`px-3 py-1 rounded-full text-sm font-medium flex items-center gap-1 ${getStatusColor(visit.status)}`}>
-                        {getStatusIcon(visit.status)}
-                        {visit.status.replace('_', ' ').toUpperCase()}
-                      </div>
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex justify-between items-center p-4 border rounded-lg">
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-48" />
+                      <Skeleton className="h-3 w-32" />
                     </div>
-                    
-                    <div className="text-sm text-gray-600">
-                      <strong>Chief Complaint:</strong> {visit.chief_complaint}
-                    </div>
-                    
-                    <div className="text-xs text-gray-500">
-                      Registered at: {new Date(visit.created_at).toLocaleTimeString()}
-                      {visit.estimated_wait_time > 0 && (
-                        <span className="ml-4">
-                          Est. wait: {visit.estimated_wait_time} mins
-                        </span>
-                      )}
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-6 w-16" />
+                      <Skeleton className="h-9 w-20" />
                     </div>
                   </div>
-                  
-                  <div className="flex gap-2">
-                    {visit.status === 'waiting' && (
+                ))}
+              </div>
+            ) : filteredQueue.length === 0 ? (
+              <div className="text-center py-12">
+                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-lg font-medium mb-2">No patients in queue</p>
+                <p className="text-sm text-muted-foreground">
+                  {searchTerm ? 'No patients found matching your search criteria' : 'All patients have been seen or no appointments scheduled for today'}
+                </p>
+              </div>
+            ) : (
+              filteredQueue.map((patient) => (
+                <div key={patient.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="bg-blue-100 text-blue-800 rounded-full w-12 h-12 flex items-center justify-center font-bold text-lg">
+                        #{patient.token_number}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-lg">{patient.patient_name}</h3>
+                          {patient.priority && (
+                            <Badge variant="destructive" className="text-xs">
+                              Priority
+                            </Badge>
+                          )}
+                          <Badge 
+                            variant={patient.status === 'in_consultation' ? 'default' : 'secondary'}
+                            className="text-xs"
+                          >
+                            {patient.status === 'in_consultation' ? 'Consulting' : 'Waiting'}
+                          </Badge>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4" />
+                            <span>{patient.patient_mobile || 'No phone'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            <span>Checked in {getTimeAgo(patient.checked_in_at)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Stethoscope className="h-4 w-4" />
+                            <span>Dr. {patient.doctor_name}</span>
+                          </div>
+                          {patient.department && (
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              <span>{patient.department}</span>
+                            </div>
+                          )}
+                        </div>
+                        {patient.chief_complaint && (
+                          <div className="text-sm text-gray-600 mt-2">
+                            <strong>Chief Complaint:</strong> {patient.chief_complaint}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 ml-4">
                       <Button
+                        onClick={() => {
+                          if (patient.status === 'waiting') {
+                            // Receptionists don't conduct consultations - just update status
+                            updateVisitStatus(patient.id, 'in_consultation')
+                          } else {
+                            // Complete consultation (update status only)
+                            updateVisitStatus(patient.id, 'completed')
+                          }
+                        }}
+                        variant={patient.status === 'in_consultation' ? 'default' : 'outline'}
                         size="sm"
-                        onClick={() => updateVisitStatus(visit.id, 'in_consultation')}
                       >
-                        Start Consultation
+                        {patient.status === 'waiting' ? 'Check In' : 'Complete'} 
                       </Button>
-                    )}
-                    {visit.status === 'in_consultation' && (
                       <Button
-                        size="sm"
+                        onClick={() => router.push(`/receptionist/patients/${patient.patient_id}`)}
                         variant="outline"
-                        onClick={() => updateVisitStatus(visit.id, 'completed')}
+                        size="sm"
                       >
-                        Complete
+                        View Details
                       </Button>
-                    )}
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
-
-            {visits.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                No patients in queue today
-              </div>
+              ))
             )}
           </div>
         </CardContent>

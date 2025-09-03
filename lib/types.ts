@@ -12,9 +12,9 @@ export type PaymentStatus = 'pending' | 'partial' | 'completed' | 'refunded'
 export type PaymentMethod = 'cash' | 'card' | 'upi' | 'insurance' | 'bank_transfer'
 
 // Appointment Management Types
-export type AppointmentStatus = 'pending' | 'requested' | 'scheduled' | 'confirmed' | 'arrived' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'rescheduled'
+export type AppointmentStatus = 'pending' | 'requested' | 'scheduled' | 'confirmed' | 'checked_in' | 'arrived' | 'in_progress' | 'completed' | 'cancelled' | 'no_show' | 'rescheduled'
 
-export type AppointmentType = 'consultation' | 'follow_up' | 'procedure' | 'checkup' | 'emergency' | 'vaccination'
+export type AppointmentType = 'consultation' | 'follow_up' | 'procedure' | 'treatment' | 'checkup' | 'emergency' | 'vaccination'
 
 export type RecurrenceType = 'none' | 'daily' | 'weekly' | 'bi_weekly' | 'monthly' | 'custom'
 
@@ -690,4 +690,555 @@ export interface AppointmentAnalytics {
   no_show_rate: number
   same_day_booking_rate: number
   recurring_appointment_rate: number
+}
+
+// Consultation System Types
+export type ConsultationStep = 'chief_complaints' | 'history' | 'examination' | 'vitals' | 'diagnosis' | 'investigations' | 'treatment' | 'completed'
+
+export type ConsultationStatus = 'not_started' | 'in_progress' | 'completed' | 'on_hold'
+
+export type HistoryType = 'present_illness' | 'past_medical' | 'personal' | 'family' | 'allergy'
+
+export type ExaminationType = 'general' | 'cardiovascular' | 'respiratory' | 'abdominal' | 'neurological' | 'musculoskeletal' | 'dermatological' | 'ent' | 'ophthalmological' | 'psychiatric'
+
+export type DiagnosisType = 'provisional' | 'final' | 'differential'
+
+export type InvestigationType = 'lab' | 'imaging' | 'specialized' | 'biopsy' | 'functional'
+
+export type InvestigationUrgency = 'urgent' | 'routine' | 'stat' | 'within_24h'
+
+export type InvestigationStatus = 'ordered' | 'sample_collected' | 'in_process' | 'completed' | 'cancelled'
+
+export type TreatmentType = 'conservative' | 'surgical' | 'procedural' | 'combined'
+
+export type NoteType = 'progress' | 'addendum' | 'correction' | 'follow_up'
+
+export interface ConsultationSession {
+  id: string
+  visit_id: string
+  doctor_id: string
+  patient_id: string
+  started_at: string
+  ended_at: string | null
+  current_step: ConsultationStep
+  is_completed: boolean
+  total_duration_minutes: number | null
+  consultation_data: Record<string, any>
+  created_at: string
+  updated_at: string
+  // Relations
+  visit?: Visit
+  doctor?: UserProfile
+  patient?: Patient
+  chief_complaints?: ConsultationChiefComplaint[]
+  history?: ConsultationHistory[]
+  examination_findings?: ExaminationFinding[]
+  vitals?: ConsultationVitals[]
+  diagnoses?: ConsultationDiagnosis[]
+  investigation_orders?: InvestigationOrder[]
+  treatment_plans?: ConsultationTreatmentPlan[]
+  progress_notes?: ConsultationProgressNote[]
+}
+
+export interface ConsultationChiefComplaint {
+  id: string
+  consultation_id: string
+  complaint: string
+  duration: string | null
+  severity: number | null
+  associated_symptoms: string[]
+  onset: string | null
+  character: string | null
+  location: string | null
+  radiation: string | null
+  aggravating_factors: string[]
+  relieving_factors: string[]
+  timing: string | null
+  created_at: string
+}
+
+export interface ConsultationHistory {
+  id: string
+  consultation_id: string
+  history_type: HistoryType
+  content: Record<string, any>
+  summary_text: string | null
+  relevant_negatives: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface ExaminationFinding {
+  id: string
+  consultation_id: string
+  examination_type: ExaminationType
+  findings: Record<string, any>
+  normal_findings: string[]
+  abnormal_findings: string[]
+  clinical_significance: string | null
+  examination_order: number
+  created_at: string
+  updated_at: string
+}
+
+export interface ConsultationVitals {
+  id: string
+  consultation_id: string
+  temperature: number | null
+  heart_rate: number | null
+  blood_pressure_systolic: number | null
+  blood_pressure_diastolic: number | null
+  respiratory_rate: number | null
+  oxygen_saturation: number | null
+  height: number | null
+  weight: number | null
+  bmi: number | null
+  pain_score: number | null
+  recorded_at: string
+  recorded_by: string | null
+  // Relations
+  recorded_by_user?: UserProfile
+}
+
+export interface ConsultationDiagnosis {
+  id: string
+  consultation_id: string
+  diagnosis_type: DiagnosisType
+  diagnosis_text: string
+  icd10_code: string | null
+  icd10_description: string | null
+  confidence_level: number | null
+  is_primary: boolean
+  supporting_evidence: string[]
+  ruling_out_evidence: string[]
+  clinical_notes: string | null
+  created_at: string
+  updated_at: string
+}
+
+export interface InvestigationOrder {
+  id: string
+  consultation_id: string
+  investigation_type: InvestigationType
+  investigation_name: string
+  investigation_code: string | null
+  category: string | null
+  urgency: InvestigationUrgency
+  clinical_indication: string | null
+  instructions: string | null
+  expected_date: string | null
+  cost_estimate: number | null
+  status: InvestigationStatus
+  results: Record<string, any> | null
+  results_summary: string | null
+  interpretation: string | null
+  follow_up_required: boolean
+  created_at: string
+  updated_at: string
+}
+
+export interface ConsultationTreatmentPlan {
+  id: string
+  consultation_id: string
+  treatment_type: TreatmentType
+  primary_treatment: string
+  treatment_goals: string[]
+  plan_details: Record<string, any>
+  medications: Record<string, any> | null
+  lifestyle_modifications: string[]
+  dietary_advice: string | null
+  activity_restrictions: string[]
+  home_care_instructions: string[]
+  procedures: Record<string, any> | null
+  pre_operative_requirements: string[]
+  post_operative_care: string[]
+  risk_assessment: string | null
+  consent_required: boolean
+  follow_up_required: boolean
+  follow_up_days: number | null
+  follow_up_instructions: string | null
+  warning_signs: string[]
+  emergency_instructions: string | null
+  estimated_cost: number | null
+  insurance_approval_needed: boolean
+  referral_required: boolean
+  referral_specialty: string | null
+  special_instructions: string | null
+  patient_education_provided: string[]
+  created_at: string
+  updated_at: string
+}
+
+export interface ConsultationTemplate {
+  id: string
+  name: string
+  specialty: string | null
+  condition: string | null
+  template_data: Record<string, any>
+  chief_complaints_template: Record<string, any> | null
+  history_template: Record<string, any> | null
+  examination_template: Record<string, any> | null
+  common_diagnoses: string[]
+  common_investigations: string[]
+  common_treatments: Record<string, any> | null
+  created_by: string | null
+  is_active: boolean
+  usage_count: number
+  created_at: string
+  updated_at: string
+  // Relations
+  created_by_user?: UserProfile
+}
+
+export interface ConsultationProgressNote {
+  id: string
+  consultation_id: string
+  note_type: NoteType
+  note_text: string
+  clinical_changes: string | null
+  plan_modifications: string | null
+  created_by: string
+  created_at: string
+  // Relations
+  created_by_user?: UserProfile
+}
+
+// Form Types for Consultation System
+export interface ConsultationSessionForm {
+  visit_id: string
+  doctor_id: string
+  patient_id: string
+  current_step?: ConsultationStep
+}
+
+export interface ChiefComplaintForm {
+  complaint: string
+  duration?: string
+  severity?: number
+  associated_symptoms?: string[]
+  onset?: string
+  character?: string
+  location?: string
+  radiation?: string
+  aggravating_factors?: string[]
+  relieving_factors?: string[]
+  timing?: string
+}
+
+export interface HistoryForm {
+  history_type: HistoryType
+  content: Record<string, any>
+  summary_text?: string
+  relevant_negatives?: string[]
+}
+
+export interface ExaminationForm {
+  examination_type: ExaminationType
+  findings: Record<string, any>
+  normal_findings?: string[]
+  abnormal_findings?: string[]
+  clinical_significance?: string
+}
+
+export interface VitalsForm {
+  temperature?: number
+  heart_rate?: number
+  blood_pressure_systolic?: number
+  blood_pressure_diastolic?: number
+  respiratory_rate?: number
+  oxygen_saturation?: number
+  height?: number
+  weight?: number
+  pain_score?: number
+}
+
+export interface DiagnosisForm {
+  diagnosis_type: DiagnosisType
+  diagnosis_text: string
+  icd10_code?: string
+  icd10_description?: string
+  confidence_level?: number
+  is_primary?: boolean
+  supporting_evidence?: string[]
+  ruling_out_evidence?: string[]
+  clinical_notes?: string
+}
+
+export interface InvestigationOrderForm {
+  investigation_type: InvestigationType
+  investigation_name: string
+  investigation_code?: string
+  category?: string
+  urgency?: InvestigationUrgency
+  clinical_indication?: string
+  instructions?: string
+  expected_date?: string
+  cost_estimate?: number
+}
+
+export interface TreatmentPlanForm {
+  treatment_type: TreatmentType
+  primary_treatment: string
+  treatment_goals?: string[]
+  plan_details: Record<string, any>
+  medications?: Record<string, any>
+  lifestyle_modifications?: string[]
+  dietary_advice?: string
+  activity_restrictions?: string[]
+  home_care_instructions?: string[]
+  procedures?: Record<string, any>
+  pre_operative_requirements?: string[]
+  post_operative_care?: string[]
+  risk_assessment?: string
+  consent_required?: boolean
+  follow_up_required?: boolean
+  follow_up_days?: number
+  follow_up_instructions?: string
+  warning_signs?: string[]
+  emergency_instructions?: string
+  estimated_cost?: number
+  insurance_approval_needed?: boolean
+  referral_required?: boolean
+  referral_specialty?: string
+  special_instructions?: string
+  patient_education_provided?: string[]
+}
+
+// Extended Visit interface to include consultation
+export interface VisitWithConsultation extends Visit {
+  consultation_status: ConsultationStatus
+  consultation_sessions?: ConsultationSession[]
+}
+
+// Task Management System Types
+export type TaskType = 'clinical' | 'administrative' | 'follow_up' | 'investigation' | 'procedure' | 'medication' | 'appointment' | 'documentation' | 'discharge' | 'referral'
+
+export type TaskPriority = 'low' | 'normal' | 'high' | 'urgent' | 'critical'
+
+export type TaskStatus = 'pending' | 'assigned' | 'in_progress' | 'completed' | 'cancelled' | 'overdue'
+
+export type TaskCategory = 'patient_care' | 'administrative' | 'quality_assurance' | 'compliance' | 'education' | 'research'
+
+export interface AssignedTask {
+  id: string
+  title: string
+  description: string | null
+  task_type: TaskType
+  category: TaskCategory
+  priority: TaskPriority
+  status: TaskStatus
+  // Assignment details
+  assigned_by: string
+  assigned_to: string
+  assigned_at: string
+  // Related entities
+  patient_id: string | null
+  visit_id: string | null
+  appointment_id: string | null
+  consultation_id: string | null
+  // Timing
+  due_date: string | null
+  due_time: string | null
+  estimated_duration_minutes: number | null
+  actual_duration_minutes: number | null
+  // Progress tracking
+  progress_percentage: number
+  started_at: string | null
+  completed_at: string | null
+  cancelled_at: string | null
+  cancellation_reason: string | null
+  // Clinical context
+  clinical_context: Record<string, any> | null
+  required_resources: string[] | null
+  prerequisites: string[] | null
+  outcome_notes: string | null
+  quality_check_required: boolean
+  // Metadata
+  tags: string[]
+  attachments: string[] | null
+  reminders_sent: number
+  last_reminder_at: string | null
+  created_at: string
+  updated_at: string
+  // Relations
+  assigned_by_user?: UserProfile
+  assigned_to_user?: UserProfile
+  patient?: Patient
+  visit?: Visit
+  appointment?: Appointment
+  consultation_session?: ConsultationSession
+  subtasks?: TaskSubtask[]
+  comments?: TaskComment[]
+  attachments_data?: TaskAttachment[]
+}
+
+export interface TaskSubtask {
+  id: string
+  parent_task_id: string
+  title: string
+  description: string | null
+  status: TaskStatus
+  assigned_to: string | null
+  due_date: string | null
+  completed_at: string | null
+  order_index: number
+  created_at: string
+  updated_at: string
+  // Relations
+  assigned_to_user?: UserProfile
+}
+
+export interface TaskComment {
+  id: string
+  task_id: string
+  author_id: string
+  comment_text: string
+  is_internal: boolean
+  created_at: string
+  updated_at: string
+  // Relations
+  author?: UserProfile
+}
+
+export interface TaskAttachment {
+  id: string
+  task_id: string
+  file_name: string
+  file_path: string
+  file_type: string
+  file_size: number
+  uploaded_by: string
+  uploaded_at: string
+  // Relations
+  uploaded_by_user?: UserProfile
+}
+
+export interface TaskTemplate {
+  id: string
+  name: string
+  description: string | null
+  task_type: TaskType
+  category: TaskCategory
+  default_priority: TaskPriority
+  estimated_duration_minutes: number | null
+  required_resources: string[] | null
+  prerequisites: string[] | null
+  checklist_template: TaskChecklistItem[] | null
+  tags: string[]
+  is_active: boolean
+  usage_count: number
+  created_by: string
+  created_at: string
+  updated_at: string
+  // Relations
+  created_by_user?: UserProfile
+}
+
+export interface TaskChecklistItem {
+  id: string
+  task_id: string
+  title: string
+  description: string | null
+  is_required: boolean
+  completed: boolean
+  completed_by: string | null
+  completed_at: string | null
+  order_index: number
+  // Relations
+  completed_by_user?: UserProfile
+}
+
+export interface TaskNotification {
+  id: string
+  task_id: string
+  recipient_id: string
+  notification_type: 'assignment' | 'due_soon' | 'overdue' | 'completed' | 'cancelled' | 'reminder'
+  message: string
+  sent_at: string | null
+  read_at: string | null
+  // Relations
+  task?: AssignedTask
+  recipient?: UserProfile
+}
+
+export interface TaskRecurrence {
+  id: string
+  task_template_id: string
+  recurrence_type: 'daily' | 'weekly' | 'monthly' | 'quarterly' | 'yearly' | 'custom'
+  interval_value: number
+  days_of_week: number[] | null
+  day_of_month: number | null
+  month_of_year: number | null
+  end_type: 'never' | 'after_count' | 'until_date'
+  end_count: number | null
+  end_date: string | null
+  is_active: boolean
+  last_generated_at: string | null
+  next_due_date: string | null
+  created_at: string
+}
+
+// Task Management Form Types
+export interface TaskCreationForm {
+  title: string
+  description?: string
+  task_type: TaskType
+  category: TaskCategory
+  priority: TaskPriority
+  assigned_to: string
+  patient_id?: string
+  visit_id?: string
+  appointment_id?: string
+  consultation_id?: string
+  due_date?: string
+  due_time?: string
+  estimated_duration_minutes?: number
+  required_resources?: string[]
+  prerequisites?: string[]
+  tags?: string[]
+  quality_check_required?: boolean
+  clinical_context?: Record<string, any>
+}
+
+export interface TaskUpdateForm {
+  title?: string
+  description?: string
+  priority?: TaskPriority
+  status?: TaskStatus
+  assigned_to?: string
+  due_date?: string
+  due_time?: string
+  progress_percentage?: number
+  outcome_notes?: string
+  tags?: string[]
+  clinical_context?: Record<string, any>
+}
+
+export interface TaskFilterOptions {
+  assigned_to?: string
+  assigned_by?: string
+  task_type?: TaskType
+  category?: TaskCategory
+  priority?: TaskPriority
+  status?: TaskStatus
+  patient_id?: string
+  due_date_from?: string
+  due_date_to?: string
+  created_from?: string
+  created_to?: string
+  tags?: string[]
+  overdue_only?: boolean
+}
+
+export interface TaskDashboardStats {
+  total_tasks: number
+  pending_tasks: number
+  in_progress_tasks: number
+  completed_today: number
+  overdue_tasks: number
+  high_priority_tasks: number
+  my_tasks: number
+  team_tasks: number
+  average_completion_time_hours: number
+  completion_rate_percentage: number
 }

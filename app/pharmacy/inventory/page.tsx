@@ -1,13 +1,31 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
+import { inventoryManager } from '@/lib/pharmacy/inventory-manager'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Package, Plus, Search, AlertTriangle, TrendingUp, TrendingDown, Calendar } from 'lucide-react'
+import { Badge } from '@/components/ui/badge'
+import { 
+  Package, 
+  Plus, 
+  Search, 
+  AlertTriangle, 
+  TrendingUp, 
+  TrendingDown, 
+  Calendar,
+  Activity,
+  DollarSign,
+  CheckCircle,
+  AlertCircle,
+  Edit,
+  Save,
+  X,
+  ShoppingCart
+} from 'lucide-react'
 
 interface Medicine {
   id: string
@@ -64,6 +82,7 @@ export default function InventoryPage() {
   })
   const [error, setError] = useState<string | null>(null)
   const [success, setSuccess] = useState<string | null>(null)
+  const [lowStockAlerts, setLowStockAlerts] = useState<Medicine[]>([])
 
   const supabase = createClient()
   // const router = useRouter()
@@ -75,16 +94,32 @@ export default function InventoryPage() {
 
   const fetchMedicines = async () => {
     try {
-      const { data, error } = await supabase
-        .from('medicines')
-        .select('*')
-        .order('name', { ascending: true })
-
-      if (error) throw error
-      setMedicines(data || [])
+      // Use inventory manager for enhanced data fetching
+      const inventoryStatus = await inventoryManager.getInventoryStatus()
+      setMedicines(inventoryStatus.medicines || [])
+      
+      // Also get low stock alerts
+      const lowStockMedicines = await inventoryManager.getLowStockMedicines()
+      setLowStockAlerts(lowStockMedicines)
+      if (lowStockMedicines.length > 0) {
+        console.log(`Found ${lowStockMedicines.length} medicines with low stock`)
+      }
     } catch (error) {
       console.error('Error fetching medicines:', error)
       setError('Failed to load medicines')
+      
+      // Fallback to direct database query
+      try {
+        const { data, error: dbError } = await supabase
+          .from('medicines')
+          .select('*')
+          .order('name', { ascending: true })
+
+        if (dbError) throw dbError
+        setMedicines(data || [])
+      } catch (fallbackError) {
+        console.error('Fallback query also failed:', fallbackError)
+      }
     } finally {
       setLoading(false)
     }
@@ -92,25 +127,34 @@ export default function InventoryPage() {
 
   const fetchTransactions = async () => {
     try {
-      const { data, error } = await supabase
-        .from('inventory_transactions')
-        .select(`
-          *,
-          medicines (
-            id,
-            name,
-            generic_name,
-            brand_name,
-            strength
-          )
-        `)
-        .order('created_at', { ascending: false })
-        .limit(50)
-
-      if (error) throw error
-      setTransactions(data || [])
+      // Since inventory_transactions table doesn't exist yet and transactions are logged to console only,
+      // we'll use mock data for now. In a full implementation, this would query a real transactions table.
+      
+      // For now, just set empty transactions to avoid console errors
+      setTransactions([])
+      
+      // TODO: When inventory_transactions table is created, uncomment below:
+      // const { data, error } = await supabase
+      //   .from('inventory_transactions')
+      //   .select(`
+      //     *,
+      //     medicines (
+      //       id,
+      //       name,
+      //       generic_name,
+      //       brand_name,
+      //       strength
+      //     )
+      //   `)
+      //   .order('created_at', { ascending: false })
+      //   .limit(50)
+      //
+      // if (error) throw error
+      // setTransactions(data || [])
+      
     } catch (error) {
       console.error('Error fetching transactions:', error)
+      setTransactions([])
     }
   }
 
@@ -125,58 +169,75 @@ export default function InventoryPage() {
     }
 
     try {
-      // Get current user from localStorage
-      const userData = localStorage.getItem('swamicare_user')
-      const user = userData ? JSON.parse(userData) : null
-
       const quantity = parseInt(stockFormData.quantity)
       const unitCost = parseFloat(stockFormData.unit_cost) || 0
-      const totalCost = quantity * unitCost
-
-      // Insert transaction record
-      const { error: transactionError } = await supabase
-        .from('inventory_transactions')
-        .insert([{
-          medicine_id: selectedMedicine,
-          transaction_type: stockFormData.transaction_type,
-          quantity: stockFormData.transaction_type === 'stock_out' ? -quantity : quantity,
-          unit_cost: unitCost,
-          total_cost: totalCost,
-          batch_number: stockFormData.batch_number,
-          expiry_date: stockFormData.expiry_date || null,
-          supplier: stockFormData.supplier,
-          notes: stockFormData.notes,
-          created_by: user?.id
-        }])
-        .select()
-
-      if (transactionError) throw transactionError
-
-      // Update medicine stock quantity
-      let newStockQuantity: number
       const medicine = medicines.find(m => m.id === selectedMedicine)
+      
       if (!medicine) {
         setError('Medicine not found')
         return
       }
 
-      if (stockFormData.transaction_type === 'stock_out' || 
-          stockFormData.transaction_type === 'expired' || 
-          stockFormData.transaction_type === 'damaged') {
-        newStockQuantity = Math.max(0, medicine.stock_quantity - quantity)
-      } else {
-        newStockQuantity = medicine.stock_quantity + quantity
+      // Use inventory manager for stock adjustments
+      if (stockFormData.transaction_type === 'stock_in') {
+        await inventoryManager.adjustStock(
+          medicine.name,
+          quantity,
+          'stock_in',
+          stockFormData.notes || 'Manual stock addition',
+          {
+            batch_number: stockFormData.batch_number,
+            expiry_date: stockFormData.expiry_date,
+            supplier: stockFormData.supplier,
+            unit_cost: unitCost
+          }
+        )
+      } else if (stockFormData.transaction_type === 'stock_out') {
+        await inventoryManager.adjustStock(
+          medicine.name,
+          -quantity,
+          'stock_out',
+          stockFormData.notes || 'Manual stock removal',
+          {
+            batch_number: stockFormData.batch_number,
+            expiry_date: stockFormData.expiry_date
+          }
+        )
+      } else if (stockFormData.transaction_type === 'adjustment') {
+        await inventoryManager.adjustStock(
+          medicine.name,
+          quantity,
+          'adjustment',
+          stockFormData.notes || 'Stock adjustment',
+          {
+            batch_number: stockFormData.batch_number,
+            expiry_date: stockFormData.expiry_date,
+            unit_cost: unitCost
+          }
+        )
+      } else if (stockFormData.transaction_type === 'expired') {
+        await inventoryManager.adjustStock(
+          medicine.name,
+          -quantity,
+          'expired',
+          stockFormData.notes || 'Expired stock removal',
+          {
+            batch_number: stockFormData.batch_number,
+            expiry_date: stockFormData.expiry_date
+          }
+        )
+      } else if (stockFormData.transaction_type === 'damaged') {
+        await inventoryManager.adjustStock(
+          medicine.name,
+          -quantity,
+          'damaged',
+          stockFormData.notes || 'Damaged stock removal',
+          {
+            batch_number: stockFormData.batch_number,
+            expiry_date: stockFormData.expiry_date
+          }
+        )
       }
-
-      const { error: updateError } = await supabase
-        .from('medicines')
-        .update({ 
-          stock_quantity: newStockQuantity,
-          ...(unitCost > 0 && { unit_price: unitCost })
-        })
-        .eq('id', selectedMedicine)
-
-      if (updateError) throw updateError
 
       setSuccess(`Stock ${stockFormData.transaction_type} recorded successfully`)
       setStockFormData({
@@ -194,7 +255,7 @@ export default function InventoryPage() {
       fetchTransactions()
     } catch (error) {
       console.error('Error processing stock transaction:', error)
-      setError('Failed to process stock transaction')
+      setError('Failed to process stock transaction: ' + (error as Error).message)
     }
   }
 
@@ -371,6 +432,77 @@ export default function InventoryPage() {
         </Card>
       </div>
 
+      {/* Low Stock Alerts */}
+      {lowStockAlerts.length > 0 && (
+        <Card className="border-orange-200 bg-orange-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2 text-orange-900">
+              <AlertTriangle className="h-5 w-5" />
+              Low Stock Alerts ({lowStockAlerts.length})
+            </CardTitle>
+            <CardDescription className="text-orange-700">
+              Medicines requiring immediate attention for restocking
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+              {lowStockAlerts.slice(0, 6).map((medicine) => (
+                <div key={medicine.id} className="bg-white border border-orange-200 rounded-lg p-4">
+                  <div className="flex justify-between items-start mb-2">
+                    <div className="flex-1">
+                      <h4 className="font-semibold text-orange-900">{medicine.name}</h4>
+                      <p className="text-sm text-orange-700">{medicine.manufacturer}</p>
+                    </div>
+                    <Badge variant="outline" className="border-orange-300 text-orange-800">
+                      {medicine.stock_quantity === 0 ? 'Out of Stock' : 'Low Stock'}
+                    </Badge>
+                  </div>
+                  <div className="space-y-1 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-orange-700">Current:</span>
+                      <span className="font-medium text-orange-900">{medicine.stock_quantity}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-orange-700">Required:</span>
+                      <span className="font-medium text-orange-900">{medicine.minimum_stock}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-orange-700">Shortage:</span>
+                      <span className="font-medium text-red-600">
+                        {Math.max(0, medicine.minimum_stock - medicine.stock_quantity)}
+                      </span>
+                    </div>
+                  </div>
+                  <Button
+                    size="sm"
+                    className="w-full mt-3 bg-orange-600 hover:bg-orange-700"
+                    onClick={() => {
+                      setSelectedMedicine(medicine.id)
+                      setStockFormData({
+                        ...stockFormData,
+                        transaction_type: 'stock_in',
+                        quantity: String(Math.max(1, medicine.minimum_stock - medicine.stock_quantity))
+                      })
+                      setShowStockForm(true)
+                    }}
+                  >
+                    <ShoppingCart className="h-4 w-4 mr-1" />
+                    Restock Now
+                  </Button>
+                </div>
+              ))}
+            </div>
+            {lowStockAlerts.length > 6 && (
+              <div className="text-center mt-4">
+                <p className="text-orange-700 text-sm">
+                  +{lowStockAlerts.length - 6} more medicines need restocking
+                </p>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      )}
+
       {/* Search and Filter */}
       <Card>
         <CardContent className="p-4">
@@ -543,95 +675,152 @@ export default function InventoryPage() {
               const inventoryValue = medicine.stock_quantity * medicine.unit_price
               
               return (
-                <div key={medicine.id} className="border rounded-lg p-4 hover:bg-gray-50">
-                  <div className="flex justify-between items-start">
-                    <div className="space-y-2 flex-1">
+                <div 
+                  key={medicine.id} 
+                  className="border rounded-lg p-6 hover:shadow-md transition-shadow"
+                >
+                  <div className="flex justify-between items-start mb-4">
+                    <div className="space-y-2">
                       <div className="flex items-center gap-4">
-                        <div>
-                          <h3 className="font-semibold text-lg">{medicine.name}</h3>
-                          <p className="text-sm text-gray-600">
-                            {medicine.generic_name && `Generic: ${medicine.generic_name}`}
-                            {medicine.brand_name && ` • Brand: ${medicine.brand_name}`}
-                          </p>
-                        </div>
-                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${stockStatus.color}`}>
+                        <h3 className="font-semibold text-lg">{medicine.name}</h3>
+                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${stockStatus.color} flex items-center gap-1`}>
+                          {stockStatus.status === 'in_stock' && <CheckCircle className="h-4 w-4" />}
+                          {stockStatus.status === 'low_stock' && <AlertTriangle className="h-4 w-4" />}
+                          {stockStatus.status === 'out_of_stock' && <AlertCircle className="h-4 w-4" />}
                           {stockStatus.label}
                         </div>
-                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${expiryStatus.color}`}>
+                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${expiryStatus.color} flex items-center gap-1`}>
+                          {expiryStatus.status === 'expired' && <AlertCircle className="h-4 w-4" />}
+                          {(expiryStatus.status === 'expiring_soon' || expiryStatus.status === 'expiring_3months') && <Calendar className="h-4 w-4" />}
+                          {expiryStatus.status === 'good' && <CheckCircle className="h-4 w-4" />}
                           {expiryStatus.label}
                         </div>
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-5 gap-4 text-sm">
-                        <div>
-                          <span className="font-medium text-gray-700">Current Stock:</span>
-                          <p className="text-lg font-semibold">{medicine.stock_quantity}</p>
+                      <div className="flex items-center gap-4 text-sm text-gray-600">
+                        <div className="flex items-center gap-1">
+                          <Package className="h-4 w-4" />
+                          {medicine.manufacturer || 'Unknown manufacturer'}
                         </div>
-                        <div>
-                          <span className="font-medium text-gray-700">Min. Stock:</span>
-                          <p>{medicine.minimum_stock}</p>
+                        <div className="flex items-center gap-1">
+                          <Activity className="h-4 w-4" />
+                          {medicine.supplier || 'Unknown supplier'}
                         </div>
-                        <div>
-                          <span className="font-medium text-gray-700">Unit Price:</span>
-                          <p>₹{medicine.unit_price?.toFixed(2) || '0.00'}</p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-700">Total Value:</span>
-                          <p className="font-semibold text-green-600">₹{inventoryValue.toFixed(2)}</p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-700">Expiry:</span>
-                          <p>{medicine.expiry_date ? new Date(medicine.expiry_date).toLocaleDateString() : 'Not set'}</p>
-                        </div>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div>
-                          <span className="font-medium text-gray-700">Strength:</span>
-                          <p>{medicine.strength || 'Not specified'}</p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-700">Batch:</span>
-                          <p>{medicine.batch_number || 'Not specified'}</p>
-                        </div>
-                        <div>
-                          <span className="font-medium text-gray-700">Manufacturer:</span>
-                          <p>{medicine.manufacturer || 'Not specified'}</p>
+                        <div className="flex items-center gap-1">
+                          <Calendar className="h-4 w-4" />
+                          {medicine.expiry_date ? new Date(medicine.expiry_date).toLocaleDateString() : 'No expiry date'}
                         </div>
                       </div>
                     </div>
-                    
-                    <div className="flex gap-2 ml-4">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedMedicine(medicine.id)
-                          setStockFormData({
-                            ...stockFormData,
-                            transaction_type: 'stock_in'
-                          })
-                          setShowStockForm(true)
-                        }}
-                      >
-                        <TrendingUp className="h-4 w-4 mr-1" />
-                        Stock In
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => {
-                          setSelectedMedicine(medicine.id)
-                          setStockFormData({
-                            ...stockFormData,
-                            transaction_type: 'stock_out'
-                          })
-                          setShowStockForm(true)
-                        }}
-                      >
-                        <TrendingDown className="h-4 w-4 mr-1" />
-                        Stock Out
-                      </Button>
+                    <div className="text-right">
+                      <div className="text-2xl font-bold text-green-600">₹{inventoryValue.toFixed(2)}</div>
+                      <div className="text-sm text-gray-600">Current: {medicine.stock_quantity}</div>
+                    </div>
+                  </div>
+
+                  {/* Inventory Details */}
+                  <div className="border-t pt-4">
+                    <h4 className="font-medium mb-3">Stock Details:</h4>
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                      <div className="bg-gray-50 p-3 rounded">
+                        <div className="text-xs text-gray-600">Current Stock</div>
+                        <div className="font-medium text-lg">{medicine.stock_quantity}</div>
+                      </div>
+                      <div className="bg-gray-50 p-3 rounded">
+                        <div className="text-xs text-gray-600">Minimum Stock</div>
+                        <div className="font-medium">{medicine.minimum_stock}</div>
+                      </div>
+                      <div className="bg-gray-50 p-3 rounded">
+                        <div className="text-xs text-gray-600">Unit Price</div>
+                        <div className="font-medium">₹{medicine.unit_price?.toFixed(2) || '0.00'}</div>
+                      </div>
+                      <div className="bg-gray-50 p-3 rounded">
+                        <div className="text-xs text-gray-600">Batch Number</div>
+                        <div className="font-medium">{medicine.batch_number || 'N/A'}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="border-t mt-4 pt-4">
+                    <div className="flex items-center justify-between">
+                      <h4 className="font-medium text-gray-700">Inventory Actions:</h4>
+                      <div className="flex gap-2">
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedMedicine(medicine.id)
+                            setStockFormData({
+                              ...stockFormData,
+                              transaction_type: 'stock_in'
+                            })
+                            setShowStockForm(true)
+                          }}
+                          className="text-green-600 border-green-300 hover:bg-green-50"
+                        >
+                          <TrendingUp className="h-4 w-4 mr-1" />
+                          Stock In
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedMedicine(medicine.id)
+                            setStockFormData({
+                              ...stockFormData,
+                              transaction_type: 'stock_out'
+                            })
+                            setShowStockForm(true)
+                          }}
+                          className="text-red-600 border-red-300 hover:bg-red-50"
+                        >
+                          <TrendingDown className="h-4 w-4 mr-1" />
+                          Stock Out
+                        </Button>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={() => {
+                            setSelectedMedicine(medicine.id)
+                            setStockFormData({
+                              ...stockFormData,
+                              transaction_type: 'adjustment'
+                            })
+                            setShowStockForm(true)
+                          }}
+                        >
+                          <Edit className="h-4 w-4 mr-1" />
+                          Adjust Stock
+                        </Button>
+                      </div>
+                    </div>
+                    {stockStatus.status === 'low_stock' && (
+                      <div className="mt-2 text-sm text-orange-600">
+                        ⚠️ Reorder recommended - {medicine.minimum_stock - medicine.stock_quantity} units needed
+                      </div>
+                    )}
+                    {stockStatus.status === 'out_of_stock' && (
+                      <div className="mt-2 text-sm text-red-600">
+                        🚨 Out of stock - Immediate restocking required
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Additional Info */}
+                  <div className="border-t mt-4 pt-4">
+                    <div className="grid grid-cols-3 gap-4 text-sm">
+                      <div>
+                        <span className="text-gray-600">Strength:</span>
+                        <div className="font-medium">{medicine.strength || 'N/A'}</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Dosage Form:</span>
+                        <div className="font-medium">{medicine.dosage_form || 'N/A'}</div>
+                      </div>
+                      <div>
+                        <span className="text-gray-600">Status:</span>
+                        <div className="font-medium">{medicine.is_active ? 'Active' : 'Inactive'}</div>
+                      </div>
                     </div>
                   </div>
                 </div>

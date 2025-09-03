@@ -6,8 +6,9 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, User, Phone, Mail, Calendar, Heart, FileText, Pill } from 'lucide-react'
+import { ArrowLeft, User, Phone, Mail, Calendar, Heart, FileText, Pill, History } from 'lucide-react'
 import type { Patient } from '@/lib/types'
+import { PatientReport } from '@/components/reports/patient-report'
 
 interface PatientWithDetails extends Patient {
   appointments?: any[]
@@ -15,10 +16,55 @@ interface PatientWithDetails extends Patient {
   opd_records?: any[]
 }
 
+interface Visit {
+  id: string
+  patient_id: string
+  doctor_id: string
+  visit_date: string
+  visit_time: string
+  chief_complaint: string
+  symptoms: string
+  diagnosis: string
+  examination_notes: string
+  vital_signs: string
+  status: string
+  created_at: string
+  users?: {
+    id: string
+    full_name: string
+    email: string
+  }
+  prescriptions?: Array<{
+    id: string
+    medicine_id: string
+    quantity: number
+    dosage: string
+    frequency: string
+    duration: string
+    instructions: string
+    medicines: {
+      name: string
+      category: string
+    }
+  }>
+  visit_services?: Array<{
+    id: string
+    service_id: string
+    notes: string
+    status: string
+    price: number
+    services: {
+      name: string
+      category: string
+    }
+  }>
+}
+
 export default function DoctorPatientDetailPage() {
   const params = useParams()
   const router = useRouter()
   const [patient, setPatient] = useState<PatientWithDetails | null>(null)
+  const [visits, setVisits] = useState<Visit[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -40,8 +86,8 @@ export default function DoctorPatientDetailPage() {
           return
         }
 
-        // Fetch doctor-specific related data
-        const [appointmentsRes, prescriptionsRes, opdRecordsRes] = await Promise.all([
+        // Fetch doctor-specific related data including visits
+        const [appointmentsRes, prescriptionsRes, opdRecordsRes, visitsRes] = await Promise.all([
           supabase
             .from('appointments')
             .select('*')
@@ -64,7 +110,45 @@ export default function DoctorPatientDetailPage() {
             .select('*')
             .eq('patient_id', patientId)
             .order('visit_date', { ascending: false })
-            .limit(10)
+            .limit(10),
+            
+          supabase
+            .from('visits')
+            .select(`
+              *,
+              users!visits_doctor_id_fkey (
+                id,
+                full_name,
+                email
+              ),
+              prescriptions (
+                id,
+                medicine_id,
+                quantity,
+                dosage,
+                frequency,
+                duration,
+                instructions,
+                medicines (
+                  name,
+                  category
+                )
+              ),
+              visit_services (
+                id,
+                service_id,
+                notes,
+                status,
+                price,
+                services (
+                  name,
+                  category
+                )
+              )
+            `)
+            .eq('patient_id', patientId)
+            .order('visit_date', { ascending: false })
+            .limit(20)
         ])
 
         setPatient({
@@ -73,6 +157,8 @@ export default function DoctorPatientDetailPage() {
           prescriptions: prescriptionsRes.data || [],
           opd_records: opdRecordsRes.data || []
         })
+        
+        setVisits(visitsRes.data || [])
       } catch (err) {
         setError('Failed to load patient details')
         console.error(err)
@@ -126,10 +212,24 @@ export default function DoctorPatientDetailPage() {
             <FileText className="h-4 w-4 mr-2" />
             New Consultation
           </Button>
+          <Button 
+            variant="outline" 
+            size="sm"
+            onClick={() => router.push(`/admin/patients/${patient.id}/consultations-history`)}
+          >
+            <History className="h-4 w-4 mr-2" />
+            View History
+          </Button>
           <Button variant="outline" size="sm">
             <Pill className="h-4 w-4 mr-2" />
             Prescribe
           </Button>
+          {visits.length > 0 && (
+            <PatientReport 
+              patient={patient as any} 
+              visits={visits}
+            />
+          )}
         </div>
       </div>
 

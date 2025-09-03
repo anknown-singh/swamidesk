@@ -65,36 +65,37 @@ export default function ReceptionistDashboard() {
           .select('id', { count: 'exact', head: true })
           .eq('visit_date', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString().split('T')[0]),
         
-        // Queue by department
+        // Queue by doctor (since department column doesn't exist)
         supabase
           .from('visits')
-          .select('department')
+          .select('doctor_id, users!visits_doctor_id_fkey(full_name)')
           .eq('visit_date', new Date().toISOString().split('T')[0])
           .in('status', ['waiting', 'in_consultation'])
       ])
 
-      // Process results
-      const todayPatients = todayVisitsResult.count || 0
-      const yesterdayPatients = yesterdayVisitsResult.count || 0
-      const todayRevenue = todayRevenueResult.data?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) || 0
+      // Process results with null safety
+      const todayPatients = todayVisitsResult?.count ?? 0
+      const yesterdayPatients = yesterdayVisitsResult?.count ?? 0
+      const queueLength = queueResult?.count ?? 0
+      const todayRevenue = todayRevenueResult?.data?.reduce((sum, inv) => sum + (inv.total_amount || 0), 0) ?? 0
 
       setStats({
         todayPatients,
-        queueLength: queueResult.count || 0,
+        queueLength,
         appointments: todayPatients, // Using visits as appointments for now
         todayRevenue,
         yesterdayPatients
       })
 
-      // Process department queue data
-      const deptMap = new Map<string, number>()
+      // Process doctor queue data (since department column doesn't exist)
+      const doctorMap = new Map<string, number>()
       departmentQueueResult.data?.forEach(visit => {
-        const dept = visit.department || 'General'
-        deptMap.set(dept, (deptMap.get(dept) || 0) + 1)
+        const doctorName = visit.users?.full_name || 'Unassigned'
+        doctorMap.set(doctorName, (doctorMap.get(doctorName) || 0) + 1)
       })
 
-      const departmentQueues: DepartmentQueue[] = Array.from(deptMap.entries()).map(([dept, count]) => ({
-        department: dept,
+      const departmentQueues: DepartmentQueue[] = Array.from(doctorMap.entries()).map(([doctor, count]) => ({
+        department: `Dr. ${doctor}`,
         waiting: count
       }))
 
@@ -111,6 +112,10 @@ export default function ReceptionistDashboard() {
   useEffect(() => {
     fetchDashboardData()
   }, [fetchDashboardData])
+
+  useEffect(() => {
+    document.title = 'Receptionist Dashboard - SwamiCare'
+  }, [])
 
   const formatCurrency = (amount: number) => {
     return `₹${amount.toLocaleString()}`
@@ -256,9 +261,9 @@ export default function ReceptionistDashboard() {
 
         <Card>
           <CardHeader>
-            <CardTitle>Department Queue</CardTitle>
+            <CardTitle>Doctor Queue</CardTitle>
             <CardDescription>
-              Current waiting patients by department
+              Current waiting patients by doctor
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -274,7 +279,11 @@ export default function ReceptionistDashboard() {
             ) : (
               <div className="space-y-3">
                 {departments.length === 0 ? (
-                  <p className="text-sm text-muted-foreground">No patients in queue</p>
+                  <div className="text-center py-4">
+                    <Clock className="h-8 w-8 text-gray-300 mx-auto mb-2" />
+                    <p className="text-sm text-muted-foreground">No patients currently waiting</p>
+                    <p className="text-xs text-muted-foreground">Queue will update automatically</p>
+                  </div>
                 ) : (
                   departments.map((dept) => {
                     const colors = ['blue', 'green', 'purple', 'orange', 'red']

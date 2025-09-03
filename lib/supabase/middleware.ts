@@ -1,42 +1,69 @@
-import { createServerClient } from '@supabase/ssr'
 import { NextResponse, type NextRequest } from 'next/server'
 
+const SESSION_COOKIE = 'swamicare_session'
+const USER_COOKIE = 'swamicare_user'
+
 export async function updateSession(request: NextRequest) {
-  let supabaseResponse = NextResponse.next({
-    request,
-  })
-
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  if (!supabaseUrl || !supabaseAnonKey) {
-    // If environment variables are not available, just continue without Supabase auth
-    return supabaseResponse
+  const { pathname } = request.nextUrl
+  
+  // Skip authentication for public routes
+  const publicRoutes = ['/login', '/api/health', '/api/status', '/_next', '/favicon.ico', '/unauthorized']
+  const isPublicRoute = publicRoutes.some(route => pathname.startsWith(route))
+  
+  if (isPublicRoute) {
+    return NextResponse.next()
   }
 
-  const supabase = createServerClient(
-    supabaseUrl,
-    supabaseAnonKey,
-    {
-      cookies: {
-        getAll() {
-          return request.cookies.getAll()
-        },
-        setAll(cookiesToSet) {
-          cookiesToSet.forEach(({ name, value }) => request.cookies.set(name, value))
-          supabaseResponse = NextResponse.next({
-            request,
-          })
-          cookiesToSet.forEach(({ name, value, options }) =>
-            supabaseResponse.cookies.set(name, value, options)
-          )
-        },
-      },
+  // Check for custom session cookies
+  const sessionCookie = request.cookies.get(SESSION_COOKIE)
+  const userCookie = request.cookies.get(USER_COOKIE)
+
+  if (!sessionCookie || !userCookie) {
+    // No valid session, redirect to login
+    const loginUrl = new URL('/login', request.url)
+    return NextResponse.redirect(loginUrl)
+  }
+
+  try {
+    // Validate session data
+    const sessionData = JSON.parse(sessionCookie.value)
+    const userData = JSON.parse(userCookie.value)
+    
+    // Check if session is expired (24 hours)
+    const SESSION_DURATION = 24 * 60 * 60 * 1000 // 24 hours
+    if (Date.now() - sessionData.timestamp > SESSION_DURATION) {
+      // Session expired, redirect to login
+      const loginUrl = new URL('/login', request.url)
+      const response = NextResponse.redirect(loginUrl)
+      
+      // Clear expired cookies
+      response.cookies.delete(SESSION_COOKIE)
+      response.cookies.delete(USER_COOKIE)
+      
+      return response
     }
-  )
 
-  // refreshing the auth token
-  await supabase.auth.getUser()
+    // Check role-based access for protected routes
+    const userRole = userData.role
+    if (!userRole || !userData.is_active) {
+      const unauthorizedUrl = new URL('/unauthorized', request.url)
+      return NextResponse.redirect(unauthorizedUrl)
+    }
 
-  return supabaseResponse
+    // Allow access for authenticated users
+    return NextResponse.next()
+
+  } catch (error) {
+    console.error('Session validation error:', error)
+    
+    // Invalid session data, redirect to login
+    const loginUrl = new URL('/login', request.url)
+    const response = NextResponse.redirect(loginUrl)
+    
+    // Clear invalid cookies
+    response.cookies.delete(SESSION_COOKIE)
+    response.cookies.delete(USER_COOKIE)
+    
+    return response
+  }
 }

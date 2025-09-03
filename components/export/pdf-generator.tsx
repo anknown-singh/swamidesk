@@ -161,16 +161,16 @@ export function PDFGenerator() {
     if (procedureError) throw procedureError
     reportData.summary.completedProcedures = procedures?.length || 0
 
-    // Fetch pharmacy data
-    const { data: pharmacy, error: pharmacyError } = await supabase
-      .from('pharmacy_issues')
-      .select('*')
-      .gte('issued_at', startDate.toISOString())
-      .lte('issued_at', endDate.toISOString())
+    // Fetch pharmacy data - count dispensed prescriptions instead of pharmacy issues
+    const { data: dispensedPrescriptions, error: pharmacyError } = await supabase
+      .from('prescriptions')
+      .select('id')
+      .gte('dispensed_at', startDate.toISOString())
+      .lte('dispensed_at', endDate.toISOString())
       .eq('status', 'dispensed')
 
     if (pharmacyError) throw pharmacyError
-    reportData.summary.dispensedMedicines = pharmacy?.length || 0
+    reportData.summary.dispensedMedicines = dispensedPrescriptions?.length || 0
 
     // Fetch inventory data if requested
     if (options.includeInventoryData) {

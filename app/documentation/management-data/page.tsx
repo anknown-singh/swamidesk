@@ -5,7 +5,7 @@ import Link from 'next/link'
 import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
-import { ArrowLeftIcon, CheckCircleIcon, Users, Pill, FileText, Calendar, ShoppingCart, DollarSign } from 'lucide-react'
+import { ArrowLeftIcon, CheckCircleIcon, Users, Pill, FileText, Calendar, DollarSign } from 'lucide-react'
 
 interface DataSummary {
   consultations: {
@@ -32,11 +32,6 @@ interface DataSummary {
     inProgress: number
     completed: number
   }
-  pharmacyQueue: {
-    total: number
-    pending: number
-    dispensed: number
-  }
   invoices: {
     total: number
     pending: number
@@ -62,14 +57,12 @@ export default function ManagementDataPage() {
         prescriptionsRes,
         treatmentPlansRes,
         proceduresRes,
-        pharmacyRes,
         invoicesRes
       ] = await Promise.all([
         supabase.from('visits').select('status'),
         supabase.from('prescriptions').select('status'),
         supabase.from('treatment_plans').select('status'),
         supabase.from('visit_services').select('status'),
-        supabase.from('pharmacy_issues').select('status'),
         supabase.from('invoices').select('payment_status, total_amount')
       ])
 
@@ -77,7 +70,6 @@ export default function ManagementDataPage() {
       const prescriptions = prescriptionsRes.data || []
       const treatmentPlans = treatmentPlansRes.data || []
       const procedures = proceduresRes.data || []
-      const pharmacy = pharmacyRes.data || []
       const invoices = invoicesRes.data || []
 
       setDataSummary({
@@ -104,11 +96,6 @@ export default function ManagementDataPage() {
           assigned: procedures.filter(p => p.status === 'assigned').length,
           inProgress: procedures.filter(p => p.status === 'in_progress').length,
           completed: procedures.filter(p => p.status === 'completed').length
-        },
-        pharmacyQueue: {
-          total: pharmacy.length,
-          pending: pharmacy.filter(p => p.status === 'pending').length,
-          dispensed: pharmacy.filter(p => p.status === 'dispensed').length
         },
         invoices: {
           total: invoices.length,
@@ -298,34 +285,6 @@ export default function ManagementDataPage() {
             </CardContent>
           </Card>
 
-          {/* Pharmacy Queue */}
-          <Card className="border-l-4 border-l-teal-500">
-            <CardHeader>
-              <CardTitle className="flex items-center gap-2">
-                <ShoppingCart className="w-5 h-5 text-teal-600" />
-                Pharmacy Queue
-              </CardTitle>
-              <CardDescription>Medicine dispensing queue</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm font-medium">Total Queue Items</span>
-                  <Badge>{dataSummary?.pharmacyQueue.total || 0}</Badge>
-                </div>
-                <div className="space-y-1">
-                  <div className="flex justify-between text-sm">
-                    <span>Pending:</span>
-                    <span className="text-yellow-600">{dataSummary?.pharmacyQueue.pending || 0}</span>
-                  </div>
-                  <div className="flex justify-between text-sm">
-                    <span>Dispensed:</span>
-                    <span className="text-green-600">{dataSummary?.pharmacyQueue.dispensed || 0}</span>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
 
           {/* Billing & Invoices */}
           <Card className="border-l-4 border-l-red-500">
@@ -389,7 +348,7 @@ export default function ManagementDataPage() {
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircleIcon className="w-4 h-4 text-green-600" />
-                <span className="text-sm">Pharmacy Queue: Operational</span>
+                <span className="text-sm">Pharmacy Management: Operational</span>
               </div>
               <div className="flex items-center gap-2">
                 <CheckCircleIcon className="w-4 h-4 text-green-600" />

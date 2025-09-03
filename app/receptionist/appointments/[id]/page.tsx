@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -22,15 +22,11 @@ interface AppointmentWithDetails extends Appointment {
   users?: {
     full_name: string
     phone?: string
-    specialization?: string
-    department?: string
+    user_profiles: Array<{
+      specialization?: string
+      department?: string
+    }>
   }
-  invoices?: Array<{
-    id: string
-    total_amount: number
-    payment_status: string
-    balance_amount: number
-  }>
 }
 
 export default function ReceptionistAppointmentDetailPage() {
@@ -40,7 +36,7 @@ export default function ReceptionistAppointmentDetailPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
+  const supabase = createAuthenticatedClient()
   const appointmentId = params.id as string
 
   useEffect(() => {
@@ -51,16 +47,22 @@ export default function ReceptionistAppointmentDetailPage() {
           .select(`
             *,
             patients(full_name, phone, email, date_of_birth, gender, address, emergency_contact_name),
-            users(full_name, phone, specialization, department),
-            invoices(id, total_amount, payment_status, balance_amount)
+            users!appointments_doctor_id_fkey(
+              full_name, 
+              phone, 
+              user_profiles!inner(specialization, department)
+            )
           `)
           .eq('id', appointmentId)
           .single()
 
         if (appointmentError) {
-          setError('Appointment not found')
+          console.error('Error fetching appointment:', appointmentError)
+          setError(`Appointment not found: ${appointmentError.message}`)
           return
         }
+        
+        console.log('Fetched appointment data:', appointmentData)
 
         setAppointment(appointmentData)
       } catch (err) {
@@ -303,7 +305,7 @@ export default function ReceptionistAppointmentDetailPage() {
               <>
                 <div>
                   <p className="font-medium text-lg">Dr. {appointment.users.full_name}</p>
-                  <p className="text-sm text-gray-600">{appointment.users.specialization}</p>
+                  <p className="text-sm text-gray-600">{appointment.users.user_profiles[0]?.specialization}</p>
                 </div>
 
                 {appointment.users.phone && (
@@ -313,9 +315,9 @@ export default function ReceptionistAppointmentDetailPage() {
                   </div>
                 )}
 
-                {appointment.users.department && (
+                {appointment.users.user_profiles[0]?.department && (
                   <Badge variant="outline" className="text-xs">
-                    {appointment.users.department}
+                    {appointment.users.user_profiles[0]?.department}
                   </Badge>
                 )}
               </>
@@ -324,39 +326,27 @@ export default function ReceptionistAppointmentDetailPage() {
         </Card>
       </div>
 
-      {/* Billing Information */}
-      {appointment.invoices && appointment.invoices.length > 0 && (
+      {/* Appointment Notes */}
+      {(appointment.description || appointment.patient_notes) && (
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center space-x-2">
-              <CreditCard className="h-5 w-5 text-purple-600" />
-              <span>Billing Information</span>
+              <span>Additional Information</span>
             </CardTitle>
           </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {appointment.invoices.map((invoice) => (
-                <div key={invoice.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
-                  <div>
-                    <p className="font-medium">Invoice #{invoice.id.slice(0, 8)}...</p>
-                    <p className="text-sm text-gray-600">Total: ₹{invoice.total_amount}</p>
-                  </div>
-                  <div className="text-right">
-                    <Badge variant={
-                      invoice.payment_status === 'completed' ? 'default' :
-                      invoice.payment_status === 'partial' ? 'secondary' : 'destructive'
-                    }>
-                      {invoice.payment_status}
-                    </Badge>
-                    {invoice.balance_amount > 0 && (
-                      <p className="text-sm text-red-600 mt-1">
-                        Balance: ₹{invoice.balance_amount}
-                      </p>
-                    )}
-                  </div>
-                </div>
-              ))}
-            </div>
+          <CardContent className="space-y-4">
+            {appointment.description && (
+              <div>
+                <p className="font-medium text-sm text-gray-600 mb-1">Description</p>
+                <p className="text-sm">{appointment.description}</p>
+              </div>
+            )}
+            {appointment.patient_notes && (
+              <div>
+                <p className="font-medium text-sm text-gray-600 mb-1">Patient Notes</p>
+                <p className="text-sm">{appointment.patient_notes}</p>
+              </div>
+            )}
           </CardContent>
         </Card>
       )}
@@ -378,7 +368,7 @@ export default function ReceptionistAppointmentDetailPage() {
             </Button>
             <Button variant="outline" className="w-full">
               <CreditCard className="h-4 w-4 mr-2" />
-              Generate Bill
+              Convert to Visit
             </Button>
             <Button variant="outline" className="w-full">
               <Phone className="h-4 w-4 mr-2" />

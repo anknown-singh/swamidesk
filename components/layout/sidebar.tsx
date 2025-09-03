@@ -1,10 +1,10 @@
-'use client'
+"use client";
 
-import Link from 'next/link'
-import { usePathname, useRouter } from 'next/navigation'
-import { cn } from '@/lib/utils'
-import type { UserProfile, UserRole } from '@/lib/types'
-import { createClient } from '@/lib/supabase/client'
+import Link from "next/link";
+import { usePathname } from "next/navigation";
+import { cn } from "@/lib/utils";
+import type { UserProfile, UserRole } from "@/lib/types";
+import { useAuth } from "@/contexts/auth-context";
 import {
   Calendar,
   Users,
@@ -23,201 +23,220 @@ import {
   UserCog,
   Pill,
   ShoppingCart,
+  TrendingUp,
   BookOpen,
-} from 'lucide-react'
+  GitBranch,
+} from "lucide-react";
 
 interface SidebarItem {
-  href: string
-  label: string
-  icon: React.ComponentType<{ className?: string }>
-  roles: UserRole[]
-  isGlobal?: boolean // for routes that don't need role prefix
+  href: string;
+  label: string;
+  icon: React.ComponentType<{ className?: string }>;
+  roles: UserRole[];
+  isGlobal?: boolean; // for routes that don't need role prefix
 }
 
 const sidebarItems: SidebarItem[] = [
   {
-    href: '/dashboard',
-    label: 'Dashboard',
+    href: "/dashboard",
+    label: "Dashboard",
     icon: Home,
-    roles: ['admin', 'doctor', 'receptionist', 'attendant', 'pharmacist'],
+    roles: ["admin", "doctor", "receptionist", "attendant", "pharmacist"],
   },
   // Calendar for MVP roles (except pharmacist)
   {
-    href: '/calendar',
-    label: 'Calendar',
+    href: "/calendar",
+    label: "Calendar",
     icon: Calendar,
-    roles: ['admin', 'doctor', 'receptionist', 'attendant'],
+    roles: ["admin", "doctor", "receptionist", "attendant"],
   },
   // Receptionist specific
   {
-    href: '/patients',
-    label: 'Patient Registration',
+    href: "/patients",
+    label: "Patient Registration",
     icon: Users,
-    roles: ['admin', 'receptionist'],
+    roles: ["admin", "receptionist"],
   },
   {
-    href: '/appointments',
-    label: 'Appointments',
+    href: "/appointments",
+    label: "Appointments",
     icon: ClipboardList,
-    roles: ['admin', 'receptionist'],
+    roles: ["admin", "receptionist"],
   },
   {
-    href: '/appointment-management',
-    label: 'Appointment Status',
+    href: "/appointment-management",
+    label: "Appointment Status",
     icon: ClipboardList,
-    roles: ['admin', 'receptionist'],
-  },
-  {
-    href: '/queue',
-    label: 'Queue Management',
-    icon: Clock,
-    roles: ['admin', 'receptionist'],
+    roles: ["admin", "receptionist"],
   },
   // Doctor specific
   {
-    href: '/appointment-management',
-    label: 'My Appointments',
+    href: "/appointment-management",
+    label: "My Appointments",
     icon: ClipboardList,
-    roles: ['doctor'],
+    roles: ["doctor"],
   },
   {
-    href: '/consultations',
-    label: 'Consultations',
+    href: "/workflow",
+    label: "Patient Workflow",
+    icon: GitBranch,
+    roles: ["doctor", "admin"],
+  },
+  {
+    href: "/queue",
+    label: "Patient Queue",
+    icon: Users,
+    roles: ["admin", "doctor", "receptionist"],
+  },
+  {
+    href: "/consultations",
+    label: "Consultations",
     icon: Stethoscope,
-    roles: ['admin', 'doctor'],
+    roles: ["admin", "doctor"],
   },
   {
-    href: '/opd',
-    label: 'OPD Workflow',
+    href: "/opd",
+    label: "OPD Workflow",
     icon: Activity,
-    roles: ['admin', 'doctor', 'receptionist'],
+    roles: ["admin", "doctor", "receptionist"],
   },
   {
-    href: '/prescriptions',
-    label: 'Prescriptions',
+    href: "/prescriptions",
+    label: "Prescriptions",
     icon: FileText,
-    roles: ['admin', 'doctor'],
+    roles: ["admin", "doctor"],
   },
   {
-    href: '/treatment-plans',
-    label: 'Treatment Plans',
+    href: "/treatment-plans",
+    label: "Treatment Plans",
     icon: ClipboardList,
-    roles: ['admin', 'doctor'],
+    roles: ["admin", "doctor"],
   },
   {
-    href: '/availability',
-    label: 'My Availability',
+    href: "/availability",
+    label: "My Availability",
     icon: Clock,
-    roles: ['doctor'],
+    roles: ["doctor"],
   },
   // Service Attendant specific
   {
-    href: '/appointment-management',
-    label: 'Service Queue',
+    href: "/appointment-management",
+    label: "Service Queue",
     icon: UserCog,
-    roles: ['attendant'],
+    roles: ["attendant"],
   },
   {
-    href: '/services',
-    label: 'Services',
+    href: "/services",
+    label: "Services",
     icon: UserCog,
-    roles: ['admin', 'attendant'],
+    roles: ["admin", "attendant"],
   },
   {
-    href: '/procedures',
-    label: 'Procedures',
+    href: "/procedures",
+    label: "Procedures",
     icon: Activity,
-    roles: ['admin', 'attendant'],
+    roles: ["admin", "attendant"],
   },
   // Pharmacist specific
   {
-    href: '/pharmacy',
-    label: 'Pharmacy Queue',
-    icon: Pill,
-    roles: ['admin', 'pharmacist'],
-  },
-  {
-    href: '/inventory',
-    label: 'Inventory',
+    href: "/inventory",
+    label: "Inventory Management",
     icon: Package,
-    roles: ['admin', 'pharmacist'],
+    roles: ["admin", "pharmacist"],
   },
   {
-    href: '/medicines',
-    label: 'Medicine Master',
+    href: "/pharmacy/purchase-orders",
+    label: "Purchase Orders",
     icon: ShoppingCart,
-    roles: ['admin', 'pharmacist'],
-  },
-  // Billing & Admin
-  {
-    href: '/billing',
-    label: 'Billing & Invoices',
-    icon: CreditCard,
-    roles: ['admin', 'receptionist'],
-  },
-  {
-    href: '/reports',
-    label: 'Reports',
-    icon: BarChart3,
-    roles: ['admin'],
-  },
-  {
-    href: '/analytics',
-    label: 'Analytics',
-    icon: ClipboardList,
-    roles: ['admin'],
-  },
-  {
-    href: '/users',
-    label: 'User Management',
-    icon: UserCheck,
-    roles: ['admin'],
-  },
-  {
-    href: '/doctor-availability',
-    label: 'Doctor Availability',
-    icon: Clock,
-    roles: ['admin'],
-  },
-  {
-    href: '/documentation',
-    label: 'Help & Documentation',
-    icon: BookOpen,
-    roles: ['admin', 'doctor', 'receptionist', 'attendant', 'pharmacist'],
+    roles: ["admin", "pharmacist"],
     isGlobal: true,
   },
   {
-    href: '/settings',
-    label: 'Settings',
-    icon: Settings,
-    roles: ['admin', 'doctor', 'receptionist', 'attendant', 'pharmacist'],
+    href: "/pharmacy/sell-orders",
+    label: "Sell Orders",
+    icon: TrendingUp,
+    roles: ["admin", "pharmacist"],
+    isGlobal: true,
   },
-]
+  {
+    href: "/pharmacy/medicines",
+    label: "Medicines",
+    icon: Activity,
+    roles: ["admin", "pharmacist"],
+    isGlobal: true,
+  },
+  // Billing & Admin
+  {
+    href: "/billing",
+    label: "Billing & Invoices",
+    icon: CreditCard,
+    roles: ["admin", "receptionist"],
+  },
+  {
+    href: "/reports",
+    label: "Reports",
+    icon: BarChart3,
+    roles: ["admin"],
+  },
+  {
+    href: "/analytics",
+    label: "Analytics",
+    icon: ClipboardList,
+    roles: ["admin"],
+  },
+  {
+    href: "/users",
+    label: "User Management",
+    icon: UserCheck,
+    roles: ["admin"],
+  },
+  {
+    href: "/doctor-availability",
+    label: "Doctor Availability",
+    icon: Clock,
+    roles: ["admin"],
+  },
+  {
+    href: "/documentation",
+    label: "Help & Documentation",
+    icon: BookOpen,
+    roles: ["admin", "doctor", "receptionist", "attendant", "pharmacist"],
+    isGlobal: true,
+  },
+  {
+    href: "/settings",
+    label: "Settings",
+    icon: Settings,
+    roles: ["admin", "doctor", "receptionist", "attendant", "pharmacist"],
+  },
+];
 
 interface SidebarProps {
-  userProfile: UserProfile
+  userProfile: UserProfile;
 }
 
 export function Sidebar({ userProfile }: SidebarProps) {
-  const pathname = usePathname()
-  const router = useRouter()
-  
+  const pathname = usePathname();
+  const { logout } = useAuth();
+
   // Normalize role name to match directory structure
   const normalizeRole = (role: string): string => {
-    if (role === 'service_attendant') return 'attendant'
-    return role
-  }
-  
-  const userRole = normalizeRole(userProfile.role)
-  const allowedItems = sidebarItems.filter(item => item.roles.includes(userRole as UserRole))
+    if (role === "service_attendant") return "attendant";
+    if (role === "pharmacist") return "pharmacy"; // Special case: pharmacist uses /pharmacy/ directory
+    return role;
+  };
 
-  const baseHref = `/${userRole}`
+  const userRole = userProfile.role;
+  const normalizedRole = normalizeRole(userProfile.role);
+  const allowedItems = sidebarItems.filter((item) =>
+    item.roles.includes(userRole as UserRole)
+  );
 
-  const handleLogout = async () => {
-    const supabase = createClient()
-    await supabase.auth.signOut()
-    router.push('/login')
-  }
+  const baseHref = `/${normalizedRole}`;
+
+  const handleLogout = () => {
+    logout();
+  };
 
   return (
     <div className="flex h-full w-64 flex-col bg-card border-r">
@@ -225,37 +244,37 @@ export function Sidebar({ userProfile }: SidebarProps) {
         <Activity className="h-8 w-8 text-primary" />
         <span className="ml-2 text-xl font-bold">SwamiCare</span>
       </div>
-      
+
       <nav className="flex-1 space-y-1 p-4">
         {allowedItems.map((item) => {
-          const href = item.isGlobal ? item.href : `${baseHref}${item.href}`
-          const isActive = pathname === href || pathname.startsWith(`${href}/`)
-          const Icon = item.icon
-          
+          const href = item.isGlobal ? item.href : `${baseHref}${item.href}`;
+          const isActive = pathname === href || pathname.startsWith(`${href}/`);
+          const Icon = item.icon;
+
           return (
             <Link
               key={item.href}
               href={href}
               className={cn(
-                'flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors',
+                "flex items-center px-4 py-2 text-sm font-medium rounded-md transition-colors",
                 isActive
-                  ? 'bg-primary text-primary-foreground'
-                  : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
+                  ? "bg-primary text-primary-foreground"
+                  : "text-muted-foreground hover:bg-accent hover:text-accent-foreground"
               )}
             >
               <Icon className="mr-3 h-5 w-5" />
               {item.label}
             </Link>
-          )
+          );
         })}
       </nav>
-      
+
       <div className="border-t p-4">
         <div className="flex items-center mb-4">
           <div className="ml-2">
             <p className="text-sm font-medium">{userProfile.full_name}</p>
             <p className="text-xs text-muted-foreground capitalize">
-              {userProfile.role.replace('_', ' ')}
+              {userProfile.role.replace("_", " ")}
             </p>
             {userProfile.department && (
               <p className="text-xs text-muted-foreground">
@@ -274,5 +293,5 @@ export function Sidebar({ userProfile }: SidebarProps) {
         </button>
       </div>
     </div>
-  )
+  );
 }

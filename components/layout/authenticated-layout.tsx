@@ -1,9 +1,8 @@
 'use client'
 
-import { ReactNode, useEffect, useState } from 'react'
+import { ReactNode, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
-import type { UserRole, UserProfile } from '@/lib/types'
-import { createClient } from '@/lib/supabase/client'
+import { useAuth, UserRole } from '@/contexts/auth-context'
 import { Sidebar } from './sidebar'
 import { Header } from './header'
 
@@ -13,74 +12,53 @@ interface AuthenticatedLayoutProps {
 }
 
 export function AuthenticatedLayout({ children, allowedRoles }: AuthenticatedLayoutProps) {
-  const [user, setUser] = useState<{ profile: UserProfile } | null>(null)
-  const [loading, setLoading] = useState(true)
+  const { user, loading, isAuthenticated } = useAuth()
   const router = useRouter()
-  const supabase = createClient()
 
   useEffect(() => {
-    async function getUser() {
-      try {
-        // Check for our custom localStorage session
-        const sessionData = localStorage.getItem('swamicare_user')
-        
-        if (!sessionData) {
-          router.push('/login')
-          return
-        }
+    // Wait for auth to finish loading
+    if (loading) return
 
-        const userData = JSON.parse(sessionData)
-        
-        // Verify the user still exists in the database
-        const { data: profiles } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', userData.id)
-          .eq('is_active', true)
-
-        if (!profiles || profiles.length === 0) {
-          localStorage.removeItem('swamicare_user')
-          router.push('/login')
-          return
-        }
-
-        const profile = profiles[0]
-        const userProfile = profile as UserProfile
-        if (allowedRoles && !allowedRoles.includes(userProfile.role)) {
-          router.push('/unauthorized')
-          return
-        }
-
-        setUser({ profile: userProfile })
-      } catch (error) {
-        console.error('Auth error:', error)
-        localStorage.removeItem('swamicare_user')
-        router.push('/login')
-      } finally {
-        setLoading(false)
-      }
+    // If no user is authenticated, redirect to login
+    if (!isAuthenticated || !user) {
+      router.push('/login')
+      return
     }
 
-    getUser()
-  }, [supabase, router, allowedRoles])
+    // Check role permissions
+    if (allowedRoles && !allowedRoles.includes(user.role)) {
+      router.push('/unauthorized')
+      return
+    }
+  }, [user, loading, isAuthenticated, router, allowedRoles])
+
+  useEffect(() => {
+    if (loading && typeof document !== 'undefined') {
+      document.title = 'Loading... - SwamiCare'
+    }
+  }, [loading])
 
   if (loading) {
     return (
-      <div className="flex h-screen items-center justify-center">
-        <div className="text-lg">Loading...</div>
+      <div className="flex h-screen items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <div className="text-lg text-gray-700">Loading...</div>
+          <div className="text-sm text-gray-500 mt-1">Checking authentication</div>
+        </div>
       </div>
     )
   }
 
-  if (!user) {
+  if (!isAuthenticated || !user) {
     return null
   }
 
   return (
     <div className="flex h-screen bg-gray-100">
-      <Sidebar userProfile={user.profile} />
+      <Sidebar userProfile={user} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header userProfile={user.profile} />
+        <Header userProfile={user} />
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
           {children}
         </main>

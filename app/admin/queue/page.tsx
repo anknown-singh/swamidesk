@@ -1,125 +1,157 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
+import { toast } from '@/lib/toast'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Badge } from '@/components/ui/badge'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Clock, Search, Users, UserCheck, AlertCircle, CheckCircle, Calendar, Phone } from 'lucide-react'
+import { Clock, Search, Users, UserCheck, AlertCircle, CheckCircle, Calendar, Phone, RefreshCw, Stethoscope, Filter } from 'lucide-react'
+import { useUser } from '@/hooks/use-user'
 
-interface QueueItem {
+interface QueuePatient {
   id: string
-  patient_id: string
   token_number: number
-  status: 'waiting' | 'in_consultation' | 'services_pending' | 'completed'
+  patient_name: string
+  patient_mobile: string
+  doctor_name: string
+  doctor_id: string
+  checked_in_at: string
   priority: boolean
-  chief_complaint: string
-  notes: string
+  status: string
   visit_date: string
-  created_at: string
-  updated_at: string
-  patients: {
-    id: string
-    full_name: string
-    phone: string
-    date_of_birth: string
-  }
+  department?: string
 }
 
-export default function AdminQueuePage() {
-  const [queueItems, setQueueItems] = useState<QueueItem[]>([])
+interface Doctor {
+  id: string
+  full_name: string
+  department: string
+}
+
+export default function AdminPatientQueuePage() {
+  const router = useRouter()
+  const { user } = useUser()
+  const [queue, setQueue] = useState<QueuePatient[]>([])
+  const [doctors, setDoctors] = useState<Doctor[]>([])
   const [loading, setLoading] = useState(true)
+  const [refreshing, setRefreshing] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const [filterStatus, setFilterStatus] = useState<string>('all')
-  const [filterPriority, setFilterPriority] = useState<string>('all')
+  const [selectedDoctor, setSelectedDoctor] = useState<string>('all')
   const [error, setError] = useState<string | null>(null)
 
-  const fetchQueue = useCallback(async () => {
+  const fetchQueueData = useCallback(async () => {
     const supabase = createClient()
     try {
-      const { data, error } = await supabase
+      setError(null)
+
+      // Fetch doctors first
+      const { data: doctorsResult, error: doctorsError } = await supabase
+        .from('users')
+        .select('id, full_name, department')
+        .eq('role', 'doctor')
+        .order('full_name')
+
+      if (doctorsError) throw doctorsError
+      setDoctors(doctorsResult || [])
+
+      // Build query conditions
+      let query = supabase
         .from('visits')
         .select(`
-          *,
-          patients (
-            id,
-            full_name,
-            phone,
-            date_of_birth
-          )
+          id,
+          token_number,
+          priority,
+          status,
+          checked_in_at,
+          visit_date,
+          doctor_id,
+          patients!inner(full_name, phone),
+          users!visits_doctor_id_fkey(full_name, department)
         `)
+        .eq('visit_date', new Date().toISOString().split('T')[0])
         .in('status', ['waiting', 'in_consultation'])
-        .order('created_at', { ascending: true })
+        .order('priority', { ascending: false })
+        .order('checked_in_at', { ascending: true })
 
-      if (error) throw error
-      setQueueItems(data || [])
+      // Filter by doctor if selected
+      if (selectedDoctor !== 'all') {
+        query = query.eq('doctor_id', selectedDoctor)
+      }
+
+      const { data: queueResult, error: queueError } = await query
+
+      if (queueError) throw queueError
+
+      // Process queue data
+      const queuePatients: QueuePatient[] = queueResult?.map(visit => ({
+        id: visit.id,
+        token_number: visit.token_number,
+        patient_name: visit.patients?.[0]?.full_name || 'Unknown',
+        patient_mobile: visit.patients?.[0]?.phone || '',
+        doctor_name: visit.users?.full_name || 'Unknown Doctor',
+        doctor_id: visit.doctor_id,
+        checked_in_at: visit.checked_in_at,
+        priority: visit.priority,
+        status: visit.status,
+        visit_date: visit.visit_date,
+        department: visit.users?.department
+      })) || []
+
+      setQueue(queuePatients)
+
     } catch (error) {
-      console.error('Error fetching queue:', error)
-      setError('Failed to load queue')
+      console.error('Error fetching queue data:', error)
+      setError('Failed to load queue data')
     } finally {
       setLoading(false)
+      setRefreshing(false)
     }
-  }, [])
+  }, [selectedDoctor])
 
   useEffect(() => {
-    fetchQueue()
-    
-    // Set up real-time subscription  
-    const supabase = createClient()
-    const subscription = supabase
-      .channel('queue_changes')
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'visits' }, () => {
-        fetchQueue()
-      })
-      .subscribe()
-
-    return () => {
-      subscription.unsubscribe()
+    if (user) {
+      fetchQueueData()
     }
-  }, [fetchQueue])
+  }, [user, fetchQueueData])
 
-  const getStatusConfig = (status: string) => {
-    switch (status) {
-      case 'waiting':
-        return { color: 'bg-yellow-100 text-yellow-800', label: 'Waiting', icon: Clock }
-      case 'in_consultation':
-        return { color: 'bg-blue-100 text-blue-800', label: 'In Consultation', icon: UserCheck }
-      case 'services_pending':
-        return { color: 'bg-orange-100 text-orange-800', label: 'Services Pending', icon: AlertCircle }
-      case 'completed':
-        return { color: 'bg-green-100 text-green-800', label: 'Completed', icon: CheckCircle }
-      default:
-        return { color: 'bg-gray-100 text-gray-800', label: status, icon: Clock }
-    }
+  const handleRefresh = async () => {
+    setRefreshing(true)
+    await fetchQueueData()
   }
 
-  const getPriorityConfig = (priority: boolean) => {
-    if (priority) {
-      return { color: 'bg-red-100 text-red-800', label: 'High Priority' }
-    } else {
-      return { color: 'bg-gray-100 text-gray-600', label: 'Normal' }
-    }
+  const getTimeAgo = (dateString: string) => {
+    const date = new Date(dateString)
+    const now = new Date()
+    const diffInMinutes = Math.floor((now.getTime() - date.getTime()) / (1000 * 60))
+    
+    if (diffInMinutes < 1) return 'Just now'
+    if (diffInMinutes < 60) return `${diffInMinutes} min ago`
+    return `${Math.floor(diffInMinutes / 60)} hr ago`
   }
 
-  const filteredQueue = queueItems.filter(item => {
-    const matchesSearch = (item.patients?.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                         (item.patients?.id?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-                         item.token_number.toString().includes(searchTerm)
+  const getStatusCounts = () => {
+    const total = queue.length
+    const waiting = queue.filter(p => p.status === 'waiting').length
+    const inProgress = queue.filter(p => p.status === 'in_consultation').length
+    const highPriority = queue.filter(p => p.priority).length
     
-    const matchesStatus = filterStatus === 'all' || item.status === filterStatus
-    const matchesPriority = filterPriority === 'all' || 
-                           (filterPriority === 'emergency' && item.priority) ||
-                           (filterPriority === 'normal' && !item.priority)
-    
-    return matchesSearch && matchesStatus && matchesPriority
+    return { total, waiting, inProgress, highPriority }
+  }
+
+  const filteredQueue = queue.filter(item => {
+    return (item.patient_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+           (item.patient_mobile?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+           (item.doctor_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+           item.token_number.toString().includes(searchTerm)
   })
 
-  const totalInQueue = queueItems.length
-  const waitingCount = queueItems.filter(q => q.status === 'waiting').length
-  const inProgressCount = queueItems.filter(q => q.status === 'in_consultation').length
-  const completedCount = queueItems.filter(q => q.status === 'completed').length
-  const emergencyCount = queueItems.filter(q => q.priority === true).length
+  const { total, waiting, inProgress, highPriority } = getStatusCounts()
 
   if (loading) {
     return (
@@ -149,13 +181,13 @@ export default function AdminQueuePage() {
       )}
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Total in Queue</p>
-                <p className="text-2xl font-bold">{totalInQueue}</p>
+                <p className="text-2xl font-bold">{total}</p>
               </div>
               <Users className="h-8 w-8 text-blue-600" />
             </div>
@@ -167,7 +199,7 @@ export default function AdminQueuePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">Waiting</p>
-                <p className="text-2xl font-bold text-yellow-600">{waitingCount}</p>
+                <p className="text-2xl font-bold text-yellow-600">{waiting}</p>
               </div>
               <Clock className="h-8 w-8 text-yellow-600" />
             </div>
@@ -179,7 +211,7 @@ export default function AdminQueuePage() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm text-gray-600">In Progress</p>
-                <p className="text-2xl font-bold text-blue-600">{inProgressCount}</p>
+                <p className="text-2xl font-bold text-blue-600">{inProgress}</p>
               </div>
               <UserCheck className="h-8 w-8 text-blue-600" />
             </div>
@@ -190,20 +222,8 @@ export default function AdminQueuePage() {
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm text-gray-600">Completed</p>
-                <p className="text-2xl font-bold text-green-600">{completedCount}</p>
-              </div>
-              <CheckCircle className="h-8 w-8 text-green-600" />
-            </div>
-          </CardContent>
-        </Card>
-        
-        <Card>
-          <CardContent className="p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm text-gray-600">Emergency</p>
-                <p className="text-2xl font-bold text-red-600">{emergencyCount}</p>
+                <p className="text-sm text-gray-600">High Priority</p>
+                <p className="text-2xl font-bold text-red-600">{highPriority}</p>
               </div>
               <AlertCircle className="h-8 w-8 text-red-600" />
             </div>
@@ -214,35 +234,44 @@ export default function AdminQueuePage() {
       {/* Search and Filter */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex items-center gap-4">
-            <Search className="h-5 w-5 text-gray-400" />
-            <Input
-              placeholder="Search by patient name, ID, or queue number..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="max-w-md"
-            />
-            <select
-              value={filterStatus}
-              onChange={(e) => setFilterStatus(e.target.value)}
-              className="p-2 border border-gray-300 rounded-md"
-            >
-              <option value="all">All Status</option>
-              <option value="waiting">Waiting</option>
-              <option value="in_consultation">In Consultation</option>
-              <option value="services_pending">Services Pending</option>
-              <option value="completed">Completed</option>
-            </select>
-            <select
-              value={filterPriority}
-              onChange={(e) => setFilterPriority(e.target.value)}
-              className="p-2 border border-gray-300 rounded-md"
-            >
-              <option value="all">All Priority</option>
-              <option value="emergency">High Priority</option>
-              <option value="normal">Normal</option>
-            </select>
-            <div className="text-sm text-muted-foreground">
+          <div className="flex flex-wrap items-center gap-4">
+            <div className="flex items-center gap-2 flex-1 min-w-[300px]">
+              <Search className="h-5 w-5 text-gray-400" />
+              <Input
+                placeholder="Search by patient name, phone, doctor, or token number..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="flex-1"
+              />
+            </div>
+            <div className="flex items-center gap-2">
+              <Filter className="h-4 w-4 text-gray-500" />
+              <Select value={selectedDoctor} onValueChange={setSelectedDoctor}>
+                <SelectTrigger className="w-[180px]">
+                  <SelectValue placeholder="Filter by doctor" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Doctors</SelectItem>
+                  {doctors.map((doctor) => (
+                    <SelectItem key={doctor.id} value={doctor.id}>
+                      Dr. {doctor.full_name}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                onClick={handleRefresh}
+                variant="outline"
+                size="sm"
+                disabled={refreshing}
+              >
+                <RefreshCw className={`h-4 w-4 mr-2 ${refreshing ? 'animate-spin' : ''}`} />
+                Refresh
+              </Button>
+            </div>
+            <div className="text-sm text-muted-foreground ml-auto">
               {filteredQueue.length} patients in queue
             </div>
           </div>
@@ -256,87 +285,99 @@ export default function AdminQueuePage() {
             <Clock className="h-5 w-5" />
             Patient Queue ({filteredQueue.length})
           </CardTitle>
+          <CardDescription>
+            System-wide view of patient queue across all departments
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <div className="space-y-4">
-            {filteredQueue.map((item) => {
-              const statusConfig = getStatusConfig(item.status)
-              const priorityConfig = getPriorityConfig(item.priority)
-              const StatusIcon = statusConfig.icon
-              
-              return (
-                <div key={item.id} className="border rounded-lg p-4 hover:bg-gray-50">
+            {loading ? (
+              <div className="space-y-3">
+                {[1, 2, 3, 4, 5].map((i) => (
+                  <div key={i} className="flex justify-between items-center p-4 border rounded-lg">
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-48" />
+                      <Skeleton className="h-3 w-32" />
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Skeleton className="h-6 w-16" />
+                      <Skeleton className="h-9 w-20" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : filteredQueue.length === 0 ? (
+              <div className="text-center py-12">
+                <Users className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
+                <p className="text-lg font-medium mb-2">No patients in queue</p>
+                <p className="text-sm text-muted-foreground">
+                  {searchTerm ? 'No patients found matching your search criteria' : 'All patients have been seen or no appointments scheduled for today'}
+                </p>
+              </div>
+            ) : (
+              filteredQueue.map((patient) => (
+                <div key={patient.id} className="border rounded-lg p-4 hover:bg-gray-50 transition-colors">
                   <div className="flex justify-between items-start">
-                    <div className="space-y-2 flex-1">
-                      <div className="flex items-center gap-4">
-                        <div className="bg-blue-100 text-blue-800 rounded-full w-12 h-12 flex items-center justify-center font-bold text-lg">
-                          #{item.token_number}
+                    <div className="flex items-center gap-4 flex-1">
+                      <div className="bg-blue-100 text-blue-800 rounded-full w-12 h-12 flex items-center justify-center font-bold text-lg">
+                        #{patient.token_number}
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <h3 className="font-semibold text-lg">{patient.patient_name}</h3>
+                          {patient.priority && (
+                            <Badge variant="destructive" className="text-xs">
+                              Priority
+                            </Badge>
+                          )}
+                          <Badge 
+                            variant={patient.status === 'in_consultation' ? 'default' : 'secondary'}
+                            className="text-xs"
+                          >
+                            {patient.status === 'in_consultation' ? 'Consulting' : 'Waiting'}
+                          </Badge>
                         </div>
-                        <div>
-                          <h3 className="font-semibold text-lg">{item.patients.full_name}</h3>
-                          <p className="text-sm text-gray-600">
-                            ID: {item.patients.id.slice(0, 8)}...
-                            {item.patients.phone && ` • ${item.patients.phone}`}
-                          </p>
-                        </div>
-                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${statusConfig.color} flex items-center gap-1`}>
-                          <StatusIcon className="h-4 w-4" />
-                          {statusConfig.label}
-                        </div>
-                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${priorityConfig.color}`}>
-                          {priorityConfig.label}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm text-gray-600">
+                          <div className="flex items-center gap-2">
+                            <Phone className="h-4 w-4" />
+                            <span>{patient.patient_mobile || 'No phone'}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Clock className="h-4 w-4" />
+                            <span>Checked in {getTimeAgo(patient.checked_in_at)}</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <Stethoscope className="h-4 w-4" />
+                            <span>Dr. {patient.doctor_name}</span>
+                          </div>
+                          {patient.department && (
+                            <div className="flex items-center gap-2">
+                              <Calendar className="h-4 w-4" />
+                              <span>{patient.department}</span>
+                            </div>
+                          )}
                         </div>
                       </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
-                        <div className="flex items-center gap-2">
-                          <Calendar className="h-4 w-4 text-gray-400" />
-                          <div>
-                            <span className="font-medium text-gray-700">Added to Queue:</span>
-                            <p>{new Date(item.created_at).toLocaleString()}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Clock className="h-4 w-4 text-gray-400" />
-                          <div>
-                            <span className="font-medium text-gray-700">Last Updated:</span>
-                            <p>{new Date(item.updated_at).toLocaleString()}</p>
-                          </div>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Phone className="h-4 w-4 text-gray-400" />
-                          <div>
-                            <span className="font-medium text-gray-700">Age:</span>
-                            <p>{item.patients.date_of_birth ? 
-                                new Date().getFullYear() - new Date(item.patients.date_of_birth).getFullYear() 
-                                : 'N/A'} years</p>
-                          </div>
-                        </div>
-                      </div>
-
-                      {item.chief_complaint && (
-                        <div className="text-sm">
-                          <span className="font-medium text-gray-700">Chief Complaint:</span>
-                          <p className="text-gray-600 mt-1">{item.chief_complaint}</p>
-                        </div>
-                      )}
-                      
-                      {item.notes && (
-                        <div className="text-sm">
-                          <span className="font-medium text-gray-700">Notes:</span>
-                          <p className="text-gray-600 mt-1">{item.notes}</p>
-                        </div>
-                      )}
+                    </div>
+                    <div className="flex items-center gap-2 ml-4">
+                      <Button
+                        onClick={() => router.push(`/admin/patients/${patient.id}`)}
+                        variant="outline"
+                        size="sm"
+                      >
+                        View Details
+                      </Button>
+                      <Button
+                        onClick={() => router.push(`/doctor/consultations/${patient.id}`)}
+                        variant={patient.status === 'in_consultation' ? 'default' : 'outline'}
+                        size="sm"
+                      >
+                        {patient.status === 'in_consultation' ? 'Monitor' : 'View'} Consultation
+                      </Button>
                     </div>
                   </div>
                 </div>
-              )
-            })}
-
-            {filteredQueue.length === 0 && (
-              <div className="text-center py-8 text-gray-500">
-                {searchTerm ? 'No patients found matching your search' : 'No patients in queue'}
-              </div>
+              ))
             )}
           </div>
         </CardContent>

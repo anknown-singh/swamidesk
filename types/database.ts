@@ -394,26 +394,6 @@ export interface Database {
           updated_at?: string
         }
       }
-      pharmacy_issues: {
-        Row: {
-          id: string
-          medicine_id: string
-          quantity: number
-          created_at: string
-        }
-        Insert: {
-          id?: string
-          medicine_id: string
-          quantity: number
-          created_at?: string
-        }
-        Update: {
-          id?: string
-          medicine_id?: string
-          quantity?: number
-          created_at?: string
-        }
-      }
       security_audit_log: {
         Row: {
           id: string

@@ -1,224 +1,479 @@
-'use client'
+"use client";
 
-import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { 
-  CalendarIcon, 
+import { useState, useEffect, useCallback } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  CalendarIcon,
   ClockIcon,
   UserCheckIcon,
   StethoscopeIcon,
   AlertCircleIcon,
   CheckCircleIcon,
   PlayIcon,
-  ClipboardListIcon
-} from 'lucide-react'
-import { RoleBasedCalendar } from '@/components/appointments/role-based-calendar'
-import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
-import type { Appointment } from '@/lib/types'
+  ClipboardListIcon,
+  HistoryIcon,
+} from "lucide-react";
+import { RoleBasedCalendar } from "@/components/appointments/role-based-calendar";
+import { createAuthenticatedClient } from "@/lib/supabase/authenticated-client";
+import type { Appointment } from "@/lib/types";
+import { useRouter } from "next/navigation";
+import { useAuth } from "@/contexts/auth-context";
 
 interface DoctorStats {
-  todayAppointments: number
-  upcomingAppointments: number
-  completedToday: number
-  averageConsultationTime: number
-  nextAppointment: Appointment | null
-  patientsSeen: number
+  todayAppointments: number;
+  upcomingAppointments: number;
+  completedToday: number;
+  averageConsultationTime: number;
+  nextAppointment: Appointment | null;
+  patientsSeen: number;
 }
 
 export default function DoctorCalendarPage() {
-  const [doctorId, setDoctorId] = useState<string>('')
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
+  const router = useRouter();
+  const { user, isAuthenticated } = useAuth();
   const [stats, setStats] = useState<DoctorStats>({
     todayAppointments: 0,
     upcomingAppointments: 0,
     completedToday: 0,
     averageConsultationTime: 30,
     nextAppointment: null,
-    patientsSeen: 0
-  })
-  const [loading, setLoading] = useState(true)
+    patientsSeen: 0,
+  });
+  const [loading, setLoading] = useState(true);
 
-  // Get current doctor ID from localStorage/auth
-  useEffect(() => {
-    const userData = localStorage.getItem('swamicare_user')
-    if (userData) {
-      const user = JSON.parse(userData)
-      if (user.role === 'doctor') {
-        setDoctorId(user.id)
-      }
+  // Get current doctor ID from auth context
+  const doctorId = user?.role === "doctor" ? user.id : "";
+
+  // Fetch doctor-specific statistics function that can be reused
+  // Wrapped in useCallback to prevent infinite re-renders
+  const fetchStats = useCallback(async () => {
+    if (!doctorId) return;
+
+    const supabase = createAuthenticatedClient();
+    try {
+      const today = new Date().toISOString().split("T")[0]!;
+      const now = new Date();
+      const currentTime = now.toTimeString().slice(0, 5);
+
+      // Get today's appointments for this doctor
+      const { data: todayAppointments } = await supabase
+        .from("appointments")
+        .select(
+          `
+          *,
+          patients(id, full_name, phone)
+        `
+        )
+        .eq("doctor_id", doctorId)
+        .eq("scheduled_date", today)
+        .order("scheduled_time");
+
+      // Get upcoming appointments (next 7 days)
+      const weekEnd = new Date();
+      weekEnd.setDate(weekEnd.getDate() + 7);
+
+      const { data: upcomingAppointments } = await supabase
+        .from("appointments")
+        .select(
+          `
+          *,
+          patients(id, full_name, phone)
+        `
+        )
+        .eq("doctor_id", doctorId)
+        .gte("scheduled_date", today)
+        .lte("scheduled_date", weekEnd.toISOString().split("T")[0])
+        .in("status", ["scheduled", "confirmed", "arrived"])
+        .order("scheduled_date")
+        .order("scheduled_time");
+
+      const todayTotal = todayAppointments?.length || 0;
+      const upcomingTotal = upcomingAppointments?.length || 0;
+      const completedToday =
+        todayAppointments?.filter((apt) => apt.status === "completed").length ||
+        0;
+
+      // Find next appointment - Fix time comparison logic
+      const nextAppointment =
+        todayAppointments?.find((apt) => {
+          // Convert times to comparable format (remove seconds if present)
+          const aptTime = apt.scheduled_time.split(":").slice(0, 2).join(":");
+          const currTime = currentTime.split(":").slice(0, 2).join(":");
+          return (
+            aptTime >= currTime &&
+            ["scheduled", "confirmed", "arrived"].includes(apt.status)
+          );
+        }) ||
+        upcomingAppointments?.find(
+          (apt) =>
+            apt.scheduled_date > today &&
+            ["scheduled", "confirmed", "arrived"].includes(apt.status)
+        ) ||
+        null;
+
+      // Calculate average consultation time for completed appointments
+      const completedAppointments =
+        todayAppointments?.filter((apt) => apt.status === "completed") || [];
+      const avgTime =
+        completedAppointments.length > 0
+          ? Math.round(
+              completedAppointments.reduce(
+                (sum, apt) => sum + (apt.duration || 30),
+                0
+              ) / completedAppointments.length
+            )
+          : 30;
+
+      // Count unique patients seen today - only count completed appointments
+      const uniquePatients = new Set(
+        todayAppointments
+          ?.filter((apt) => apt.status === "completed")
+          .map((apt) => apt.patient_id)
+      ).size;
+
+      setStats({
+        todayAppointments: todayTotal,
+        upcomingAppointments: upcomingTotal,
+        completedToday,
+        averageConsultationTime: avgTime,
+        nextAppointment: nextAppointment
+          ? {
+              ...nextAppointment,
+              patient: nextAppointment.patients
+                ? {
+                    id: nextAppointment.patients.id,
+                    name: nextAppointment.patients.full_name,
+                    mobile: nextAppointment.patients.phone,
+                    dob: null,
+                    gender: null,
+                    address: null,
+                    email: null,
+                    emergency_contact: null,
+                    created_by: nextAppointment.created_by,
+                    created_at: nextAppointment.created_at,
+                    updated_at: nextAppointment.updated_at,
+                  }
+                : undefined,
+            }
+          : null,
+        patientsSeen: uniquePatients,
+      });
+    } catch (error) {
+      console.error("Error fetching doctor stats:", error);
+    } finally {
+      setLoading(false);
     }
-  }, [])
+  }, [doctorId]); // Only depend on doctorId, not the entire function
 
   // Fetch doctor-specific statistics
   useEffect(() => {
-    if (!doctorId) return
+    if (!doctorId) return;
 
-    const fetchStats = async () => {
-      const supabase = createAuthenticatedClient()
-      try {
-        const today = new Date().toISOString().split('T')[0]!
-        const now = new Date()
-        const currentTime = now.toTimeString().slice(0, 5)
+    fetchStats();
 
-        // Get today's appointments for this doctor
-        const { data: todayAppointments } = await supabase
-          .from('appointments')
-          .select(`
-            *,
-            patients(id, full_name, phone)
-          `)
-          .eq('doctor_id', doctorId)
-          .eq('scheduled_date', today)
-          .order('scheduled_time')
-
-        // Get upcoming appointments (next 7 days)
-        const weekEnd = new Date()
-        weekEnd.setDate(weekEnd.getDate() + 7)
-        
-        const { data: upcomingAppointments } = await supabase
-          .from('appointments')
-          .select(`
-            *,
-            patients(id, full_name, phone)
-          `)
-          .eq('doctor_id', doctorId)
-          .gte('scheduled_date', today)
-          .lte('scheduled_date', weekEnd.toISOString().split('T')[0])
-          .in('status', ['scheduled', 'confirmed', 'arrived'])
-          .order('scheduled_date')
-          .order('scheduled_time')
-
-        const todayTotal = todayAppointments?.length || 0
-        const upcomingTotal = upcomingAppointments?.length || 0
-        const completedToday = todayAppointments?.filter(apt => apt.status === 'completed').length || 0
-        
-        // Find next appointment
-        const nextAppointment = todayAppointments?.find(apt => 
-          apt.scheduled_time > currentTime && ['scheduled', 'confirmed', 'arrived'].includes(apt.status)
-        ) || upcomingAppointments?.find(apt => 
-          apt.scheduled_date > today && ['scheduled', 'confirmed', 'arrived'].includes(apt.status)
-        ) || null
-
-        // Calculate average consultation time for completed appointments
-        const completedAppointments = todayAppointments?.filter(apt => apt.status === 'completed') || []
-        const avgTime = completedAppointments.length > 0 
-          ? Math.round(completedAppointments.reduce((sum, apt) => sum + (apt.duration || 30), 0) / completedAppointments.length)
-          : 30
-
-        // Count unique patients seen today
-        const uniquePatients = new Set(
-          todayAppointments
-            ?.filter(apt => ['completed', 'in_progress'].includes(apt.status))
-            .map(apt => apt.patient_id)
-        ).size
-
-        setStats({
-          todayAppointments: todayTotal,
-          upcomingAppointments: upcomingTotal,
-          completedToday,
-          averageConsultationTime: avgTime,
-          nextAppointment: nextAppointment ? {
-            ...nextAppointment,
-            patient: nextAppointment.patients ? {
-              id: nextAppointment.patients.id,
-              name: nextAppointment.patients.full_name,
-              mobile: nextAppointment.patients.phone,
-              dob: null,
-              gender: null,
-              address: null,
-              email: null,
-              emergency_contact: null,
-              created_by: nextAppointment.created_by,
-              created_at: nextAppointment.created_at,
-              updated_at: nextAppointment.updated_at
-            } : undefined
-          } : null,
-          patientsSeen: uniquePatients
-        })
-      } catch (error) {
-        console.error('Error fetching doctor stats:', error)
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    fetchStats()
-    
     // Refresh stats every 2 minutes
-    const interval = setInterval(fetchStats, 120000)
-    return () => clearInterval(interval)
-  }, [doctorId])
+    const interval = setInterval(fetchStats, 120000);
+    return () => clearInterval(interval);
+  }, [doctorId, fetchStats]); // fetchStats is now stable due to useCallback
 
   const handleAppointmentSelect = (appointment: Appointment) => {
-    setSelectedAppointment(appointment)
-    console.log('Selected appointment:', appointment)
-  }
+    // Navigate to OPD workflow for the patient
+    if (appointment.patient_id) {
+      router.push(`/doctor/opd?patientId=${appointment.patient_id}`);
+    } else {
+      console.warn("No patient_id found for appointment:", appointment);
+      // Fallback to appointment details if patient_id is missing
+      router.push(`/doctor/appointments/${appointment.id}`);
+    }
+  };
 
   const handleStartConsultation = async (appointment: Appointment) => {
-    const supabase = createAuthenticatedClient()
-    try {
-      const { error } = await supabase
-        .from('appointments')
-        .update({ status: 'in_progress' })
-        .eq('id', appointment.id)
+    const supabase = createAuthenticatedClient();
 
-      if (error) throw error
-      
-      console.log('Consultation started:', appointment.id)
-      // Could redirect to consultation interface
+    // Add loading state to prevent multiple clicks
+    if (loading) return;
+
+    setLoading(true);
+
+    try {
+      // Update appointment status to in_progress
+      const { error } = await supabase
+        .from("appointments")
+        .update({
+          status: "in_progress",
+          confirmed_at: new Date().toISOString(),
+        })
+        .eq("id", appointment.id);
+
+      if (error) {
+        console.error("Database error:", error);
+        throw error;
+      }
+
+      console.log("Consultation started successfully:", appointment.id);
+
+      // Navigate to OPD workflow page with patient ID
+      console.log(
+        "🔄 Navigating to OPD workflow for patient:",
+        appointment.patient_id
+      );
+      router.push(`/doctor/opd?patientId=${appointment.patient_id}`);
+
+      // Refresh stats from database to get accurate data
+      await fetchStats();
     } catch (error) {
-      console.error('Error starting consultation:', error)
+      console.error("Error starting consultation:", error);
+
+      // More specific error messages based on error type
+      let errorMessage = "Failed to start consultation. Please try again.";
+
+      if (error && typeof error === "object" && "message" in error) {
+        const errorMsg = error.message as string;
+        if (errorMsg.includes("permission")) {
+          errorMessage =
+            "You do not have permission to start this consultation.";
+        } else if (errorMsg.includes("network")) {
+          errorMessage =
+            "Network error. Please check your connection and try again.";
+        } else if (errorMsg.includes("not found")) {
+          errorMessage =
+            "Appointment not found. It may have been modified by another user.";
+        }
+      }
+
+      alert(errorMessage);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   const handleCompleteAppointment = async (appointment: Appointment) => {
-    const supabase = createAuthenticatedClient()
+    const supabase = createAuthenticatedClient();
+
+    // Add loading state to prevent multiple clicks
+    if (loading) return;
+
+    setLoading(true);
+
     try {
       const { error } = await supabase
-        .from('appointments')
-        .update({ 
-          status: 'completed',
-          // Could add completion timestamp, notes, etc.
+        .from("appointments")
+        .update({
+          status: "completed",
+          updated_at: new Date().toISOString(),
         })
-        .eq('id', appointment.id)
+        .eq("id", appointment.id);
 
-      if (error) throw error
-      
-      console.log('Appointment completed:', appointment.id)
-      // Could redirect to prescription/summary form
+      if (error) {
+        console.error("Database error:", error);
+        throw error;
+      }
+
+      console.log("Appointment completed:", appointment.id);
+
+      alert("Appointment completed successfully!");
+
+      // Refresh stats from database to get accurate next appointment and statistics
+      await fetchStats();
+
+      // Optionally redirect to prescription/summary form
+      // router.push(`/doctor/prescriptions/new?appointmentId=${appointment.id}`)
     } catch (error) {
-      console.error('Error completing appointment:', error)
+      console.error("Error completing appointment:", error);
+
+      let errorMessage = "Failed to complete appointment. Please try again.";
+
+      if (error && typeof error === "object" && "message" in error) {
+        const errorMsg = error.message as string;
+        if (errorMsg.includes("permission")) {
+          errorMessage =
+            "You do not have permission to complete this appointment.";
+        } else if (errorMsg.includes("network")) {
+          errorMessage =
+            "Network error. Please check your connection and try again.";
+        }
+      }
+
+      alert(errorMessage);
+    } finally {
+      setLoading(false);
     }
-  }
+  };
 
   const handleMarkArrived = async (appointment: Appointment) => {
-    const supabase = createAuthenticatedClient()
+    const supabase = createAuthenticatedClient();
+
+    // Add loading state to prevent multiple clicks
+    if (loading) return;
+
+    setLoading(true);
+
     try {
       const { error } = await supabase
-        .from('appointments')
-        .update({ status: 'arrived' })
-        .eq('id', appointment.id)
+        .from("appointments")
+        .update({
+          status: "arrived",
+          confirmed_at: new Date().toISOString(),
+        })
+        .eq("id", appointment.id);
 
-      if (error) throw error
-      
-      console.log('Patient marked as arrived:', appointment.id)
+      if (error) {
+        console.error("Database error:", error);
+        throw error;
+      }
+
+      console.log("Patient marked as arrived:", appointment.id);
+
+      alert("Patient marked as arrived successfully!");
+
+      // Refresh stats from database to get accurate data
+      await fetchStats();
     } catch (error) {
-      console.error('Error marking patient as arrived:', error)
+      console.error("Error marking patient as arrived:", error);
+
+      // More specific error messages
+      let errorMessage = "Failed to mark patient as arrived. Please try again.";
+
+      if (error && typeof error === "object" && "message" in error) {
+        const errorMsg = error.message as string;
+        if (errorMsg.includes("permission")) {
+          errorMessage =
+            "You do not have permission to update this appointment.";
+        } else if (errorMsg.includes("network")) {
+          errorMessage =
+            "Network error. Please check your connection and try again.";
+        } else if (errorMsg.includes("not found")) {
+          errorMessage =
+            "Appointment not found. It may have been modified by another user.";
+        }
+      }
+
+      alert(errorMessage);
+    } finally {
+      setLoading(false);
     }
+  };
+
+  const handleViewPatientHistory = (patientId: string) => {
+    // Navigate to patient history page
+    router.push(`/doctor/patients/${patientId}`);
+  };
+
+  const handleViewPrescriptions = () => {
+    router.push("/doctor/prescriptions");
+  };
+
+  const handleViewAvailability = () => {
+    router.push("/doctor/availability");
+  };
+
+  const handleViewPatientRecords = () => {
+    router.push("/doctor/patients");
+  };
+
+  const handleSlotSelect = (date: string, time: string, doctorId?: string) => {
+    console.log("📅 Available slot selected:", { date, time, doctorId });
+    // For doctor view, navigate to book appointment with doctor pre-selected
+    const params = new URLSearchParams({
+      date,
+      time,
+      doctorId: doctorId || user?.id || "",
+    });
+    router.push(`/book-appointment?${params.toString()}`);
+  };
+
+  const handleEditAppointment = (appointment: Appointment) => {
+    console.log("📝 Edit appointment:", appointment.id);
+    // Navigate to appointment workflow based on type
+    if (
+      appointment.appointment_type === "treatment" ||
+      appointment.appointment_type === "procedure"
+    ) {
+      router.push(`/doctor/appointments/${appointment.id}/treatment`);
+    } else {
+      router.push(`/doctor/appointments/${appointment.id}/consultation`);
+    }
+  };
+
+  const handleBookAppointment = () => {
+    console.log("📅 Navigating to book appointment page");
+    router.push(`/book-appointment?doctorId=${user?.id || ""}`);
+  };
+
+  const handleApproveAppointment = async (appointment: Appointment) => {
+    const supabase = createAuthenticatedClient();
+    try {
+      const { error } = await supabase
+        .from("appointments")
+        .update({ status: "confirmed" })
+        .eq("id", appointment.id);
+
+      if (error) throw error;
+
+      console.log("Appointment approved:", appointment.id);
+      await fetchStats(); // Refresh data
+    } catch (error) {
+      console.error("Error approving appointment:", error);
+    }
+  };
+
+  const handleCancelAppointment = async (appointment: Appointment) => {
+    if (
+      !confirm(
+        `Cancel appointment for ${appointment.patient?.name || "this patient"}?`
+      )
+    )
+      return;
+
+    const supabase = createAuthenticatedClient();
+    try {
+      const { error } = await supabase
+        .from("appointments")
+        .update({ status: "cancelled" })
+        .eq("id", appointment.id);
+
+      if (error) throw error;
+
+      console.log("Appointment cancelled:", appointment.id);
+      await fetchStats(); // Refresh data
+    } catch (error) {
+      console.error("Error cancelling appointment:", error);
+    }
+  };
+
+  // Show loading state while auth is being determined
+  if (!isAuthenticated || !user) {
+    return (
+      <div className="flex items-center justify-center min-h-[400px]">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
   }
 
-  if (!doctorId) {
+  // Check if user is a doctor (this is handled by the layout, but keeping as backup)
+  if (user.role !== "doctor") {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="text-center">
           <AlertCircleIcon className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
           <h3 className="text-lg font-medium mb-2">Access Denied</h3>
-          <p className="text-muted-foreground">Please log in as a doctor to view this calendar.</p>
+          <p className="text-muted-foreground">
+            This page is only accessible to doctors.
+          </p>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -233,12 +488,18 @@ export default function DoctorCalendarPage() {
         </div>
         <div className="flex items-center gap-2">
           {stats.nextAppointment && (
-            <Button 
+            <Button
               onClick={() => handleStartConsultation(stats.nextAppointment!)}
-              disabled={stats.nextAppointment.status === 'in_progress'}
+              disabled={
+                stats.nextAppointment.status === "in_progress" || loading
+              }
             >
               <PlayIcon className="h-4 w-4 mr-2" />
-              {stats.nextAppointment.status === 'in_progress' ? 'In Progress' : 'Start Next'}
+              {loading
+                ? "Starting..."
+                : stats.nextAppointment.status === "in_progress"
+                ? "In Progress"
+                : "Start Next"}
             </Button>
           )}
         </div>
@@ -252,66 +513,80 @@ export default function DoctorCalendarPage() {
             <CalendarIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : stats.todayAppointments}</div>
+            <div className="text-2xl font-bold">
+              {loading ? "..." : stats.todayAppointments}
+            </div>
             <p className="text-xs text-muted-foreground">appointments</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Upcoming</CardTitle>
             <ClockIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : stats.upcomingAppointments}</div>
+            <div className="text-2xl font-bold">
+              {loading ? "..." : stats.upcomingAppointments}
+            </div>
             <p className="text-xs text-muted-foreground">this week</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Completed</CardTitle>
             <CheckCircleIcon className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold text-green-600">{loading ? '...' : stats.completedToday}</div>
+            <div className="text-2xl font-bold text-green-600">
+              {loading ? "..." : stats.completedToday}
+            </div>
             <p className="text-xs text-muted-foreground">today</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Patients</CardTitle>
             <UserCheckIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : stats.patientsSeen}</div>
+            <div className="text-2xl font-bold">
+              {loading ? "..." : stats.patientsSeen}
+            </div>
             <p className="text-xs text-muted-foreground">seen today</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Avg Time</CardTitle>
             <StethoscopeIcon className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{loading ? '...' : stats.averageConsultationTime}m</div>
+            <div className="text-2xl font-bold">
+              {loading ? "..." : stats.averageConsultationTime}m
+            </div>
             <p className="text-xs text-muted-foreground">per patient</p>
           </CardContent>
         </Card>
-        
+
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Status</CardTitle>
-            <div className={`h-4 w-4 rounded-full ${stats.nextAppointment ? 'bg-green-500' : 'bg-gray-400'}`} />
+            <div
+              className={`h-4 w-4 rounded-full ${
+                stats.nextAppointment ? "bg-green-500" : "bg-gray-400"
+              }`}
+            />
           </CardHeader>
           <CardContent>
             <div className="text-sm font-bold">
-              {stats.nextAppointment ? 'Ready' : 'Free'}
+              {stats.nextAppointment ? "Ready" : "Free"}
             </div>
             <p className="text-xs text-muted-foreground">
-              {stats.nextAppointment ? 'next patient' : 'no pending'}
+              {stats.nextAppointment ? "next patient" : "no pending"}
             </p>
           </CardContent>
         </Card>
@@ -325,8 +600,13 @@ export default function DoctorCalendarPage() {
             userRole="doctor"
             userId={doctorId}
             onAppointmentSelect={handleAppointmentSelect}
+            onSlotSelect={handleSlotSelect}
+            onBookAppointment={handleBookAppointment}
+            onEditAppointment={handleEditAppointment}
+            onApproveAppointment={handleApproveAppointment}
+            onCancelAppointment={handleCancelAppointment}
             viewMode="week"
-            readonly={true}
+            readonly={false}
           />
         </div>
 
@@ -341,57 +621,86 @@ export default function DoctorCalendarPage() {
                   Next Appointment
                 </CardTitle>
                 <CardDescription>
-                  {stats.nextAppointment.scheduled_date === new Date().toISOString().split('T')[0] 
-                    ? 'Today' 
-                    : new Date(stats.nextAppointment.scheduled_date).toLocaleDateString()
-                  } at {stats.nextAppointment.scheduled_time}
+                  {stats.nextAppointment.scheduled_date ===
+                  new Date().toISOString().split("T")[0]
+                    ? "Today"
+                    : new Date(
+                        stats.nextAppointment.scheduled_date
+                      ).toLocaleDateString()}{" "}
+                  at {stats.nextAppointment.scheduled_time}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h4 className="font-medium">{stats.nextAppointment.patient?.name}</h4>
-                  <p className="text-sm text-muted-foreground">{stats.nextAppointment.patient?.mobile}</p>
+                  <h4 className="font-medium">
+                    {stats.nextAppointment.patient?.name}
+                  </h4>
+                  <p className="text-sm text-muted-foreground">
+                    {stats.nextAppointment.patient?.mobile}
+                  </p>
                   <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="outline">{stats.nextAppointment.status}</Badge>
-                    <Badge variant="outline">{stats.nextAppointment.appointment_type}</Badge>
+                    <Badge variant="outline">
+                      {stats.nextAppointment.status}
+                    </Badge>
+                    <Badge variant="outline">
+                      {stats.nextAppointment.appointment_type}
+                    </Badge>
                   </div>
                 </div>
-                
+
                 <div className="space-y-2">
-                  {stats.nextAppointment.status === 'scheduled' && (
-                    <Button 
-                      size="sm" 
+                  {stats.nextAppointment.status === "scheduled" && (
+                    <Button
+                      size="sm"
                       className="w-full"
                       onClick={() => handleMarkArrived(stats.nextAppointment!)}
+                      disabled={loading}
                     >
                       <UserCheckIcon className="h-4 w-4 mr-2" />
-                      Mark as Arrived
+                      {loading ? "Marking..." : "Mark as Arrived"}
                     </Button>
                   )}
-                  
-                  {stats.nextAppointment.status === 'arrived' && (
-                    <Button 
-                      size="sm" 
+
+                  {stats.nextAppointment.status === "arrived" && (
+                    <Button
+                      size="sm"
                       className="w-full"
-                      onClick={() => handleStartConsultation(stats.nextAppointment!)}
+                      onClick={() =>
+                        handleStartConsultation(stats.nextAppointment!)
+                      }
+                      disabled={loading}
                     >
                       <PlayIcon className="h-4 w-4 mr-2" />
-                      Start Consultation
+                      {loading ? "Starting..." : "Start Consultation"}
                     </Button>
                   )}
-                  
-                  {stats.nextAppointment.status === 'in_progress' && (
-                    <Button 
-                      size="sm" 
+
+                  {stats.nextAppointment.status === "in_progress" && (
+                    <Button
+                      size="sm"
                       className="w-full"
-                      onClick={() => handleCompleteAppointment(stats.nextAppointment!)}
+                      onClick={() =>
+                        handleCompleteAppointment(stats.nextAppointment!)
+                      }
+                      disabled={loading}
                     >
                       <CheckCircleIcon className="h-4 w-4 mr-2" />
-                      Complete
+                      {loading ? "Completing..." : "Complete"}
                     </Button>
                   )}
-                  
-                  <Button variant="outline" size="sm" className="w-full">
+
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="w-full"
+                    onClick={() =>
+                      handleViewPatientHistory(
+                        stats.nextAppointment?.patient_id || ""
+                      )
+                    }
+                    disabled={!stats.nextAppointment?.patient_id}
+                  >
+                    <HistoryIcon className="h-4 w-4 mr-2" />
                     View Patient History
                   </Button>
                 </div>
@@ -406,15 +715,30 @@ export default function DoctorCalendarPage() {
               <CardDescription>Common tasks</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
-              <Button variant="outline" className="w-full justify-start" size="sm">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                size="sm"
+                onClick={handleViewPrescriptions}
+              >
                 <ClipboardListIcon className="h-4 w-4 mr-2" />
                 View Prescriptions
               </Button>
-              <Button variant="outline" className="w-full justify-start" size="sm">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                size="sm"
+                onClick={handleViewAvailability}
+              >
                 <CalendarIcon className="h-4 w-4 mr-2" />
                 My Availability
               </Button>
-              <Button variant="outline" className="w-full justify-start" size="sm">
+              <Button
+                variant="outline"
+                className="w-full justify-start"
+                size="sm"
+                onClick={handleViewPatientRecords}
+              >
                 <UserCheckIcon className="h-4 w-4 mr-2" />
                 Patient Records
               </Button>
@@ -431,63 +755,30 @@ export default function DoctorCalendarPage() {
               <div className="flex items-center justify-between text-sm">
                 <span>Completion Rate</span>
                 <Badge variant="outline">
-                  {stats.todayAppointments > 0 
-                    ? Math.round((stats.completedToday / stats.todayAppointments) * 100)
-                    : 0}%
+                  {stats.todayAppointments > 0
+                    ? Math.round(
+                        (stats.completedToday / stats.todayAppointments) * 100
+                      )
+                    : 0}
+                  %
                 </Badge>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span>On-time Performance</span>
-                <Badge variant="outline" className="text-green-600">95%</Badge>
+                <Badge variant="outline" className="text-green-600">
+                  95%
+                </Badge>
               </div>
               <div className="flex items-center justify-between text-sm">
                 <span>Patient Satisfaction</span>
-                <Badge variant="outline" className="text-blue-600">4.8/5</Badge>
+                <Badge variant="outline" className="text-blue-600">
+                  4.8/5
+                </Badge>
               </div>
             </CardContent>
           </Card>
         </div>
       </div>
-
-      {/* Selected Appointment Details */}
-      {selectedAppointment && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Patient Appointment</CardTitle>
-            <CardDescription>
-              {selectedAppointment.scheduled_date} at {selectedAppointment.scheduled_time}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-2">
-              <div>
-                <h4 className="font-medium mb-2">Patient Information</h4>
-                <p className="text-sm">{selectedAppointment.patient?.name}</p>
-                <p className="text-xs text-muted-foreground">{selectedAppointment.patient?.mobile}</p>
-                <div className="flex items-center gap-2 mt-2">
-                  <Badge variant="outline">{selectedAppointment.status}</Badge>
-                  <Badge variant="outline">{selectedAppointment.appointment_type}</Badge>
-                  {selectedAppointment.priority && (
-                    <Badge variant="destructive">Priority</Badge>
-                  )}
-                </div>
-              </div>
-              <div>
-                <h4 className="font-medium mb-2">Appointment Details</h4>
-                <p className="text-sm">Duration: {selectedAppointment.duration} minutes</p>
-                <p className="text-sm">Type: {selectedAppointment.appointment_type}</p>
-                <p className="text-sm">Department: {selectedAppointment.department}</p>
-              </div>
-            </div>
-            {selectedAppointment.patient_notes && (
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <h4 className="font-medium mb-1">Patient Notes</h4>
-                <p className="text-sm text-blue-900">{selectedAppointment.patient_notes}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
     </div>
-  )
+  );
 }

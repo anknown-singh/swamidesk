@@ -4,10 +4,10 @@ import { useState, useEffect } from 'react'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { CalendarIcon, PlusIcon, FilterIcon, SearchIcon, ClockIcon } from 'lucide-react'
-import { AppointmentCalendar } from '@/components/appointments/appointment-calendar'
-import { AppointmentBookingForm } from '@/components/appointments/appointment-booking-form'
+import { RoleBasedCalendar } from '@/components/appointments/role-based-calendar'
 import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
-import type { Appointment, AppointmentBookingForm as AppointmentBookingFormData } from '@/lib/types'
+import type { Appointment } from '@/lib/types'
+import { useRouter } from 'next/navigation'
 
 interface AppointmentStats {
   todayTotal: number
@@ -19,8 +19,7 @@ interface AppointmentStats {
 }
 
 export default function AppointmentsPage() {
-  const [showBookingForm, setShowBookingForm] = useState(false)
-  const [selectedSlot, setSelectedSlot] = useState<{ date: string, time: string, doctorId?: string } | null>(null)
+  const router = useRouter()
   const [stats, setStats] = useState<AppointmentStats>({
     todayTotal: 0,
     confirmed: 0,
@@ -67,8 +66,12 @@ export default function AppointmentsPage() {
           .from('appointments')
           .select(`
             *,
-            patients!inner(id, first_name, last_name, phone),
-            users!inner(id, full_name, department)
+            patients!inner(id, full_name, phone),
+            users!appointments_doctor_id_fkey(
+              id, 
+              full_name,
+              user_profiles!inner(department, specialization)
+            )
           `)
           .gte('scheduled_date', new Date().toISOString().split('T')[0])
           .in('status', ['scheduled', 'confirmed'])
@@ -76,9 +79,25 @@ export default function AppointmentsPage() {
           .order('scheduled_time', { ascending: true })
           .limit(3)
 
+        if (upcomingError) {
+          console.error('Error fetching upcoming appointments:', upcomingError) // Debug error
+        }
+        
         if (!upcomingError && upcoming) {
+          console.log('Raw upcoming appointments data:', upcoming) // Debug log
+          console.log('Number of appointments found:', upcoming.length) // Debug log
+          
+          // Check for the specific appointment the user mentioned
+          const userAppointment = upcoming.find(apt => apt.id === '9738ea52-6d32-4056-a472-b8f4501bf416')
+          if (userAppointment) {
+            console.log('Found user appointment:', userAppointment)
+          } else {
+            console.log('User appointment not found in results')
+          }
+          
           const mappedUpcoming = upcoming.map(apt => ({
             id: apt.id,
+            appointment_number: apt.appointment_number,
             patient_id: apt.patient_id,
             doctor_id: apt.doctor_id,
             department: apt.department,
@@ -87,44 +106,61 @@ export default function AppointmentsPage() {
             scheduled_date: apt.scheduled_date,
             scheduled_time: apt.scheduled_time,
             duration: apt.duration || 30,
+            estimated_end_time: null,
             title: apt.title,
             description: apt.description,
+            chief_complaint: null,
             notes: apt.notes,
             patient_notes: apt.patient_notes,
             priority: apt.priority || false,
             is_recurring: apt.is_recurring || false,
+            recurrence_type: null,
+            recurrence_end_date: null,
+            parent_appointment_id: null,
             reminder_sent: apt.reminder_sent || false,
             confirmation_sent: apt.confirmation_sent || false,
+            confirmed_at: null,
+            estimated_cost: null,
+            actual_cost: null,
+            arrived_at: null,
+            started_at: null,
+            completed_at: null,
+            cancelled_at: null,
+            cancellation_reason: null,
             created_by: apt.created_by,
             created_at: apt.created_at,
             updated_at: apt.updated_at,
-            patient: apt.patients ? {
+            patients: apt.patients ? {
               id: apt.patients.id,
-              name: `${apt.patients.first_name} ${apt.patients.last_name}`,
-              mobile: apt.patients.phone,
-              dob: null,
-              gender: null,
-              address: null,
-              email: null,
-              emergency_contact: null,
+              full_name: apt.patients.full_name,
+              phone: apt.patients.phone,
+              date_of_birth: apt.patients.date_of_birth || null,
+              gender: apt.patients.gender as 'male' | 'female' | 'other' | null,
+              address: apt.patients.address || null,
+              email: apt.patients.email || null,
+              emergency_contact_name: null,
+              emergency_contact_phone: apt.patients.emergency_contact_phone || null,
+              medical_history: null,
+              allergies: null,
+              notes: null,
               created_by: apt.created_by,
               created_at: apt.patients.created_at || apt.created_at,
               updated_at: apt.patients.updated_at || apt.updated_at
             } : undefined,
-            doctor: apt.users ? {
+            users: apt.users ? {
               id: apt.users.id,
               role: 'doctor' as const,
               full_name: apt.users.full_name,
-              email: '',
-              phone: null,
-              department: apt.users.department,
-              specialization: null,
+              email: apt.users.email || '',
+              phone: apt.users.phone,
+              department: apt.users.user_profiles[0]?.department || null,
+              specialization: apt.users.user_profiles[0]?.specialization || null,
               password_hash: '',
               is_active: true,
               created_at: apt.users.created_at || apt.created_at,
               updated_at: apt.users.updated_at || apt.updated_at
             } : undefined
-          }))
+          })) as Appointment[]
           setUpcomingAppointments(mappedUpcoming)
         }
       } catch (error) {
@@ -142,41 +178,25 @@ export default function AppointmentsPage() {
   }, [])
 
   const handleBookAppointment = () => {
-    setShowBookingForm(true)
-    setSelectedSlot(null)
+    router.push('/receptionist/appointments/new')
   }
 
   const handleSlotSelect = (date: string, time: string, doctorId?: string) => {
-    setSelectedSlot({ date, time, doctorId: doctorId || undefined })
-    setShowBookingForm(true)
+    const params = new URLSearchParams({
+      date,
+      time,
+      ...(doctorId && { doctorId })
+    })
+    router.push(`/receptionist/appointments/new?${params.toString()}`)
   }
 
   const handleAppointmentSelect = (appointment: Appointment) => {
-    // Could open appointment details modal here
-    console.log('Selected appointment:', appointment)
+    // Navigate to appointment details for receptionist workflow
+    router.push(`/receptionist/appointments/${appointment.id}`)
   }
 
-  const handleBookingSubmit = (formData: AppointmentBookingFormData) => {
-    console.log('Booking appointment:', formData)
-    // Here you would typically submit to your API
-    setShowBookingForm(false)
-    setSelectedSlot(null)
-  }
-
-  const handleBookingCancel = () => {
-    setShowBookingForm(false)
-    setSelectedSlot(null)
-  }
-
-  const getInitialBookingData = () => {
-    if (selectedSlot) {
-      return {
-        scheduled_date: selectedSlot.date,
-        scheduled_time: selectedSlot.time,
-        doctor_id: selectedSlot.doctorId || '',
-      }
-    }
-    return {}
+  const handleEditAppointment = (appointment: Appointment) => {
+    router.push(`/receptionist/appointments/${appointment.id}`)
   }
 
   return (
@@ -256,23 +276,18 @@ export default function AppointmentsPage() {
         </Card>
       </div>
 
-      {/* Appointment Booking Form */}
-      {showBookingForm && (
-        <AppointmentBookingForm
-          onSubmit={handleBookingSubmit}
-          onCancel={handleBookingCancel}
-          initialData={getInitialBookingData()}
-        />
-      )}
 
       {/* Main Content Area */}
       <div className="grid gap-6 md:grid-cols-3">
         {/* Calendar/Schedule View */}
         <div className="md:col-span-2">
-          <AppointmentCalendar
+          <RoleBasedCalendar
+            userRole="receptionist"
             onAppointmentSelect={handleAppointmentSelect}
             onSlotSelect={handleSlotSelect}
             onBookAppointment={handleBookAppointment}
+            onEditAppointment={handleEditAppointment}
+            viewMode="week"
           />
         </div>
 
@@ -333,7 +348,7 @@ export default function AppointmentsPage() {
                       }`} />
                     </div>
                     <div className="text-muted-foreground">
-                      {appointment.patient?.name} - {appointment.doctor?.full_name}
+                      {appointment.patients?.full_name} - {appointment.users?.full_name}
                     </div>
                     <div className="text-xs text-muted-foreground capitalize">
                       {appointment.appointment_type} • {appointment.duration}min
@@ -355,17 +370,17 @@ export default function AppointmentsPage() {
                       >
                         Edit
                       </Button>
-                      {appointment.patient && (
+                      {appointment.patients && (
                         <Button 
                           size="sm" 
                           variant="outline" 
                           className="text-xs h-6"
                           onClick={() => {
-                            if (appointment.patient?.mobile) {
-                              window.open(`tel:${appointment.patient.mobile}`)
+                            if (appointment.patients?.phone) {
+                              window.open(`tel:${appointment.patients.phone}`)
                             }
                           }}
-                          disabled={!appointment.patient.mobile}
+                          disabled={!appointment.patients?.phone}
                         >
                           Call
                         </Button>

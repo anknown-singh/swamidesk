@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
-import { useUser } from '@/hooks/use-user'
+import { useAuth } from '@/contexts/auth-context'
 import {
   realtimeNotificationSystem,
   type Notification,
@@ -27,7 +27,7 @@ interface NotificationProviderProps {
 }
 
 export function NotificationProvider({ children }: NotificationProviderProps) {
-  const { user } = useUser()
+  const { user } = useAuth()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [isLoading, setIsLoading] = useState(true)
@@ -174,7 +174,7 @@ export function NotificationProvider({ children }: NotificationProviderProps) {
       unsubscribeUser?.()
       unsubscribeRole?.()
     }
-  }, [user?.id, user?.role, handleNewNotification, refreshNotifications, requestNotificationPermission])
+  }, [user?.id, user?.role]) // Fixed: Removed function dependencies that cause infinite loops
 
   const contextValue: NotificationContextType = {
     notifications,

@@ -53,7 +53,7 @@ export function withAPIProtection(
             { status: 401 }
           )
         }
-        userId = authResult.userId
+        userId = authResult.userId || null
       }
 
       // 3. Authorization check

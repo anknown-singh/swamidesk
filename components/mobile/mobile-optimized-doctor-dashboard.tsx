@@ -11,7 +11,7 @@ import {
 import { MobileCard, MobileMetricCard, MobileListCard } from './mobile-card'
 import { TouchButton } from './mobile-touch-interactions'
 import { createClient } from '@/lib/supabase/client'
-import { useUser } from '@/hooks/use-user'
+import { useAuth } from '@/contexts/auth-context'
 import { Skeleton } from '@/components/ui/skeleton'
 import { 
   Users, 
@@ -55,7 +55,7 @@ export function MobileOptimizedDoctorDashboard() {
   const [refreshing, setRefreshing] = useState(false)
   const [error, setError] = useState<string | null>(null)
   
-  const { user } = useUser()
+  const { user } = useAuth()
   const supabase = createClient()
 
   const fetchDashboardData = useCallback(async (isRefresh = false) => {
@@ -72,13 +72,13 @@ export function MobileOptimizedDoctorDashboard() {
         return
       }
 
-      // Simplified data fetching for mobile
+      // Fetch all data in parallel with individual error handling
       const [
         todayVisitsResult,
         queueResult,
         prescriptionsResult,
         servicesResult
-      ] = await Promise.all([
+      ] = await Promise.allSettled([
         supabase
           .from('visits')
           .select('id, status')
@@ -93,7 +93,7 @@ export function MobileOptimizedDoctorDashboard() {
             priority,
             status,
             checked_in_at,
-            patients!inner(name, mobile)
+            patients!inner(full_name, phone)
           `)
           .eq('doctor_id', user.id)
           .eq('visit_date', new Date().toISOString().split('T')[0])
@@ -114,42 +114,71 @@ export function MobileOptimizedDoctorDashboard() {
           .gte('created_at', new Date().toISOString().split('T')[0])
       ])
 
-      // Process data
-      const todayVisits = todayVisitsResult.data || []
-      const completed = todayVisits.filter(v => v.status === 'completed').length
-      const pending = todayVisits.filter(v => ['waiting', 'in_consultation', 'services_pending'].includes(v.status)).length
+      // Process data with error handling and validation
+      const todayVisits = (todayVisitsResult.status === 'fulfilled' ? todayVisitsResult.value.data : []) || []
+      const validVisits = Array.isArray(todayVisits) ? todayVisits.filter(v => v && typeof v.status === 'string') : []
+      const completed = validVisits.filter(v => v.status === 'completed').length
+      const pending = validVisits.filter(v => ['waiting', 'in_consultation', 'services_pending'].includes(v.status)).length
+
+      // Validate and set stats with type safety  
+      const queueLength = (queueResult.status === 'fulfilled' ? queueResult.value.data?.length : 0) || 0
+      const prescriptionsCount = (prescriptionsResult.status === 'fulfilled' ? prescriptionsResult.value.data?.length : 0) || 0
+      const servicesCount = (servicesResult.status === 'fulfilled' ? servicesResult.value.data?.length : 0) || 0
 
       setStats({
         todayPatients: {
-          total: todayVisits.length,
-          completed,
-          pending
+          total: Math.max(0, validVisits.length),
+          completed: Math.max(0, completed),
+          pending: Math.max(0, pending)
         },
-        queueLength: queueResult.data?.length || 0,
-        prescriptionsToday: prescriptionsResult.data?.length || 0,
-        servicesAssigned: servicesResult.data?.length || 0,
+        queueLength: Math.max(0, Number(queueLength) || 0),
+        prescriptionsToday: Math.max(0, Number(prescriptionsCount) || 0),
+        servicesAssigned: Math.max(0, Number(servicesCount) || 0),
         averageConsultationTime: 18 // Mock data
       })
 
-      // Process queue with wait times
-      const queuePatients: QueuePatient[] = queueResult.data?.map(visit => {
-        const checkedInTime = new Date(visit.checked_in_at)
+      // Process queue with error handling, validation, and wait times
+      const queueData = (queueResult.status === 'fulfilled' ? queueResult.value.data : []) || []
+      const validQueueData = Array.isArray(queueData) ? queueData.filter(visit => 
+        visit && 
+        visit.id && 
+        typeof visit.token_number === 'number' &&
+        typeof visit.status === 'string'
+      ) : []
+      
+      const queuePatients: QueuePatient[] = validQueueData.map(visit => {
+        const checkedInTime = new Date(visit.checked_in_at || new Date())
         const now = new Date()
-        const waitTime = Math.floor((now.getTime() - checkedInTime.getTime()) / (1000 * 60))
+        const waitTime = Math.max(0, Math.floor((now.getTime() - checkedInTime.getTime()) / (1000 * 60)))
         
         return {
-          id: visit.id,
-          token_number: visit.token_number,
-          patient_name: visit.patients?.[0]?.name || 'Unknown',
-          patient_mobile: visit.patients?.[0]?.mobile || '',
-          checked_in_at: visit.checked_in_at,
-          priority: visit.priority,
-          status: visit.status,
-          waitTime
+          id: String(visit.id),
+          token_number: Number(visit.token_number) || 0,
+          patient_name: visit.patients?.[0]?.full_name || 'Unknown Patient',
+          patient_mobile: visit.patients?.[0]?.phone || '',
+          checked_in_at: visit.checked_in_at || new Date().toISOString(),
+          priority: Boolean(visit.priority),
+          status: String(visit.status || 'waiting'),
+          waitTime: Math.min(waitTime, 999) // Cap wait time at 999 minutes
         }
-      }) || []
+      })
 
       setQueue(queuePatients)
+
+      // Log any failed queries for debugging
+      const failedQueries = [
+        { name: 'todayVisits', result: todayVisitsResult },
+        { name: 'queue', result: queueResult },
+        { name: 'prescriptions', result: prescriptionsResult },
+        { name: 'services', result: servicesResult }
+      ].filter(({ result }) => result.status === 'rejected')
+
+      if (failedQueries.length > 0) {
+        console.warn('Some mobile dashboard queries failed:', failedQueries.map(q => ({
+          name: q.name,
+          error: q.result.status === 'rejected' ? q.result.reason : null
+        })))
+      }
 
     } catch (error) {
       console.error('Error fetching doctor dashboard data:', error)
@@ -158,16 +187,18 @@ export function MobileOptimizedDoctorDashboard() {
       setLoading(false)
       setRefreshing(false)
     }
-  }, [user, supabase])
+  }, [user?.id]) // Fixed: Only depend on user.id, not entire user or supabase objects
 
   useEffect(() => {
-    if (user) {
+    if (user?.id) {
       fetchDashboardData()
-      // Auto-refresh every 30 seconds
-      const interval = setInterval(() => fetchDashboardData(true), 30000)
+      // Auto-refresh every 45 seconds (increased from 30s to reduce glitching)
+      const interval = setInterval(() => {
+        fetchDashboardData(true)
+      }, 45000)
       return () => clearInterval(interval)
     }
-  }, [user, fetchDashboardData])
+  }, [user?.id, fetchDashboardData]) // Removed refreshing and loading dependencies to prevent infinite loop
 
   const getTimeAgo = (dateString: string) => {
     const date = new Date(dateString)

@@ -5,16 +5,13 @@ import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { Label } from '@/components/ui/label'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Plus, Search, User, Calendar, Phone, MapPin, FileText } from 'lucide-react'
 
 interface Patient {
   id: string
-  patient_number: string
-  first_name: string
-  last_name: string
+  full_name: string
   date_of_birth: string
   gender: string
   phone: string
@@ -22,31 +19,21 @@ interface Patient {
   address: string
   emergency_contact_name: string
   emergency_contact_phone: string
+  blood_group: string
+  allergies: string[]
   medical_history: string
-  allergies: string
+  insurance_provider: string
+  insurance_number: string
+  is_active: boolean
   created_at: string
+  updated_at: string
 }
 
 export default function PatientsPage() {
   const [patients, setPatients] = useState<Patient[]>([])
   const [loading, setLoading] = useState(true)
-  const [showForm, setShowForm] = useState(false)
   const [searchTerm, setSearchTerm] = useState('')
-  const [formData, setFormData] = useState({
-    first_name: '',
-    last_name: '',
-    date_of_birth: '',
-    gender: '',
-    phone: '',
-    email: '',
-    address: '',
-    emergency_contact_name: '',
-    emergency_contact_phone: '',
-    medical_history: '',
-    allergies: ''
-  })
   const [error, setError] = useState<string | null>(null)
-  const [success, setSuccess] = useState<string | null>(null)
 
   const supabase = createClient()
   const router = useRouter()
@@ -72,53 +59,18 @@ export default function PatientsPage() {
     }
   }
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError(null)
-    setSuccess(null)
+  const handleNewPatient = () => {
+    router.push('/receptionist/patients/new')
+  }
 
-    try {
-      // Get current user from localStorage
-      const userData = localStorage.getItem('swamicare_user')
-      const user = userData ? JSON.parse(userData) : null
-
-      const { data, error } = await supabase
-        .from('patients')
-        .insert([{
-          ...formData,
-          created_by: user?.id
-        }])
-        .select()
-
-      if (error) throw error
-
-      setSuccess(`Patient registered successfully! Patient ID: ${data[0].patient_number}`)
-      setFormData({
-        first_name: '',
-        last_name: '',
-        date_of_birth: '',
-        gender: '',
-        phone: '',
-        email: '',
-        address: '',
-        emergency_contact_name: '',
-        emergency_contact_phone: '',
-        medical_history: '',
-        allergies: ''
-      })
-      setShowForm(false)
-      fetchPatients()
-    } catch (error) {
-      console.error('Error registering patient:', error)
-      setError('Failed to register patient')
-    }
+  const handlePatientClick = (patientId: string) => {
+    router.push(`/receptionist/patients/${patientId}`)
   }
 
   const filteredPatients = patients.filter(patient =>
-    (patient.first_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-    (patient.last_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-    (patient.patient_number?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
-    (patient.phone || '').includes(searchTerm)
+    (patient.full_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (patient.phone || '').includes(searchTerm) ||
+    (patient.email?.toLowerCase() || '').includes(searchTerm.toLowerCase())
   )
 
   if (loading) {
@@ -130,13 +82,13 @@ export default function PatientsPage() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 space-y-4">
       <div className="flex justify-between items-center">
         <div>
-          <h1 className="text-3xl font-bold tracking-tight">Patient Registration</h1>
-          <p className="text-muted-foreground">Manage patient information and registrations</p>
+          <h1 className="text-2xl font-bold tracking-tight">Patients</h1>
+          <p className="text-sm text-muted-foreground">Manage patient registrations</p>
         </div>
-        <Button onClick={() => setShowForm(true)} className="flex items-center gap-2">
+        <Button onClick={handleNewPatient} className="flex items-center gap-2">
           <Plus className="h-4 w-4" />
           New Patient
         </Button>
@@ -148,16 +100,6 @@ export default function PatientsPage() {
         </Alert>
       )}
 
-      {success && (
-        <Alert>
-          <AlertDescription className="flex items-center justify-between">
-            <span>{success}</span>
-            <Button size="sm" onClick={() => router.push('/receptionist/queue')}>
-              Add to Queue
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
 
       {/* Search Bar */}
       <Card>
@@ -170,7 +112,7 @@ export default function PatientsPage() {
         <CardContent>
           <div className="flex gap-4">
             <Input
-              placeholder="Search by name, patient number, or phone..."
+              placeholder="Search by name, phone, or email..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               className="max-w-md"
@@ -182,137 +124,6 @@ export default function PatientsPage() {
         </CardContent>
       </Card>
 
-      {/* Registration Form */}
-      {showForm && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Register New Patient</CardTitle>
-            <CardDescription>Enter patient information to create a new record</CardDescription>
-          </CardHeader>
-          <CardContent>
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="first_name">First Name *</Label>
-                  <Input
-                    id="first_name"
-                    value={formData.first_name}
-                    onChange={(e) => setFormData({...formData, first_name: e.target.value})}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="last_name">Last Name *</Label>
-                  <Input
-                    id="last_name"
-                    value={formData.last_name}
-                    onChange={(e) => setFormData({...formData, last_name: e.target.value})}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="date_of_birth">Date of Birth</Label>
-                  <Input
-                    id="date_of_birth"
-                    type="date"
-                    value={formData.date_of_birth}
-                    onChange={(e) => setFormData({...formData, date_of_birth: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="gender">Gender</Label>
-                  <select
-                    id="gender"
-                    value={formData.gender}
-                    onChange={(e) => setFormData({...formData, gender: e.target.value})}
-                    className="w-full p-2 border border-gray-300 rounded-md"
-                  >
-                    <option value="">Select Gender</option>
-                    <option value="male">Male</option>
-                    <option value="female">Female</option>
-                    <option value="other">Other</option>
-                  </select>
-                </div>
-                <div>
-                  <Label htmlFor="phone">Phone *</Label>
-                  <Input
-                    id="phone"
-                    value={formData.phone}
-                    onChange={(e) => setFormData({...formData, phone: e.target.value})}
-                    required
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    value={formData.email}
-                    onChange={(e) => setFormData({...formData, email: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="address">Address</Label>
-                <Input
-                  id="address"
-                  value={formData.address}
-                  onChange={(e) => setFormData({...formData, address: e.target.value})}
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="emergency_contact_name">Emergency Contact Name</Label>
-                  <Input
-                    id="emergency_contact_name"
-                    value={formData.emergency_contact_name}
-                    onChange={(e) => setFormData({...formData, emergency_contact_name: e.target.value})}
-                  />
-                </div>
-                <div>
-                  <Label htmlFor="emergency_contact_phone">Emergency Contact Phone</Label>
-                  <Input
-                    id="emergency_contact_phone"
-                    value={formData.emergency_contact_phone}
-                    onChange={(e) => setFormData({...formData, emergency_contact_phone: e.target.value})}
-                  />
-                </div>
-              </div>
-
-              <div>
-                <Label htmlFor="medical_history">Medical History</Label>
-                <textarea
-                  id="medical_history"
-                  value={formData.medical_history}
-                  onChange={(e) => setFormData({...formData, medical_history: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md h-20"
-                  placeholder="Previous medical conditions, surgeries, etc."
-                />
-              </div>
-
-              <div>
-                <Label htmlFor="allergies">Allergies</Label>
-                <textarea
-                  id="allergies"
-                  value={formData.allergies}
-                  onChange={(e) => setFormData({...formData, allergies: e.target.value})}
-                  className="w-full p-2 border border-gray-300 rounded-md h-20"
-                  placeholder="Known allergies and reactions"
-                />
-              </div>
-
-              <div className="flex gap-2">
-                <Button type="submit">Register Patient</Button>
-                <Button type="button" variant="outline" onClick={() => setShowForm(false)}>
-                  Cancel
-                </Button>
-              </div>
-            </form>
-          </CardContent>
-        </Card>
-      )}
 
       {/* Patients List */}
       <Card>
@@ -323,88 +134,83 @@ export default function PatientsPage() {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid gap-4 md:grid-cols-1 lg:grid-cols-2 xl:grid-cols-2">
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
             {filteredPatients.map((patient) => (
-              <Card key={patient.id} className="hover:shadow-md transition-shadow duration-200 border-l-4 border-l-green-500">
-                <CardContent className="p-4">
+              <Card 
+                key={patient.id} 
+                className="hover:shadow-md transition-shadow border-l-4 border-l-green-500 cursor-pointer hover:bg-gray-50"
+                onClick={() => handlePatientClick(patient.id)}
+              >
+                <CardContent className="p-3">
                   {/* Header */}
-                  <div className="flex items-center justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="bg-green-100 rounded-full p-2">
-                        <User className="h-5 w-5 text-green-600" />
+                  <div className="flex items-center justify-between mb-2">
+                    <div className="flex items-center gap-2">
+                      <div className="bg-green-100 rounded-full p-1">
+                        <User className="h-4 w-4 text-green-600" />
                       </div>
                       <div>
-                        <h3 className="font-semibold text-lg text-gray-900">
-                          {patient.first_name} {patient.last_name}
+                        <h3 className="font-semibold text-base text-gray-900">
+                          {patient.full_name}
                         </h3>
-                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-xs font-mono">
-                          {patient.patient_number}
+                        <span className="bg-blue-100 text-blue-800 px-1.5 py-0.5 rounded text-xs font-mono">
+                          ID: {patient.id.substring(0, 8)}
                         </span>
                       </div>
-                    </div>
-                    <div className="text-xs text-gray-500">
-                      {Math.floor((new Date().getTime() - new Date(patient.created_at).getTime()) / (1000 * 3600 * 24))} days ago
                     </div>
                   </div>
                   
                   {/* Contact Info Grid */}
-                  <div className="grid grid-cols-1 gap-3 mb-3">
-                    <div className="bg-gray-50 rounded-lg p-3">
-                      <div className="flex items-center gap-2 mb-1">
-                        <Calendar className="h-4 w-4 text-blue-600" />
-                        <span className="text-xs font-medium text-gray-600 uppercase">Date of Birth</span>
-                      </div>
-                      <p className="text-sm font-medium text-gray-900">
-                        {patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'Not provided'}
-                      </p>
-                      {patient.date_of_birth && (
-                        <p className="text-xs text-gray-500">
-                          Age: {Math.floor((new Date().getTime() - new Date(patient.date_of_birth).getTime()) / (1000 * 3600 * 24 * 365))} years
-                        </p>
-                      )}
+                  <div className="space-y-2 text-xs">
+                    <div className="flex items-center gap-2">
+                      <Calendar className="h-3 w-3 text-blue-600" />
+                      <span className="text-gray-600">
+                        {patient.date_of_birth ? new Date(patient.date_of_birth).toLocaleDateString() : 'DOB not provided'}
+                        {patient.date_of_birth && (
+                          <span className="text-gray-500 ml-1">
+                            ({Math.floor((new Date().getTime() - new Date(patient.date_of_birth).getTime()) / (1000 * 3600 * 24 * 365))}y)
+                          </span>
+                        )}
+                      </span>
                     </div>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          <Phone className="h-4 w-4 text-green-600" />
-                          <span className="text-xs font-medium text-gray-600 uppercase">Phone</span>
-                        </div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {patient.phone || 'Not provided'}
-                        </p>
-                      </div>
-
-                      <div className="bg-gray-50 rounded-lg p-3">
-                        <div className="flex items-center gap-2 mb-1">
-                          <MapPin className="h-4 w-4 text-red-600" />
-                          <span className="text-xs font-medium text-gray-600 uppercase">Address</span>
-                        </div>
-                        <p className="text-sm font-medium text-gray-900 line-clamp-2">
-                          {patient.address || 'Not provided'}
-                        </p>
-                      </div>
+                    <div className="flex items-center gap-2">
+                      <Phone className="h-3 w-3 text-green-600" />
+                      <span className="text-gray-900 font-medium">
+                        {patient.phone || 'No phone'}
+                      </span>
                     </div>
+
+                    {patient.address && (
+                      <div className="flex items-center gap-2">
+                        <MapPin className="h-3 w-3 text-red-600" />
+                        <span className="text-gray-600 text-xs truncate">
+                          {patient.address}
+                        </span>
+                      </div>
+                    )}
                   </div>
 
                   {/* Medical Alerts */}
                   {(patient.medical_history || patient.allergies) && (
-                    <div className="border-t pt-3">
-                      <div className="flex items-center gap-2 mb-2">
-                        <FileText className="h-4 w-4 text-orange-500" />
-                        <span className="text-xs font-semibold text-orange-800 uppercase">Medical Information</span>
+                    <div className="border-t mt-2 pt-2">
+                      <div className="flex items-center gap-1 mb-1">
+                        <FileText className="h-3 w-3 text-orange-500" />
+                        <span className="text-xs font-medium text-orange-800">Medical</span>
                       </div>
-                      <div className="space-y-2">
-                        {patient.allergies && (
-                          <div className="bg-red-50 border border-red-200 rounded p-2">
-                            <p className="text-xs font-medium text-red-800">Allergies:</p>
-                            <p className="text-sm text-red-900">{patient.allergies}</p>
+                      <div className="space-y-1">
+                        {patient.allergies && patient.allergies.length > 0 && (
+                          <div className="bg-red-50 border-l-2 border-red-200 pl-2 py-1">
+                            <p className="text-xs text-red-800">
+                              <span className="font-medium">Allergies:</span> {patient.allergies.join(', ')}
+                            </p>
                           </div>
                         )}
                         {patient.medical_history && (
-                          <div className="bg-orange-50 border border-orange-200 rounded p-2">
-                            <p className="text-xs font-medium text-orange-800">Medical History:</p>
-                            <p className="text-sm text-orange-900 line-clamp-2">{patient.medical_history}</p>
+                          <div className="bg-orange-50 border-l-2 border-orange-200 pl-2 py-1">
+                            <p className="text-xs text-orange-800">
+                              <span className="font-medium">History:</span> 
+                              <span className="line-clamp-1 ml-1">{patient.medical_history}</span>
+                            </p>
                           </div>
                         )}
                       </div>

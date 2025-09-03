@@ -2,37 +2,39 @@
 
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
-import { createClient } from '@/lib/supabase/client'
+import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, Pill, Package, Calendar, DollarSign, AlertTriangle, Plus, Minus, BarChart3, FileText } from 'lucide-react'
-import type { Medicine } from '@/lib/types'
-
-interface MedicineWithDetails extends Medicine {
-  prescriptions?: Array<{
-    id: string
-    dosage: string
-    frequency: string
-    duration: string
-    created_at: string
-    patients?: {
-      full_name: string
-    }
-    users?: {
-      full_name: string
-    }
-  }>
+import { ArrowLeft, Pill, Package, Calendar, DollarSign, AlertTriangle, Plus, Minus, BarChart3, FileText, Building2, Beaker, Shield, Clock, TrendingUp, Edit, Trash2, RefreshCw, ShoppingCart, Factory } from 'lucide-react'
+interface Medicine {
+  id: string;
+  name: string;
+  category: string;
+  manufacturer: string;
+  supplier: string | null;
+  batch_number: string | null;
+  expiry_date: string | null;
+  unit_price: string;
+  stock_quantity: number;
+  minimum_stock: number;
+  dosage_form: string;
+  strength: string | null;
+  is_active: boolean;
+  created_at: string;
+  updated_at: string;
 }
+
+// Using Medicine interface directly for now
 
 export default function MedicineDetailPage() {
   const params = useParams()
   const router = useRouter()
-  const [medicine, setMedicine] = useState<MedicineWithDetails | null>(null)
+  const [medicine, setMedicine] = useState<Medicine | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
-  const supabase = createClient()
+  const supabase = createAuthenticatedClient()
   const medicineId = params.id as string
 
   useEffect(() => {
@@ -40,14 +42,7 @@ export default function MedicineDetailPage() {
       try {
         const { data: medicineData, error: medicineError } = await supabase
           .from('medicines')
-          .select(`
-            *,
-            prescriptions(
-              id, dosage, frequency, duration, created_at,
-              patients(full_name),
-              users(full_name)
-            )
-          `)
+          .select('*')
           .eq('id', medicineId)
           .single()
 
@@ -131,24 +126,36 @@ export default function MedicineDetailPage() {
   const stockStatus = getStockStatus()
 
   return (
-    <div className="container mx-auto py-6 space-y-6">
+    <div className="container mx-auto py-4 space-y-4">
       {/* Header */}
       <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
+        <div className="flex items-center space-x-3">
+          <Button 
+            variant="ghost" 
+            size="sm" 
+            onClick={() => router.back()}
+          >
             <ArrowLeft className="h-4 w-4 mr-2" />
             Back
           </Button>
-          <h1 className="text-2xl font-bold">Medicine Details</h1>
+          <div>
+            <h1 className="text-xl font-bold text-gray-900">Medicine Details</h1>
+          </div>
         </div>
         <div className="flex items-center space-x-2">
           <Badge 
-            variant={stockStatus.color === 'red' ? 'destructive' : stockStatus.color === 'orange' ? 'secondary' : 'default'}
+            className={`px-2 py-1 text-xs ${
+              stockStatus.color === 'red' 
+                ? 'bg-red-100 text-red-800' 
+                : stockStatus.color === 'orange' 
+                ? 'bg-orange-100 text-orange-800' 
+                : 'bg-green-100 text-green-800'
+            }`}
           >
             {stockStatus.status}
           </Badge>
           {medicine.stock_quantity <= medicine.minimum_stock && (
-            <Badge variant="destructive" className="text-xs">
+            <Badge className="bg-red-100 text-red-700 px-2 py-1 text-xs">
               <AlertTriangle className="h-3 w-3 mr-1" />
               Reorder
             </Badge>
@@ -156,215 +163,313 @@ export default function MedicineDetailPage() {
         </div>
       </div>
 
-      {/* Medicine Overview */}
-      <Card>
-        <CardHeader>
-          <div className="flex items-center space-x-4">
-            <div className="bg-blue-100 p-3 rounded-full">
-              <Pill className="h-6 w-6 text-blue-600" />
-            </div>
-            <div>
-              <CardTitle className="text-xl">{medicine.name}</CardTitle>
-              <CardDescription>
-                {medicine.generic_name && `Generic: ${medicine.generic_name}`}
-                {medicine.brand && ` • Brand: ${medicine.brand}`}
-              </CardDescription>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          {/* Basic Information */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="flex items-center space-x-3">
-              <Package className="h-4 w-4 text-gray-500" />
-              <span>{medicine.dosage_form}</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <DollarSign className="h-4 w-4 text-gray-500" />
-              <span>₹{medicine.unit_price} per {medicine.unit_type}</span>
-            </div>
-            <div className="flex items-center space-x-3">
-              <Badge variant="outline">{medicine.category}</Badge>
-            </div>
-          </div>
-
-          {/* Stock Information */}
-          <div className="p-4 bg-gray-50 rounded-lg">
-            <div className="flex items-center justify-between mb-4">
-              <h4 className="font-medium">Stock Management</h4>
-              <div className="flex items-center space-x-2">
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => updateStock(-1)}
-                  disabled={medicine.stock_quantity <= 0}
-                >
-                  <Minus className="h-4 w-4" />
-                </Button>
-                <span className="text-lg font-medium min-w-[3rem] text-center">
-                  {medicine.stock_quantity}
-                </span>
-                <Button 
-                  size="sm" 
-                  variant="outline"
-                  onClick={() => updateStock(1)}
-                >
-                  <Plus className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
-            <div className="grid grid-cols-2 gap-4 text-sm">
-              <div>
-                <p className="text-gray-600">Current Stock</p>
-                <p className="font-medium">{medicine.stock_quantity} units</p>
-              </div>
-              <div>
-                <p className="text-gray-600">Minimum Stock Level</p>
-                <p className="font-medium">{medicine.minimum_stock} units</p>
-              </div>
-            </div>
-          </div>
-
-          {/* Additional Information */}
-          {(medicine.batch_number || medicine.expiry_date || medicine.supplier) && (
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
-              {medicine.batch_number && (
-                <div>
-                  <p className="text-sm text-gray-600">Batch Number</p>
-                  <p className="font-medium">{medicine.batch_number}</p>
-                </div>
-              )}
-              {medicine.expiry_date && (
-                <div>
-                  <p className="text-sm text-gray-600">Expiry Date</p>
-                  <p className="font-medium">
-                    {new Date(medicine.expiry_date).toLocaleDateString()}
-                  </p>
-                  {new Date(medicine.expiry_date) < new Date() && (
-                    <Badge variant="destructive" className="text-xs mt-1">
-                      Expired
-                    </Badge>
-                  )}
-                </div>
-              )}
-              {medicine.supplier && (
-                <div>
-                  <p className="text-sm text-gray-600">Supplier</p>
-                  <p className="font-medium">{medicine.supplier}</p>
-                </div>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
-
-      {/* Prescription History */}
-      {medicine.prescriptions && medicine.prescriptions.length > 0 && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Recent Prescriptions</CardTitle>
-            <CardDescription>
-              This medicine has been prescribed {medicine.prescriptions.length} times
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              {medicine.prescriptions.slice(0, 10).map((prescription) => (
-                <div key={prescription.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+      {/* Main Content Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        
+        {/* Left Column - Medicine Details */}
+        <div className="lg:col-span-2 space-y-4">
+          
+          {/* Main Medicine Card */}
+          <Card className="border border-gray-200">
+            <CardHeader className="bg-gray-50 border-b border-gray-200 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  <div className="p-2 bg-gray-200 rounded-lg">
+                    <Pill className="h-5 w-5 text-gray-600" />
+                  </div>
                   <div>
-                    <p className="font-medium">{prescription.patients?.full_name || 'Unknown Patient'}</p>
-                    <p className="text-sm text-gray-600">
-                      Prescribed by: {prescription.users?.full_name || 'Unknown Doctor'}
-                    </p>
-                    <div className="text-xs text-gray-500 space-x-4 mt-1">
-                      <span>Dosage: {prescription.dosage}</span>
-                      <span>Frequency: {prescription.frequency}</span>
-                      <span>Duration: {prescription.duration}</span>
+                    <CardTitle className="text-xl font-bold text-gray-900">{medicine.name}</CardTitle>
+                    <CardDescription className="text-gray-600 text-sm">
+                      Category: {medicine.category}
+                    </CardDescription>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <div className="text-xl font-bold text-gray-900">₹{medicine.unit_price}</div>
+                  <div className="text-gray-500 text-xs">per unit</div>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4">
+              {/* Key Information Grid */}
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                <div className="bg-gray-50 border border-gray-200 p-3 rounded-lg">
+                  <div className="flex items-center mb-1">
+                    <Building2 className="h-4 w-4 text-gray-600 mr-2" />
+                    <span className="text-xs font-semibold text-gray-700 uppercase">From</span>
+                  </div>
+                  <p className="text-sm font-medium text-gray-900">{medicine.supplier || 'Not specified'}</p>
+                </div>
+
+                <div className="bg-gray-50 border border-gray-200 p-3 rounded-lg">
+                  <div className="flex items-center mb-1">
+                    <Package className="h-4 w-4 text-gray-600 mr-2" />
+                    <span className="text-xs font-semibold text-gray-700 uppercase">Form</span>
+                  </div>
+                  <p className="text-sm font-medium text-gray-900">{medicine.dosage_form || 'Not specified'}</p>
+                </div>
+                
+                <div className="bg-gray-50 border border-gray-200 p-3 rounded-lg">
+                  <div className="flex items-center mb-1">
+                    <Beaker className="h-4 w-4 text-gray-600 mr-2" />
+                    <span className="text-xs font-semibold text-gray-700 uppercase">Strength</span>
+                  </div>
+                  <p className="text-sm font-medium text-gray-900">{medicine.strength || 'Not specified'}</p>
+                </div>
+                
+                <div className="bg-gray-50 border border-gray-200 p-3 rounded-lg">
+                  <div className="flex items-center mb-1">
+                    <Factory className="h-4 w-4 text-gray-600 mr-2" />
+                    <span className="text-xs font-semibold text-gray-700 uppercase">Manufacturer</span>
+                  </div>
+                  <p className="text-sm font-medium text-gray-900">{medicine.manufacturer || 'Not specified'}</p>
+                </div>
+              </div>
+
+              {/* Stock Management Section */}
+              <div className="bg-gray-50 rounded-lg p-3 mb-4">
+                <div className="flex items-center justify-between mb-3">
+                  <h4 className="text-sm font-semibold text-gray-700 flex items-center">
+                    <TrendingUp className="h-4 w-4 mr-2" />
+                    Stock Management
+                  </h4>
+                  <div className="flex items-center space-x-2">
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => updateStock(-1)}
+                      disabled={medicine.stock_quantity <= 0}
+                      className="h-7 w-7 rounded-full p-0"
+                    >
+                      <Minus className="h-3 w-3" />
+                    </Button>
+                    <span className="text-lg font-bold text-gray-900 min-w-[2rem] text-center">
+                      {medicine.stock_quantity}
+                    </span>
+                    <Button 
+                      size="sm" 
+                      variant="outline"
+                      onClick={() => updateStock(1)}
+                      className="h-7 w-7 rounded-full p-0"
+                    >
+                      <Plus className="h-3 w-3" />
+                    </Button>
+                  </div>
+                </div>
+                
+                <div className="grid grid-cols-2 gap-4 mb-3">
+                  <div className="text-center">
+                    <p className="text-xs text-gray-600">Current</p>
+                    <p className="text-xl font-bold text-blue-700">{medicine.stock_quantity}</p>
+                  </div>
+                  <div className="text-center">
+                    <p className="text-xs text-gray-600">Minimum</p>
+                    <p className="text-xl font-bold text-orange-600">{medicine.minimum_stock}</p>
+                  </div>
+                </div>
+                
+                <div className="w-full bg-gray-200 rounded-full h-2">
+                  <div 
+                    className={`h-2 rounded-full transition-all duration-300 ${
+                      medicine.stock_quantity <= medicine.minimum_stock 
+                        ? 'bg-red-500' 
+                        : medicine.stock_quantity <= medicine.minimum_stock * 1.5 
+                        ? 'bg-orange-500' 
+                        : 'bg-green-500'
+                    }`}
+                    style={{ 
+                      width: `${Math.min(100, (medicine.stock_quantity / Math.max(medicine.minimum_stock * 2, medicine.stock_quantity)) * 100)}%` 
+                    }}
+                  ></div>
+                </div>
+              </div>
+
+              {/* Additional Information */}
+              {(medicine.batch_number || medicine.expiry_date) && (
+                <div className="bg-gray-50 border border-gray-200 rounded-lg p-3">
+                  <h4 className="text-sm font-semibold text-gray-700 mb-3 flex items-center">
+                    <FileText className="h-4 w-4 mr-2" />
+                    Additional Information
+                  </h4>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {medicine.batch_number && (
+                      <div className="flex items-center space-x-2">
+                        <Package className="h-4 w-4 text-gray-500" />
+                        <div>
+                          <p className="text-xs text-gray-600">Batch Number</p>
+                          <p className="text-sm font-medium text-gray-900">{medicine.batch_number}</p>
+                        </div>
+                      </div>
+                    )}
+                    
+                    {medicine.expiry_date && (
+                      <div className="flex items-center space-x-2">
+                        <Calendar className="h-4 w-4 text-gray-500" />
+                        <div>
+                          <p className="text-xs text-gray-600">Expiry Date</p>
+                          <p className="text-sm font-medium text-gray-900">
+                            {new Date(medicine.expiry_date).toLocaleDateString()}
+                          </p>
+                          {new Date(medicine.expiry_date) < new Date() && (
+                            <Badge className="bg-red-100 text-red-700 text-xs">
+                              Expired
+                            </Badge>
+                          )}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Right Column - Quick Actions */}
+        <div className="lg:col-span-1 space-y-4">
+          
+          {/* Primary Actions Card */}
+          <Card className="border border-gray-200 shadow-sm sticky top-4">
+            <CardHeader className="border-b border-gray-200 py-3">
+              <CardTitle className="flex items-center text-sm font-bold text-gray-700 uppercase tracking-wide">
+                <BarChart3 className="h-4 w-4 mr-2 text-gray-500" />
+                Quick Actions
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="p-0">
+              {/* Primary Actions */}
+              <div className="p-4 space-y-2">
+                <div 
+                  className="group flex items-center p-3 rounded-lg cursor-pointer transition-all hover:bg-gray-50 border border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                  onClick={() => router.push(`/pharmacy/medicines/${medicine.id}/stock`)}
+                >
+                  <div className="flex items-center justify-center w-10 h-10 bg-gray-100 rounded-lg group-hover:bg-gray-200 transition-colors">
+                    <RefreshCw className="h-5 w-5 text-gray-600" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="font-semibold text-gray-900">Update Stock</p>
+                    <p className="text-sm text-gray-500">Adjust inventory levels</p>
+                  </div>
+                </div>
+
+                <div 
+                  className={`group flex items-center p-3 rounded-lg cursor-pointer transition-all border ${
+                    (!medicine.is_active || medicine.stock_quantity <= 0) 
+                      ? 'opacity-50 cursor-not-allowed border-gray-100' 
+                      : 'hover:bg-gray-50 border-gray-200 hover:border-gray-300 hover:shadow-sm'
+                  }`}
+                  onClick={() => {
+                    if (medicine.is_active && medicine.stock_quantity > 0) {
+                      router.push(`/pharmacy/dispense?medicine_id=${medicine.id}`)
+                    }
+                  }}
+                >
+                  <div className={`flex items-center justify-center w-10 h-10 rounded-lg transition-colors ${
+                    (!medicine.is_active || medicine.stock_quantity <= 0) 
+                      ? 'bg-gray-100' 
+                      : 'bg-gray-100 group-hover:bg-gray-200'
+                  }`}>
+                    <ShoppingCart className={`h-5 w-5 ${
+                      (!medicine.is_active || medicine.stock_quantity <= 0) 
+                        ? 'text-gray-400' 
+                        : 'text-gray-600'
+                    }`} />
+                  </div>
+                  <div className="ml-3">
+                    <p className={`font-semibold ${
+                      (!medicine.is_active || medicine.stock_quantity <= 0) 
+                        ? 'text-gray-400' 
+                        : 'text-gray-900'
+                    }`}>Dispense Medicine</p>
+                    <p className={`text-sm ${
+                      (!medicine.is_active || medicine.stock_quantity <= 0) 
+                        ? 'text-gray-400' 
+                        : 'text-gray-500'
+                    }`}>Issue to patients</p>
+                  </div>
+                </div>
+
+                <div 
+                  className="group flex items-center p-3 rounded-lg cursor-pointer transition-all hover:bg-gray-50 border border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                  onClick={() => router.push(`/pharmacy/medicines/${medicine.id}/edit`)}
+                >
+                  <div className="flex items-center justify-center w-10 h-10 bg-gray-100 rounded-lg group-hover:bg-gray-200 transition-colors">
+                    <Edit className="h-5 w-5 text-gray-600" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="font-semibold text-gray-900">Edit Medicine</p>
+                    <p className="text-sm text-gray-500">Update details</p>
+                  </div>
+                </div>
+
+                <div 
+                  className="group flex items-center p-3 rounded-lg cursor-pointer transition-all hover:bg-gray-50 border border-gray-200 hover:border-gray-300 hover:shadow-sm"
+                  onClick={() => window.print()}
+                >
+                  <div className="flex items-center justify-center w-10 h-10 bg-gray-100 rounded-lg group-hover:bg-gray-200 transition-colors">
+                    <FileText className="h-5 w-5 text-gray-600" />
+                  </div>
+                  <div className="ml-3">
+                    <p className="font-semibold text-gray-900">Print Label</p>
+                    <p className="text-sm text-gray-500">Generate barcode</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Secondary Actions */}
+              <div className="border-t border-gray-100 p-4">
+                <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">Management</p>
+                <div className="space-y-1">
+                  <div 
+                    className="group flex items-center p-2 rounded-lg cursor-pointer transition-all hover:bg-gray-50"
+                    onClick={() => router.push(`/pharmacy/medicines/${medicine.id}/expiry`)}
+                  >
+                    <Calendar className="h-4 w-4 text-gray-400 mr-3" />
+                    <span className="text-sm text-gray-700 group-hover:text-gray-900">Check Expiry</span>
+                  </div>
+                  <div 
+                    className="group flex items-center p-2 rounded-lg cursor-pointer transition-all hover:bg-gray-50"
+                    onClick={() => router.push(`/pharmacy/medicines/${medicine.id}/pricing`)}
+                  >
+                    <DollarSign className="h-4 w-4 text-gray-400 mr-3" />
+                    <span className="text-sm text-gray-700 group-hover:text-gray-900">Update Price</span>
+                  </div>
+                  <div 
+                    className="group flex items-center p-2 rounded-lg cursor-pointer transition-all hover:bg-gray-50"
+                    onClick={() => router.push(`/pharmacy/reports?medicine_id=${medicine.id}`)}
+                  >
+                    <BarChart3 className="h-4 w-4 text-gray-400 mr-3" />
+                    <span className="text-sm text-gray-700 group-hover:text-gray-900">Usage Report</span>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Warning Actions */}
+              {medicine.is_active && (
+                <div className="border-t border-red-100 p-4 bg-red-50/50">
+                  <p className="text-xs font-semibold text-red-600 uppercase tracking-wide mb-3">Danger Zone</p>
+                  <div 
+                    className="group flex items-center p-3 rounded-lg cursor-pointer transition-all hover:bg-red-100 border border-red-200"
+                    onClick={() => {
+                      if (confirm(`Are you sure you want to deactivate ${medicine.name}?`)) {
+                        console.log('Deactivate medicine:', medicine.id);
+                      }
+                    }}
+                  >
+                    <div className="flex items-center justify-center w-8 h-8 bg-red-200 rounded-lg group-hover:bg-red-300 transition-colors">
+                      <Trash2 className="h-4 w-4 text-red-700" />
+                    </div>
+                    <div className="ml-3">
+                      <p className="font-semibold text-red-700 group-hover:text-red-800">Deactivate Medicine</p>
+                      <p className="text-xs text-red-600">This action cannot be undone</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-600">
-                      {new Date(prescription.created_at).toLocaleDateString()}
-                    </p>
-                  </div>
                 </div>
-              ))}
-            </div>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Quick Actions */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Quick Actions</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => router.push(`/pharmacy/medicines/${medicine.id}/stock`)}
-            >
-              <Package className="h-4 w-4 mr-2" />
-              Update Stock
-            </Button>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => router.push(`/pharmacy/medicines/${medicine.id}/expiry`)}
-            >
-              <Calendar className="h-4 w-4 mr-2" />
-              Check Expiry
-            </Button>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => router.push(`/pharmacy/medicines/${medicine.id}/pricing`)}
-            >
-              <DollarSign className="h-4 w-4 mr-2" />
-              Update Price
-            </Button>
-            <Button 
-              variant="outline" 
-              className="w-full" 
-              disabled={!medicine.is_active || medicine.stock_quantity <= 0}
-              onClick={() => router.push(`/pharmacy/dispense?medicine_id=${medicine.id}`)}
-            >
-              <Pill className="h-4 w-4 mr-2" />
-              Dispense
-            </Button>
-          </div>
-
-          {/* Additional Actions */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t">
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => router.push(`/pharmacy/medicines/${medicine.id}/edit`)}
-            >
-              <Package className="h-4 w-4 mr-2" />
-              Edit Medicine
-            </Button>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => router.push(`/pharmacy/reports?medicine_id=${medicine.id}`)}
-            >
-              <BarChart3 className="h-4 w-4 mr-2" />
-              Usage Report
-            </Button>
-            <Button 
-              variant="outline" 
-              className="w-full"
-              onClick={() => window.print()}
-            >
-              <FileText className="h-4 w-4 mr-2" />
-              Print Label
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+              )}
+            </CardContent>
+          </Card>
+        </div>
+      </div>
     </div>
   )
 }

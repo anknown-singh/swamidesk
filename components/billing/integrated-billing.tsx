@@ -176,46 +176,50 @@ export function IntegratedBilling() {
       // Continue without procedure costs if there's an error
     }
 
-    // Add dispensed medicines from pharmacy
+    // Add dispensed medicines from prescriptions
     try {
       const supabase = createAuthenticatedClient()
       
       // Get dispensed medicines for this patient's visit
-      const { data: pharmacyIssues, error } = await supabase
-        .from('pharmacy_issues')
+      const { data: dispensedPrescriptions, error } = await supabase
+        .from('prescriptions')
         .select(`
-          *,
-          prescriptions!inner (
-            medicine_id,
-            visits!inner (
-              patient_id
-            ),
+          id,
+          status,
+          dispensed_at,
+          prescription_items!inner (
+            quantity,
             medicines!inner (
               name,
               generic_name,
               dosage_form,
-              strength
+              strength,
+              unit_price
             )
-          )
+          ),
+          patients!inner (id)
         `)
-        .eq('prescriptions.visits.patient_id', patient.patient_id)
+        .eq('patients.id', patient.patient_id)
         .eq('status', 'dispensed')
-        .gte('issued_at', patient.visit_date) // Only medicines from this visit
-        .lte('issued_at', new Date(new Date(patient.visit_date).getTime() + 24 * 60 * 60 * 1000).toISOString()) // Within 24 hours
+        .gte('dispensed_at', patient.visit_date) // Only medicines from this visit
+        .lte('dispensed_at', new Date(new Date(patient.visit_date).getTime() + 24 * 60 * 60 * 1000).toISOString()) // Within 24 hours
 
       if (error) throw error
 
       // Add dispensed medicines to bill
-      if (pharmacyIssues && pharmacyIssues.length > 0) {
-        pharmacyIssues.forEach((issue, index) => {
-          const medicine = issue.prescriptions.medicines
-          items.push({
-            id: `medicine_${index}`,
-            description: `${medicine.name} (${medicine.generic_name}) - ${medicine.strength} ${medicine.dosage_form}`,
-            quantity: issue.issued_quantity,
-            unit_price: issue.unit_price,
-            total: issue.total_price,
-            category: 'medicine'
+      if (dispensedPrescriptions && dispensedPrescriptions.length > 0) {
+        dispensedPrescriptions.forEach((prescription) => {
+          prescription.prescription_items.forEach((item, index) => {
+            const medicine = item.medicines
+            const total = item.quantity * medicine.unit_price
+            items.push({
+              id: `medicine_${prescription.id}_${index}`,
+              description: `${medicine.name} (${medicine.generic_name}) - ${medicine.strength} ${medicine.dosage_form}`,
+              quantity: item.quantity,
+              unit_price: medicine.unit_price,
+              total: total,
+              category: 'medicine'
+            })
           })
         })
       }

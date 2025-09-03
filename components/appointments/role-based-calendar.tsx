@@ -18,7 +18,8 @@ import {
   EyeIcon,
   CheckIcon,
   XIcon,
-  AlertTriangleIcon
+  AlertTriangleIcon,
+  TableIcon
 } from 'lucide-react'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
@@ -34,7 +35,7 @@ interface RoleBasedCalendarProps {
   onApproveAppointment?: (appointment: Appointment) => void
   onCancelAppointment?: (appointment: Appointment) => void
   selectedDoctorId?: string
-  viewMode?: 'week' | 'day'
+  viewMode?: 'week' | 'day' | 'table'
   readonly?: boolean
 }
 
@@ -99,7 +100,7 @@ export function RoleBasedCalendar({
   const [currentDate, setCurrentDate] = useState(new Date())
   const [selectedDate, setSelectedDate] = useState(new Date())
   const [filterDoctorId, setFilterDoctorId] = useState(selectedDoctorId || (userRole === 'doctor' ? userId : 'all'))
-  const [view, setView] = useState<'week' | 'day'>(viewMode)
+  const [view, setView] = useState<'week' | 'day' | 'table'>(viewMode)
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [doctors, setDoctors] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
@@ -167,7 +168,15 @@ export function RoleBasedCalendar({
       .select(`
         *,
         patients(id, full_name, phone, email, date_of_birth, gender, address, emergency_contact_phone, created_at, updated_at),
-        users!appointments_doctor_id_fkey(id, full_name, email, phone, department, specialization, created_at, updated_at)
+        users!appointments_doctor_id_fkey(
+          id, 
+          full_name, 
+          email, 
+          phone, 
+          created_at, 
+          updated_at,
+          user_profiles!inner(department, specialization)
+        )
       `)
     
     // Role-based filtering
@@ -230,10 +239,12 @@ export function RoleBasedCalendar({
         full_name: string
         email: string
         phone: string
-        department: string
-        specialization: string
         created_at: string
         updated_at: string
+        user_profiles: {
+          department: string
+          specialization: string
+        }[]
       }
     }
     
@@ -274,8 +285,8 @@ export function RoleBasedCalendar({
         full_name: apt.users.full_name,
         email: apt.users.email,
         phone: apt.users.phone || null,
-        department: apt.users.department,
-        specialization: apt.users.specialization || null,
+        department: apt.users.user_profiles[0]?.department || null,
+        specialization: apt.users.user_profiles[0]?.specialization || null,
         password_hash: 'hashed_password',
         is_active: true,
         created_at: apt.users.created_at,
@@ -374,6 +385,20 @@ export function RoleBasedCalendar({
       case 'rescheduled': return 'bg-cyan-100 text-cyan-800 border-cyan-200'
       default: return 'bg-gray-100 text-gray-800 border-gray-200'
     }
+  }
+
+  const getTableAppointments = () => {
+    const filteredAppointments = appointments.filter(apt => {
+      const doctorMatch = (filterDoctorId === 'all' || apt.doctor_id === filterDoctorId)
+      return doctorMatch
+    }).sort((a, b) => {
+      // Sort by date first, then by time
+      if (a.scheduled_date !== b.scheduled_date) {
+        return a.scheduled_date.localeCompare(b.scheduled_date)
+      }
+      return a.scheduled_time.localeCompare(b.scheduled_time)
+    })
+    return filteredAppointments
   }
 
   const getWeekDays = (date: Date): CalendarDay[] => {
@@ -530,7 +555,8 @@ export function RoleBasedCalendar({
     )
   }
 
-  const calendarData = view === 'week' ? getWeekDays(currentDate) : [getSingleDay(currentDate)]
+  const calendarData = view === 'week' ? getWeekDays(currentDate) : view === 'table' ? null : [getSingleDay(currentDate)]
+  const tableAppointments = view === 'table' ? getTableAppointments() : []
 
   const getWeekRange = () => {
     const weekDays = getWeekDays(currentDate)
@@ -627,34 +653,43 @@ export function RoleBasedCalendar({
               >
                 Week
               </Button>
+              <Button 
+                variant={view === 'table' ? 'default' : 'ghost'} 
+                size="sm"
+                onClick={() => setView('table')}
+              >
+                Table
+              </Button>
             </div>
 
-            <div className="flex items-center gap-1">
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => view === 'week' ? navigateWeek('prev') : navigateDay('prev')}
-              >
-                <ChevronLeftIcon className="h-4 w-4" />
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => {
-                  setCurrentDate(new Date())
-                  setSelectedDate(new Date())
-                }}
-              >
-                Today
-              </Button>
-              <Button 
-                variant="outline" 
-                size="sm"
-                onClick={() => view === 'week' ? navigateWeek('next') : navigateDay('next')}
-              >
-                <ChevronRightIcon className="h-4 w-4" />
-              </Button>
-            </div>
+            {view !== 'table' && (
+              <div className="flex items-center gap-1">
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => view === 'week' ? navigateWeek('prev') : navigateDay('prev')}
+                >
+                  <ChevronLeftIcon className="h-4 w-4" />
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => {
+                    setCurrentDate(new Date())
+                    setSelectedDate(new Date())
+                  }}
+                >
+                  Today
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={() => view === 'week' ? navigateWeek('next') : navigateDay('next')}
+                >
+                  <ChevronRightIcon className="h-4 w-4" />
+                </Button>
+              </div>
+            )}
 
             {onBookAppointment && canBook && (
               <Button onClick={onBookAppointment} size="sm">
@@ -667,163 +702,313 @@ export function RoleBasedCalendar({
       </CardHeader>
 
       <CardContent>
-        <div className="grid gap-4" style={{ gridTemplateColumns: view === 'week' ? 'repeat(7, 1fr)' : '1fr' }}>
-          {calendarData.map((day, dayIndex) => (
-            <div key={dayIndex} className="space-y-2">
-              {/* Day Header */}
-              <div className={`text-center p-2 rounded-lg border ${
-                day.isToday ? 'bg-blue-50 border-blue-200 text-blue-900' : 
-                day.isSelected ? 'bg-gray-100 border-gray-300' : 
-                'bg-gray-50 border-gray-200'
-              }`}>
-                <div className="font-medium">{day.dayName}</div>
-                <div className="text-sm text-muted-foreground">
-                  {day.date.getDate()}
+        {view === 'table' ? (
+          /* Table View */
+          <div className="space-y-4">
+            {tableAppointments.length === 0 ? (
+              <div className="text-center py-8">
+                <div className="text-muted-foreground">No appointments found</div>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse">
+                  <thead>
+                    <tr className="border-b">
+                      <th className="text-left p-3 font-medium">Date</th>
+                      <th className="text-left p-3 font-medium">Time</th>
+                      <th className="text-left p-3 font-medium">
+                        {isPatientView ? 'Doctor' : 'Patient'}
+                      </th>
+                      {!isDoctorView && !isPatientView && (
+                        <th className="text-left p-3 font-medium">Doctor</th>
+                      )}
+                      <th className="text-left p-3 font-medium">Type</th>
+                      <th className="text-left p-3 font-medium">Department</th>
+                      <th className="text-left p-3 font-medium">Status</th>
+                      <th className="text-left p-3 font-medium">Duration</th>
+                      <th className="text-left p-3 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {tableAppointments.map((appointment, index) => (
+                      <tr 
+                        key={appointment.id}
+                        className={`border-b hover:bg-gray-50 cursor-pointer ${
+                          appointment.priority ? 'bg-red-50' : ''
+                        }`}
+                        onClick={() => onAppointmentSelect?.(appointment)}
+                      >
+                        <td className="p-3">
+                          <div className="font-medium">
+                            {new Date(appointment.scheduled_date).toLocaleDateString('en-US', {
+                              weekday: 'short',
+                              month: 'short', 
+                              day: 'numeric'
+                            })}
+                          </div>
+                          <div className="text-xs text-muted-foreground">
+                            {new Date(appointment.scheduled_date).toLocaleDateString()}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-1">
+                            <ClockIcon className="h-3 w-3" />
+                            <span className="font-medium">{normalizeTime(appointment.scheduled_time)}</span>
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-2">
+                            <UserIcon className="h-4 w-4 text-muted-foreground" />
+                            <div>
+                              <div className="font-medium">
+                                {isPatientView ? appointment.doctor?.full_name : appointment.patient?.name}
+                              </div>
+                              <div className="text-xs text-muted-foreground">
+                                {isPatientView ? appointment.doctor?.phone : appointment.patient?.mobile}
+                              </div>
+                            </div>
+                          </div>
+                        </td>
+                        {!isDoctorView && !isPatientView && (
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <StethoscopeIcon className="h-4 w-4 text-muted-foreground" />
+                              <span>{appointment.doctor?.full_name || 'Not assigned'}</span>
+                            </div>
+                          </td>
+                        )}
+                        <td className="p-3">
+                          <span className="capitalize">{appointment.appointment_type}</span>
+                        </td>
+                        <td className="p-3">
+                          <span>{appointment.department}</span>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-2">
+                            {appointment.priority && (
+                              <AlertTriangleIcon className="h-4 w-4 text-red-500" />
+                            )}
+                            <Badge variant="outline" className={getStatusColor(appointment.status)}>
+                              {appointment.status}
+                            </Badge>
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <span>{appointment.duration || 30} min</span>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-1">
+                            {onAppointmentSelect && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
+                                onClick={(e) => handleAppointmentAction('view', appointment, e)}
+                              >
+                                <EyeIcon className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {onEditAppointment && canEdit && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
+                                onClick={(e) => handleAppointmentAction('edit', appointment, e)}
+                              >
+                                <EditIcon className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {onApproveAppointment && canApprove && (appointment.status === 'pending' || appointment.status === 'requested') && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
+                                onClick={(e) => handleAppointmentAction('approve', appointment, e)}
+                              >
+                                <CheckIcon className="h-4 w-4" />
+                              </Button>
+                            )}
+                            {onCancelAppointment && (canEdit || canApprove) && (
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-8 w-8 p-0"
+                                onClick={(e) => handleAppointmentAction('cancel', appointment, e)}
+                              >
+                                <XIcon className="h-4 w-4" />
+                              </Button>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        ) : (
+          /* Calendar View */
+          <>
+            <div className="grid gap-4" style={{ gridTemplateColumns: view === 'week' ? 'repeat(7, 1fr)' : '1fr' }}>
+              {calendarData?.map((day, dayIndex) => (
+                <div key={dayIndex} className="space-y-2">
+                  {/* Day Header */}
+                  <div className={`text-center p-2 rounded-lg border ${
+                    day.isToday ? 'bg-blue-50 border-blue-200 text-blue-900' : 
+                    day.isSelected ? 'bg-gray-100 border-gray-300' : 
+                    'bg-gray-50 border-gray-200'
+                  }`}>
+                    <div className="font-medium">{day.dayName}</div>
+                    <div className="text-sm text-muted-foreground">
+                      {day.date.getDate()}
+                    </div>
+                  </div>
+
+                  {/* Time Slots */}
+                  <div className="space-y-1">
+                    {day.slots.map((slot, slotIndex) => (
+                      <div
+                        key={slotIndex}
+                        className={`p-2 rounded border text-xs cursor-pointer transition-colors min-h-[3.5rem] relative ${
+                          slot.appointment 
+                            ? `${getStatusColor(slot.appointment.status)} hover:opacity-80` 
+                            : canBook && !readonly 
+                              ? 'bg-gray-50 border-gray-200 hover:bg-gray-100'
+                              : 'bg-gray-50 border-gray-200'
+                        }`}
+                        onClick={() => handleSlotClick(day, slot)}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <div className="flex items-center gap-1">
+                            <ClockIcon className="h-3 w-3" />
+                            <span className="font-medium">{slot.time}</span>
+                          </div>
+                          
+                          {/* Action buttons for appointments */}
+                          {slot.appointment && (
+                            <div className="flex items-center gap-1">
+                              {onAppointmentSelect && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-5 w-5 p-0"
+                                  onClick={(e) => handleAppointmentAction('view', slot.appointment!, e)}
+                                >
+                                  <EyeIcon className="h-3 w-3" />
+                                </Button>
+                              )}
+                              {onEditAppointment && canEdit && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-5 w-5 p-0"
+                                  onClick={(e) => handleAppointmentAction('edit', slot.appointment!, e)}
+                                >
+                                  <EditIcon className="h-3 w-3" />
+                                </Button>
+                              )}
+                              {onApproveAppointment && canApprove && (slot.appointment.status === 'pending' || slot.appointment.status === 'requested') && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-5 w-5 p-0"
+                                  onClick={(e) => handleAppointmentAction('approve', slot.appointment!, e)}
+                                >
+                                  <CheckIcon className="h-3 w-3" />
+                                </Button>
+                              )}
+                              {onCancelAppointment && (canEdit || canApprove) && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-5 w-5 p-0"
+                                  onClick={(e) => handleAppointmentAction('cancel', slot.appointment!, e)}
+                                >
+                                  <XIcon className="h-3 w-3" />
+                                </Button>
+                              )}
+                            </div>
+                          )}
+                        </div>
+                        
+                        {slot.appointment ? (
+                          <div className="space-y-1">
+                            <div className="flex items-center gap-1">
+                              <UserIcon className="h-3 w-3" />
+                              <span className="font-medium truncate">
+                                {isPatientView ? slot.appointment.doctor?.full_name : slot.appointment.patient?.name}
+                              </span>
+                            </div>
+                            {!isDoctorView && !isPatientView && (
+                              <div className="flex items-center gap-1">
+                                <StethoscopeIcon className="h-3 w-3" />
+                                <span className="truncate">
+                                  {doctors.find(d => d.id === slot.appointment?.doctor_id)?.full_name}
+                                </span>
+                              </div>
+                            )}
+                            <div className="text-xs opacity-80 truncate">
+                              {slot.appointment.appointment_type} • {slot.appointment.department}
+                            </div>
+                            <div className="flex items-center gap-1">
+                              {slot.appointment.priority && (
+                                <AlertTriangleIcon className="h-3 w-3 text-red-500" />
+                              )}
+                              <Badge variant="outline" className="text-xs py-0">
+                                {slot.appointment.status}
+                              </Badge>
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center text-muted-foreground">
+                            Available
+                            {filterDoctorId !== 'all' && (
+                              <div className="text-xs mt-1">
+                                {doctors.find(d => d.id === filterDoctorId)?.full_name}
+                              </div>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Legend */}
+            <div className="mt-6 pt-4 border-t">
+              <h4 className="text-sm font-medium mb-2">Status Legend:</h4>
+              <div className="flex flex-wrap gap-2 text-xs">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-yellow-100 border border-yellow-200"></div>
+                  <span>Pending</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-green-100 border border-green-200"></div>
+                  <span>Confirmed</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-blue-100 border border-blue-200"></div>
+                  <span>Scheduled</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-purple-100 border border-purple-200"></div>
+                  <span>Arrived</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-indigo-100 border border-indigo-200"></div>
+                  <span>In Progress</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded bg-gray-50 border border-gray-200"></div>
+                  <span>Available</span>
                 </div>
               </div>
-
-              {/* Time Slots */}
-              <div className="space-y-1">
-                {day.slots.map((slot, slotIndex) => (
-                  <div
-                    key={slotIndex}
-                    className={`p-2 rounded border text-xs cursor-pointer transition-colors min-h-[3.5rem] relative ${
-                      slot.appointment 
-                        ? `${getStatusColor(slot.appointment.status)} hover:opacity-80` 
-                        : canBook && !readonly 
-                          ? 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                          : 'bg-gray-50 border-gray-200'
-                    }`}
-                    onClick={() => handleSlotClick(day, slot)}
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <div className="flex items-center gap-1">
-                        <ClockIcon className="h-3 w-3" />
-                        <span className="font-medium">{slot.time}</span>
-                      </div>
-                      
-                      {/* Action buttons for appointments */}
-                      {slot.appointment && (
-                        <div className="flex items-center gap-1">
-                          {onAppointmentSelect && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-5 w-5 p-0"
-                              onClick={(e) => handleAppointmentAction('view', slot.appointment!, e)}
-                            >
-                              <EyeIcon className="h-3 w-3" />
-                            </Button>
-                          )}
-                          {onEditAppointment && canEdit && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-5 w-5 p-0"
-                              onClick={(e) => handleAppointmentAction('edit', slot.appointment!, e)}
-                            >
-                              <EditIcon className="h-3 w-3" />
-                            </Button>
-                          )}
-                          {onApproveAppointment && canApprove && (slot.appointment.status === 'pending' || slot.appointment.status === 'requested') && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-5 w-5 p-0"
-                              onClick={(e) => handleAppointmentAction('approve', slot.appointment!, e)}
-                            >
-                              <CheckIcon className="h-3 w-3" />
-                            </Button>
-                          )}
-                          {onCancelAppointment && (canEdit || canApprove) && (
-                            <Button
-                              size="sm"
-                              variant="ghost"
-                              className="h-5 w-5 p-0"
-                              onClick={(e) => handleAppointmentAction('cancel', slot.appointment!, e)}
-                            >
-                              <XIcon className="h-3 w-3" />
-                            </Button>
-                          )}
-                        </div>
-                      )}
-                    </div>
-                    
-                    {slot.appointment ? (
-                      <div className="space-y-1">
-                        <div className="flex items-center gap-1">
-                          <UserIcon className="h-3 w-3" />
-                          <span className="font-medium truncate">
-                            {isPatientView ? slot.appointment.doctor?.full_name : slot.appointment.patient?.name}
-                          </span>
-                        </div>
-                        {!isDoctorView && !isPatientView && (
-                          <div className="flex items-center gap-1">
-                            <StethoscopeIcon className="h-3 w-3" />
-                            <span className="truncate">
-                              {doctors.find(d => d.id === slot.appointment?.doctor_id)?.full_name}
-                            </span>
-                          </div>
-                        )}
-                        <div className="text-xs opacity-80 truncate">
-                          {slot.appointment.appointment_type} • {slot.appointment.department}
-                        </div>
-                        <div className="flex items-center gap-1">
-                          {slot.appointment.priority && (
-                            <AlertTriangleIcon className="h-3 w-3 text-red-500" />
-                          )}
-                          <Badge variant="outline" className="text-xs py-0">
-                            {slot.appointment.status}
-                          </Badge>
-                        </div>
-                      </div>
-                    ) : (
-                      <div className="text-center text-muted-foreground">
-                        Available
-                        {filterDoctorId !== 'all' && (
-                          <div className="text-xs mt-1">
-                            {doctors.find(d => d.id === filterDoctorId)?.full_name}
-                          </div>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                ))}
-              </div>
             </div>
-          ))}
-        </div>
-
-        {/* Legend */}
-        <div className="mt-6 pt-4 border-t">
-          <h4 className="text-sm font-medium mb-2">Status Legend:</h4>
-          <div className="flex flex-wrap gap-2 text-xs">
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-yellow-100 border border-yellow-200"></div>
-              <span>Pending</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-green-100 border border-green-200"></div>
-              <span>Confirmed</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-blue-100 border border-blue-200"></div>
-              <span>Scheduled</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-purple-100 border border-purple-200"></div>
-              <span>Arrived</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-indigo-100 border border-indigo-200"></div>
-              <span>In Progress</span>
-            </div>
-            <div className="flex items-center gap-1">
-              <div className="w-3 h-3 rounded bg-gray-50 border border-gray-200"></div>
-              <span>Available</span>
-            </div>
-          </div>
-        </div>
+          </>
+        )}
       </CardContent>
     </Card>
   )

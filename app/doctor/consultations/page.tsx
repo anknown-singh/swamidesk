@@ -12,9 +12,7 @@ import { Stethoscope, User, Clock, FileText, Save, Search, Calendar } from 'luci
 
 interface Patient {
   id: string
-  patient_number: string
-  first_name: string
-  last_name: string
+  full_name: string
   phone: string
   date_of_birth: string
   gender: string
@@ -24,16 +22,14 @@ interface Patient {
 
 interface Visit {
   id: string
-  visit_number: string
   patient_id: string
-  visit_date: string
-  status: 'waiting' | 'in_consultation' | 'services_pending' | 'completed' | 'billed'
+  doctor_id: string
+  status: string
   chief_complaint: string
+  visit_date: string
+  token_number: number
   diagnosis: string
   notes: string
-  queue_number: number
-  actual_start_time: string
-  actual_end_time: string
   created_at: string
   patients: Patient
 }
@@ -52,10 +48,10 @@ export default function ConsultationsPage() {
   const router = useRouter()
 
   useEffect(() => {
-    fetchConsultations()
+    fetchVisits()
   }, [])  // eslint-disable-line react-hooks/exhaustive-deps
 
-  const fetchConsultations = async () => {
+  const fetchVisits = async () => {
     try {
       const today = new Date().toISOString().split('T')[0]
       
@@ -65,9 +61,7 @@ export default function ConsultationsPage() {
           *,
           patients (
             id,
-            patient_number,
-            first_name,
-            last_name,
+            full_name,
             phone,
             date_of_birth,
             gender,
@@ -75,14 +69,13 @@ export default function ConsultationsPage() {
             allergies
           )
         `)
-        .eq('visit_date', today)
-        .in('status', ['waiting', 'in_consultation', 'completed'])
-        .order('queue_number', { ascending: true })
+        .gte('visit_date', today)
+        .order('token_number', { ascending: true })
 
       if (error) throw error
       setVisits(data || [])
     } catch (error) {
-      console.error('Error fetching consultations:', error)
+      console.error('Error fetching visits:', error)
       setError('Failed to load consultations')
     } finally {
       setLoading(false)
@@ -94,8 +87,7 @@ export default function ConsultationsPage() {
       const { error } = await supabase
         .from('visits')
         .update({ 
-          status: 'in_consultation',
-          actual_start_time: new Date().toISOString()
+          status: 'in_consultation'
         })
         .eq('id', visit.id)
 
@@ -104,7 +96,7 @@ export default function ConsultationsPage() {
       setActiveVisit({...visit, status: 'in_consultation'})
       setDiagnosis(visit.diagnosis || '')
       setNotes(visit.notes || '')
-      fetchConsultations()
+      fetchVisits()
       setSuccess('Consultation started')
     } catch (error) {
       console.error('Error starting consultation:', error)
@@ -120,15 +112,14 @@ export default function ConsultationsPage() {
         .from('visits')
         .update({ 
           diagnosis,
-          notes,
-          status: 'services_pending'
+          notes
         })
         .eq('id', activeVisit.id)
 
       if (error) throw error
 
       setSuccess('Consultation notes saved')
-      fetchConsultations()
+      fetchVisits()
     } catch (error) {
       console.error('Error saving consultation:', error)
       setError('Failed to save consultation')
@@ -142,10 +133,9 @@ export default function ConsultationsPage() {
       const { error } = await supabase
         .from('visits')
         .update({ 
-          diagnosis,
-          notes,
           status: 'completed',
-          actual_end_time: new Date().toISOString()
+          diagnosis,
+          notes
         })
         .eq('id', activeVisit.id)
 
@@ -155,7 +145,7 @@ export default function ConsultationsPage() {
       setActiveVisit(null)
       setDiagnosis('')
       setNotes('')
-      fetchConsultations()
+      fetchVisits()
     } catch (error) {
       console.error('Error completing consultation:', error)
       setError('Failed to complete consultation')
@@ -176,10 +166,9 @@ export default function ConsultationsPage() {
   }
 
   const filteredVisits = visits.filter(visit =>
-    visit.patients.first_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    visit.patients.last_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    visit.patients.patient_number.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    visit.chief_complaint.toLowerCase().includes(searchTerm.toLowerCase())
+    visit.patients.full_name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    visit.patients.phone.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    visit.chief_complaint?.toLowerCase().includes(searchTerm.toLowerCase())
   )
 
   const waitingVisits = filteredVisits.filter(v => v.status === 'waiting')
@@ -268,17 +257,20 @@ export default function ConsultationsPage() {
                       <div className="space-y-1">
                         <div className="flex items-center gap-2">
                           <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded text-sm font-bold">
-                            #{visit.queue_number}
+                            Token #{visit.token_number}
                           </span>
                           <h4 className="font-semibold">
-                            {visit.patients.first_name} {visit.patients.last_name}
+                            {visit.patients.full_name}
                           </h4>
                         </div>
                         <p className="text-sm text-gray-600">
-                          <strong>Complaint:</strong> {visit.chief_complaint}
+                          <strong>Complaint:</strong> {visit.chief_complaint || 'Not specified'}
                         </p>
                         <p className="text-xs text-gray-500">
-                          {visit.patients.patient_number} • {calculateAge(visit.patients.date_of_birth)}
+                          {calculateAge(visit.patients.date_of_birth)} • {visit.patients.gender}
+                        </p>
+                        <p className="text-xs text-blue-600">
+                          Visit Date: {visit.visit_date}
                         </p>
                       </div>
                       <Button 
@@ -325,17 +317,20 @@ export default function ConsultationsPage() {
                     <div className="space-y-1">
                       <div className="flex items-center gap-2">
                         <span className="bg-blue-500 text-white px-2 py-1 rounded text-sm font-bold">
-                          #{visit.queue_number}
+                          Token #{visit.token_number}
                         </span>
                         <h4 className="font-semibold">
-                          {visit.patients.first_name} {visit.patients.last_name}
+                          {visit.patients.full_name}
                         </h4>
                       </div>
                       <p className="text-sm text-gray-600">
-                        <strong>Complaint:</strong> {visit.chief_complaint}
+                        <strong>Complaint:</strong> {visit.chief_complaint || 'Not specified'}
                       </p>
                       <p className="text-xs text-gray-500">
-                        Started: {visit.actual_start_time ? new Date(visit.actual_start_time).toLocaleTimeString() : 'N/A'}
+                        Started: {visit.created_at ? new Date(visit.created_at).toLocaleTimeString() : 'N/A'}
+                      </p>
+                      <p className="text-xs text-blue-600">
+                        Status: {visit.status}
                       </p>
                     </div>
                   </div>
@@ -357,17 +352,26 @@ export default function ConsultationsPage() {
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
                   <User className="h-5 w-5" />
-                  {activeVisit.patients.first_name} {activeVisit.patients.last_name}
+                  {activeVisit.patients.full_name}
                 </CardTitle>
                 <CardDescription>
-                  {activeVisit.patients.patient_number} • {calculateAge(activeVisit.patients.date_of_birth)} • {activeVisit.patients.gender}
+                  {calculateAge(activeVisit.patients.date_of_birth)} • {activeVisit.patients.gender}
                 </CardDescription>
               </CardHeader>
               <CardContent className="space-y-4">
+                {/* Visit Info */}
+                <div className="bg-blue-50 p-3 rounded-lg">
+                  <h4 className="font-semibold mb-2">Active Consultation</h4>
+                  <p className="text-sm">Status: <span className="font-medium capitalize">{activeVisit.status}</span></p>
+                  <p className="text-xs text-gray-600 mt-1">
+                    Token #{activeVisit.token_number} • Started: {new Date(activeVisit.created_at).toLocaleString()}
+                  </p>
+                </div>
+
                 {/* Patient Info */}
                 <div className="bg-gray-50 p-3 rounded-lg">
                   <h4 className="font-semibold mb-2">Chief Complaint</h4>
-                  <p className="text-sm">{activeVisit.chief_complaint}</p>
+                  <p className="text-sm">{activeVisit.chief_complaint || 'Not specified'}</p>
                 </div>
 
                 {/* Medical History */}
@@ -450,28 +454,35 @@ export default function ConsultationsPage() {
           <CardContent>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {completedVisits.map((visit) => (
-                <div key={visit.id} className="border rounded-lg p-3 bg-green-50">
+                <div 
+                  key={visit.id} 
+                  className="border rounded-lg p-3 bg-green-50 cursor-pointer hover:bg-green-100 transition-colors"
+                  onClick={() => router.push(`/doctor/consultations/${visit.id}/summary`)}
+                >
                   <div className="space-y-2">
                     <div className="flex items-center gap-2">
                       <span className="bg-green-500 text-white px-2 py-1 rounded text-sm font-bold">
-                        #{visit.queue_number}
+                        Token #{visit.token_number}
                       </span>
                       <h4 className="font-semibold">
-                        {visit.patients.first_name} {visit.patients.last_name}
+                        {visit.patients.full_name}
                       </h4>
                     </div>
                     <p className="text-sm text-gray-600">
                       <strong>Diagnosis:</strong> {visit.diagnosis || 'Not specified'}
                     </p>
                     <p className="text-xs text-gray-500">
-                      Completed: {visit.actual_end_time ? new Date(visit.actual_end_time).toLocaleTimeString() : 'N/A'}
+                      Completed: {visit.created_at ? new Date(visit.created_at).toLocaleTimeString() : 'N/A'}
                     </p>
                     <div className="flex gap-1 mt-2">
                       <Button 
                         size="sm" 
                         variant="outline" 
                         className="text-xs h-6"
-                        onClick={() => router.push(`/doctor/patients/${visit.patients.id}`)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          router.push(`/doctor/patients/${visit.patients.id}`)
+                        }}
                       >
                         View Patient
                       </Button>
@@ -479,7 +490,10 @@ export default function ConsultationsPage() {
                         size="sm" 
                         variant="outline" 
                         className="text-xs h-6"
-                        onClick={() => router.push(`/doctor/prescriptions/new?patient_id=${visit.patients.id}&visit_id=${visit.id}`)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          router.push(`/doctor/prescriptions/new?patient_id=${visit.patients.id}&visit_id=${visit.id}`)
+                        }}
                       >
                         Prescribe
                       </Button>
@@ -487,9 +501,12 @@ export default function ConsultationsPage() {
                         size="sm" 
                         variant="outline" 
                         className="text-xs h-6"
-                        onClick={() => router.push(`/doctor/consultations/${visit.id}/notes`)}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          router.push(`/doctor/consultations/${visit.id}/summary`)
+                        }}
                       >
-                        View Notes
+                        View Summary
                       </Button>
                     </div>
                   </div>

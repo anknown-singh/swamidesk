@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -41,8 +42,7 @@ interface WaitingPatient {
 }
 
 export default function ReceptionistCalendarPage() {
-  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
-  const [, setShowBookingForm] = useState(false)
+  const router = useRouter()
   const [searchQuery, setSearchQuery] = useState('')
   const [stats, setStats] = useState<ReceptionistStats>({
     todayAppointments: 0,
@@ -160,17 +160,21 @@ export default function ReceptionistCalendarPage() {
   }, [])
 
   const handleAppointmentSelect = (appointment: Appointment) => {
-    setSelectedAppointment(appointment)
-    console.log('Selected appointment:', appointment)
+    // Navigate to appointment details for receptionist workflow
+    router.push(`/receptionist/appointments/${appointment.id}`)
   }
 
   const handleSlotSelect = (date: string, time: string, doctorId?: string) => {
-    console.log('Selected slot:', { date, time, doctorId })
-    setShowBookingForm(true)
+    const params = new URLSearchParams({
+      date,
+      time,
+      ...(doctorId && { doctorId })
+    })
+    router.push(`/receptionist/appointments/new?${params.toString()}`)
   }
 
   const handleBookAppointment = () => {
-    setShowBookingForm(true)
+    router.push('/receptionist/appointments/new')
   }
 
   const handleEditAppointment = (appointment: Appointment) => {
@@ -448,58 +452,6 @@ export default function ReceptionistCalendarPage() {
         </div>
       </div>
 
-      {/* Selected Appointment Details */}
-      {selectedAppointment && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Appointment Management</CardTitle>
-            <CardDescription>
-              {selectedAppointment.scheduled_date} at {selectedAppointment.scheduled_time}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="grid gap-4 md:grid-cols-3">
-              <div>
-                <h4 className="font-medium mb-2">Patient Details</h4>
-                <p className="text-sm">{selectedAppointment.patient?.name}</p>
-                <p className="text-xs text-muted-foreground">{selectedAppointment.patient?.mobile}</p>
-                <div className="flex gap-2 mt-2">
-                  <Button size="sm" variant="outline" onClick={() => handleCheckIn(selectedAppointment.id)}>
-                    Check In
-                  </Button>
-                  <Button size="sm" variant="outline" onClick={() => handleMarkNoShow(selectedAppointment.id)}>
-                    No Show
-                  </Button>
-                </div>
-              </div>
-              <div>
-                <h4 className="font-medium mb-2">Doctor</h4>
-                <p className="text-sm">{selectedAppointment.doctor?.full_name}</p>
-                <p className="text-xs text-muted-foreground">{selectedAppointment.doctor?.department}</p>
-              </div>
-              <div>
-                <h4 className="font-medium mb-2">Status</h4>
-                <div className="flex items-center gap-2">
-                  <Badge variant="outline">{selectedAppointment.status}</Badge>
-                  <Badge variant="outline">{selectedAppointment.appointment_type}</Badge>
-                  {selectedAppointment.priority && (
-                    <Badge variant="destructive">Priority</Badge>
-                  )}
-                </div>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Duration: {selectedAppointment.duration}min
-                </p>
-              </div>
-            </div>
-            {selectedAppointment.patient_notes && (
-              <div className="mt-4 p-3 bg-blue-50 rounded-lg">
-                <h4 className="font-medium mb-1">Patient Notes</h4>
-                <p className="text-sm text-blue-900">{selectedAppointment.patient_notes}</p>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-      )}
     </div>
   )
 }

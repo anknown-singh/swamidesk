@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Stethoscope, Search, Users, FileText, Clock, Calendar, User } from 'lucide-react'
+import { Stethoscope, Search, Users, FileText, Clock, Calendar, User, History } from 'lucide-react'
 
 interface Visit {
   id: string
@@ -369,8 +369,20 @@ export default function AdminConsultationsPage() {
                       >
                         Open Consultation
                       </Button>
+                      <Button 
+                        size="sm" 
+                        variant="outline"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          window.location.href = `/admin/patients/${visit.patient_id}/consultations-history`
+                        }}
+                        className="whitespace-nowrap"
+                      >
+                        <History className="h-4 w-4 mr-1" />
+                        View History
+                      </Button>
                       <div className="text-xs text-gray-500 text-center">
-                        Click to edit
+                        Click to edit or view history
                       </div>
                     </div>
                   </div>

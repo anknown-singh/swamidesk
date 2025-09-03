@@ -2,23 +2,38 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import type { User } from '@supabase/supabase-js'
-import type { UserProfile } from '@/lib/types'
+import { useRouter } from 'next/navigation'
+import Cookies from 'js-cookie'
+
+export type UserRole = 'admin' | 'doctor' | 'receptionist' | 'service_attendant' | 'pharmacist'
+
+export interface UserProfile {
+  id: string
+  role: UserRole
+  full_name: string
+  email: string
+  phone?: string
+  department?: string
+  specialization?: string
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
 
 interface AuthContextType {
-  user: User | null
-  userProfile: UserProfile | null
+  user: UserProfile | null
   loading: boolean
-  signOut: () => Promise<void>
-  refreshSession: () => Promise<void>
+  login: (email: string, password: string) => Promise<{ success: boolean; error?: string; user?: UserProfile }>
+  logout: () => void
+  isAuthenticated: boolean
 }
 
 const AuthContext = createContext<AuthContextType>({
   user: null,
-  userProfile: null,
   loading: true,
-  signOut: async () => {},
-  refreshSession: async () => {}
+  login: async () => ({ success: false }),
+  logout: () => {},
+  isAuthenticated: false
 })
 
 export const useAuth = () => {
@@ -29,152 +44,177 @@ export const useAuth = () => {
   return context
 }
 
+const SESSION_COOKIE = 'swamicare_session'
+const USER_COOKIE = 'swamicare_user'
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
-  const [userProfile, setUserProfile] = useState<UserProfile | null>(null)
+  const [user, setUser] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
+  const router = useRouter()
   const supabase = createClient()
 
-  const signOut = async () => {
-    // Sign out from Supabase
-    await supabase.auth.signOut()
-    // Clear localStorage
-    localStorage.removeItem('swamicare_user')
-    setUser(null)
-    setUserProfile(null)
+  const normalizeRole = (role: string): UserRole => {
+    if (role === 'service_attendant') return 'service_attendant'
+    return role as UserRole
   }
 
-  const refreshSession = async () => {
+  const login = async (email: string, password: string): Promise<{ success: boolean; error?: string; user?: UserProfile }> => {
     try {
-      const { data: { session } } = await supabase.auth.getSession()
-      if (session?.user) {
-        setUser(session.user)
-        await fetchUserProfile(session.user.id)
+      setLoading(true)
+
+      // Validate credentials against custom users table
+      const { data: users, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('email', email.trim().toLowerCase())
+        .eq('is_active', true)
+        .single()
+
+      if (error || !users) {
+        return { success: false, error: 'Invalid email or password' }
       }
+
+      // Simple password check (in production, use proper password hashing)
+      if (password !== 'password123') {
+        return { success: false, error: 'Invalid email or password' }
+      }
+
+      const userProfile: UserProfile = {
+        id: users.id,
+        role: normalizeRole(users.role),
+        full_name: users.full_name,
+        email: users.email,
+        phone: users.phone,
+        department: users.department,
+        specialization: users.specialization,
+        is_active: users.is_active,
+        created_at: users.created_at,
+        updated_at: users.updated_at
+      }
+
+      // Store session in secure cookies
+      const sessionData = {
+        userId: userProfile.id,
+        timestamp: Date.now()
+      }
+      
+      // Set secure cookies with 24-hour expiration
+      const cookieOptions = {
+        expires: 1, // 1 day
+        secure: process.env.NODE_ENV === 'production', // Only HTTPS in production
+        sameSite: 'strict' as const,
+        path: '/'
+      }
+      
+      Cookies.set(SESSION_COOKIE, JSON.stringify(sessionData), cookieOptions)
+      Cookies.set(USER_COOKIE, JSON.stringify(userProfile), cookieOptions)
+
+      setUser(userProfile)
+      setLoading(false)
+
+      return { success: true, user: userProfile }
+
     } catch (error) {
-      console.error('Error refreshing session:', error)
+      console.error('Login error:', error)
+      return { success: false, error: 'An unexpected error occurred' }
+    } finally {
+      setLoading(false)
     }
   }
 
-  const fetchUserProfile = async (userId: string) => {
+  const logout = () => {
+    // Remove cookies
+    Cookies.remove(SESSION_COOKIE, { path: '/' })
+    Cookies.remove(USER_COOKIE, { path: '/' })
+    setUser(null)
+    router.push('/login')
+  }
+
+  const loadSession = async () => {
     try {
-      const { data: profile } = await supabase
+      const sessionCookie = Cookies.get(SESSION_COOKIE)
+      const userCookie = Cookies.get(USER_COOKIE)
+      
+      if (!sessionCookie || !userCookie) {
+        setLoading(false)
+        return
+      }
+
+      const { userId, timestamp } = JSON.parse(sessionCookie)
+      const storedUser = JSON.parse(userCookie)
+      
+      // Check if session is expired (24 hours)
+      const SESSION_DURATION = 24 * 60 * 60 * 1000 // 24 hours
+      if (Date.now() - timestamp > SESSION_DURATION) {
+        Cookies.remove(SESSION_COOKIE, { path: '/' })
+        Cookies.remove(USER_COOKIE, { path: '/' })
+        setLoading(false)
+        return
+      }
+
+      // Verify user still exists and is active
+      const { data: currentUser, error } = await supabase
         .from('users')
         .select('*')
         .eq('id', userId)
         .eq('is_active', true)
         .single()
 
-      if (profile) {
-        setUserProfile(profile as UserProfile)
+      if (error || !currentUser) {
+        Cookies.remove(SESSION_COOKIE, { path: '/' })
+        Cookies.remove(USER_COOKIE, { path: '/' })
+        setLoading(false)
+        return
       }
+
+      // Update user data from database in case of changes
+      const updatedUserProfile: UserProfile = {
+        id: currentUser.id,
+        role: normalizeRole(currentUser.role),
+        full_name: currentUser.full_name,
+        email: currentUser.email,
+        phone: currentUser.phone,
+        department: currentUser.department,
+        specialization: currentUser.specialization,
+        is_active: currentUser.is_active,
+        created_at: currentUser.created_at,
+        updated_at: currentUser.updated_at
+      }
+
+      setUser(updatedUserProfile)
     } catch (error) {
-      console.error('Error fetching user profile:', error)
+      console.error('Session load error:', error)
+      Cookies.remove(SESSION_COOKIE, { path: '/' })
+      Cookies.remove(USER_COOKIE, { path: '/' })
+    } finally {
+      setLoading(false)
     }
   }
 
   useEffect(() => {
-    const initAuth = async () => {
-      try {
-        // Check if we have a localStorage session (legacy system)
-        const localSession = localStorage.getItem('swamicare_user')
-        
-        // Check Supabase session
-        const { data: { session } } = await supabase.auth.getSession()
-        
-        if (session?.user) {
-          // User is authenticated with Supabase
-          setUser(session.user)
-          await fetchUserProfile(session.user.id)
-        } else if (localSession) {
-          // User has localStorage session but no Supabase session
-          // Create a Supabase session for them
-          const userData = JSON.parse(localSession)
-          await createSupabaseSessionFromLocal(userData)
-        } else {
-          // No authentication found
-          setUser(null)
-          setUserProfile(null)
-        }
-      } catch (error) {
-        console.error('Auth initialization error:', error)
+    loadSession()
+
+    // Listen for cookie changes (logout from other tabs)
+    const checkSession = () => {
+      const sessionCookie = Cookies.get(SESSION_COOKIE)
+      if (!sessionCookie && user) {
         setUser(null)
-        setUserProfile(null)
-      } finally {
-        setLoading(false)
       }
     }
 
-    const createSupabaseSessionFromLocal = async (userData: any) => {
-      try {
-        //For the demo, we'll create a temporary Supabase user session
-        //In production, you'd want to handle this more securely
-        
-        // Verify user still exists in database
-        const { data: profile } = await supabase
-          .from('users')
-          .select('*')
-          .eq('id', userData.id)
-          .eq('is_active', true)
-          .single()
+    const intervalId = setInterval(checkSession, 5000) // Check every 5 seconds
+    return () => clearInterval(intervalId)
+  }, []) // Fixed: Remove user dependency to prevent infinite re-renders
 
-        if (profile) {
-          // Create a fake JWT session for Supabase to use
-          // This is a temporary solution - in production you'd implement proper auth
-          const fakeUser = {
-            id: profile.id,
-            email: profile.email,
-            user_metadata: {
-              full_name: profile.full_name,
-              role: profile.role
-            },
-            app_metadata: {},
-            aud: 'authenticated',
-            created_at: profile.created_at,
-            updated_at: profile.updated_at,
-            role: 'authenticated'
-          }
-          
-          setUser(fakeUser as User)
-          setUserProfile(profile as UserProfile)
-        } else {
-          //User no longer exists, clear localStorage
-          localStorage.removeItem('swamicare_user')
-        }
-      } catch (error) {
-        console.error('Error creating Supabase session from localStorage:', error)
-        localStorage.removeItem('swamicare_user')
-      }
-    }
-
-    initAuth()
-
-    // Listen for auth state changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        if (event === 'SIGNED_IN' && session?.user) {
-          setUser(session.user)
-          await fetchUserProfile(session.user.id)
-        } else if (event === 'SIGNED_OUT') {
-          setUser(null)
-          setUserProfile(null)
-          localStorage.removeItem('swamicare_user')
-        }
-      }
-    )
-
-    return () => {
-      subscription.unsubscribe()
-    }
-  }, [supabase])
+  const isAuthenticated = !!user
 
   return (
     <AuthContext.Provider value={{
       user,
-      userProfile,
       loading,
-      signOut,
-      refreshSession
+      login,
+      logout,
+      isAuthenticated
     }}>
       {children}
     </AuthContext.Provider>

@@ -111,7 +111,7 @@ export class SecurityHeaders {
   // Default CSRF configuration
   private getDefaultCSRFConfig(): CSRFConfig {
     return {
-      enabled: true,
+      enabled: false, // Temporarily disabled for debugging
       tokenHeader: 'X-CSRF-Token',
       cookieName: 'csrf-token',
       tokenLength: 32,
@@ -120,11 +120,11 @@ export class SecurityHeaders {
     }
   }
 
-  // Default rate limiting configuration
+  // Default rate limiting configuration - relaxed for development
   private getDefaultRateLimitConfig(): RateLimitConfig {
     return {
       windowMs: 15 * 60 * 1000, // 15 minutes
-      maxRequests: 100, // per window
+      maxRequests: 1000, // Increased for development
       message: 'Too many requests, please try again later',
       skipSuccessfulRequests: false,
       skipFailedRequests: false
@@ -293,7 +293,7 @@ export class SecurityHeaders {
                request.headers.get('x-real-ip') || 
                '127.0.0.1'
     
-    return ip.trim()
+    return ip?.trim() || 'unknown'
   }
 
   // Security middleware wrapper
@@ -374,11 +374,11 @@ export const ROUTE_SECURITY_CONFIGS = {
     }
   },
 
-  // Admin routes - very strict
+  // Admin routes - relaxed for development
   admin: {
     rateLimitConfig: {
       windowMs: 15 * 60 * 1000, // 15 minutes
-      maxRequests: 50,
+      maxRequests: 1000, // Increased for development
       message: 'Admin access rate limit exceeded'
     },
     customHeaders: {

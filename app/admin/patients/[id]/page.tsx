@@ -6,7 +6,7 @@ import { createClient } from '@/lib/supabase/client'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
-import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, Heart, FileText, CreditCard, Printer } from 'lucide-react'
+import { ArrowLeft, User, Phone, Mail, MapPin, Calendar, Heart, FileText, CreditCard, Printer, History } from 'lucide-react'
 import type { Patient } from '@/lib/types'
 
 interface PatientWithDetails extends Patient {
@@ -258,13 +258,21 @@ export default function PatientDetailPage() {
           <CardDescription>Administrative actions for this patient</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <Button 
               className="w-full"
               onClick={() => router.push(`/admin/appointments/new?patient_id=${patient.id}`)}
             >
               <Calendar className="h-4 w-4 mr-2" />
               Book Appointment
+            </Button>
+            <Button 
+              variant="outline" 
+              className="w-full"
+              onClick={() => router.push(`/admin/patients/${patient.id}/consultations-history`)}
+            >
+              <History className="h-4 w-4 mr-2" />
+              Consultation History
             </Button>
             <Button 
               variant="outline" 

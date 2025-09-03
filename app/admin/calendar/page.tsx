@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -29,6 +30,7 @@ interface CalendarStats {
 }
 
 export default function AdminCalendarPage() {
+  const router = useRouter()
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null)
   const [, setShowAppointmentForm] = useState(false)
   const [calendarType, setCalendarType] = useState<'existing' | 'proper'>('existing')
@@ -74,11 +76,11 @@ export default function AdminCalendarPage() {
           .gte('scheduled_date', weekStart.toISOString().split('T')[0])
           .lte('scheduled_date', weekEnd.toISOString().split('T')[0]) as { data: WeekAppointmentData[] | null }
 
-        // Get pending approvals
+        // Get pending approvals (scheduled appointments awaiting confirmation)
         const { data: pendingAppointments } = await supabase
           .from('appointments')
           .select('id')
-          .in('status', ['pending', 'requested'])
+          .in('status', ['scheduled'])
 
         const totalAppointments = weekAppointmentsData?.length || 0
         const todayTotal = todayAppointments?.length || 0
@@ -133,17 +135,29 @@ export default function AdminCalendarPage() {
   }
 
   const handleSlotSelect = (date: string, time: string, doctorId?: string) => {
-    console.log('Selected slot:', { date, time, doctorId })
-    setShowAppointmentForm(true)
+    console.log('📅 Available slot selected:', { date, time, doctorId })
+    // Navigate to book appointment page with pre-filled data
+    const params = new URLSearchParams({
+      date,
+      time,
+      ...(doctorId && { doctorId })
+    })
+    router.push(`/book-appointment?${params.toString()}`)
   }
 
   const handleBookAppointment = () => {
-    setShowAppointmentForm(true)
+    console.log('📅 Navigating to book appointment page')
+    router.push('/book-appointment')
   }
 
   const handleEditAppointment = (appointment: Appointment) => {
-    console.log('Edit appointment:', appointment)
-    // Navigate to edit form or open modal
+    console.log('📝 Edit appointment:', appointment.id)
+    // Navigate to appointment edit page based on type
+    if (appointment.appointment_type === 'treatment') {
+      router.push(`/admin/appointments/${appointment.id}/treatment`)
+    } else {
+      router.push(`/admin/appointments/${appointment.id}/consultation`)
+    }
   }
 
   const handleApproveAppointment = async (appointment: Appointment) => {

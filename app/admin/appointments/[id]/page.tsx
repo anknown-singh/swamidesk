@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button'
 import { ArrowLeft, Calendar, Clock, User, Stethoscope, FileText, Phone, CreditCard } from 'lucide-react'
 import type { Appointment } from '@/lib/types'
 
-interface AppointmentWithDetails extends Appointment {
+interface AppointmentWithDetails extends Omit<Appointment, 'patients' | 'users' | 'services'> {
   patients?: {
     id: string
     full_name: string
@@ -36,6 +36,8 @@ interface AppointmentWithDetails extends Appointment {
   visit_services?: Array<{
     id: string
     status: string
+    quantity: number
+    total_price: number
     notes?: string
     services?: {
       name: string
