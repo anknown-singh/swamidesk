@@ -34,12 +34,12 @@ export default function DoctorAvailabilityPage() {
 
         if (error) {
           console.error('❌ Error saving availability:', error)
-          alert('Error saving availability. Please try again.')
+          console.error('Error saving availability. Please try again.')
           return
         }
 
         console.log('✅ Doctor availability saved successfully')
-        alert('Availability updated successfully!')
+        console.log('Availability updated successfully!')
         
       } else {
         // It's leave data - admin can approve directly
@@ -61,17 +61,17 @@ export default function DoctorAvailabilityPage() {
 
         if (error) {
           console.error('❌ Error saving leave:', error)
-          alert('Error saving leave. Please try again.')
+          console.error('Error saving leave. Please try again.')
           return
         }
 
         console.log('✅ Doctor leave saved successfully')
-        alert('Doctor leave saved successfully!')
+        console.log('Doctor leave saved successfully!')
       }
       
     } catch (error) {
       console.error('Error saving data:', error)
-      alert('Error saving data. Please try again.')
+      console.error('Error saving data. Please try again.')
     }
   }
 

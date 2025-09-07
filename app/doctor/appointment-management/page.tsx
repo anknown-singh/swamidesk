@@ -70,7 +70,7 @@ export default function DoctorAppointmentManagementPage() {
       console.error("Access denied: User is not a doctor");
       setRedirecting(true);
       if (typeof window !== "undefined") {
-        alert("Access denied. This page is only for doctors.");
+        console.error("Access denied. This page is only for doctors.");
         window.location.href = "/login";
       }
       return;

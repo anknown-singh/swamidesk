@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { toast } from '@/lib/toast'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -170,11 +169,9 @@ export default function ReceptionistPatientQueuePage() {
 
       if (error) throw error
       
-      toast.success(`Visit status updated to ${newStatus.replace('_', ' ')}`)
       await fetchQueueData()
     } catch (error) {
       console.error('Error updating visit status:', error)
-      toast.error('Failed to update visit status')
     }
   }
 

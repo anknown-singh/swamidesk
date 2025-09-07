@@ -249,7 +249,7 @@ export default function DoctorCalendarPage() {
         }
       }
 
-      alert(errorMessage);
+      console.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -279,7 +279,7 @@ export default function DoctorCalendarPage() {
 
       console.log("Appointment completed:", appointment.id);
 
-      alert("Appointment completed successfully!");
+      console.log("Appointment completed successfully!");
 
       // Refresh stats from database to get accurate next appointment and statistics
       await fetchStats();
@@ -302,7 +302,7 @@ export default function DoctorCalendarPage() {
         }
       }
 
-      alert(errorMessage);
+      console.error(errorMessage);
     } finally {
       setLoading(false);
     }
@@ -332,7 +332,7 @@ export default function DoctorCalendarPage() {
 
       console.log("Patient marked as arrived:", appointment.id);
 
-      alert("Patient marked as arrived successfully!");
+      console.log("Patient marked as arrived successfully!");
 
       // Refresh stats from database to get accurate data
       await fetchStats();
@@ -356,7 +356,7 @@ export default function DoctorCalendarPage() {
         }
       }
 
-      alert(errorMessage);
+      console.error(errorMessage);
     } finally {
       setLoading(false);
     }

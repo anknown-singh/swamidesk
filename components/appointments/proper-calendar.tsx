@@ -96,7 +96,10 @@ export function ProperCalendar({
       .select(`
         *,
         patients(id, full_name, phone, email, date_of_birth, gender, address, emergency_contact_phone, created_at, updated_at),
-        users!appointments_doctor_id_fkey(id, full_name, email, phone, department, specialization, created_at, updated_at)
+        users!appointments_doctor_id_fkey(
+          id, full_name, email, phone, created_at, updated_at,
+          user_profiles(department, specialization)
+        )
       `)
     
     // Role-based filtering

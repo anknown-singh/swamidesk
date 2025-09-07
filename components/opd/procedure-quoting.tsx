@@ -18,7 +18,6 @@ import {
   TrashIcon
 } from 'lucide-react'
 import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
-import { toast } from '@/lib/toast'
 
 interface Service {
   id: string
@@ -87,7 +86,6 @@ export function ProcedureQuoting({
       setServices(data || [])
     } catch (error) {
       console.error('Error fetching services:', error)
-      toast.error('Failed to load services')
     }
   }, [])
 
@@ -109,7 +107,6 @@ export function ProcedureQuoting({
 
   const handleAddProcedure = () => {
     if (!newProcedure.service_id || !newProcedure.diagnosis_reason || !newProcedure.custom_price) {
-      toast.error('Please fill all required fields')
       return
     }
 
@@ -139,13 +136,11 @@ export function ProcedureQuoting({
       status: 'quoted'
     })
     setShowAddForm(false)
-    toast.success('Procedure quote added')
   }
 
   const handleRemoveProcedure = (index: number) => {
     const updated = selectedProcedures.filter((_, i) => i !== index)
     onProceduresChange(updated)
-    toast.success('Procedure removed')
   }
 
   const handleUpdateProcedure = (index: number, updates: Partial<ProcedureQuote>) => {

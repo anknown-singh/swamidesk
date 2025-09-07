@@ -1,56 +1,78 @@
-'use client'
+"use client";
 
-import type { UserProfile } from '@/lib/types'
-import { User } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { NotificationCenter } from '@/components/notifications/notification-center'
-import { GlobalSearch } from '@/components/search/global-search'
+import type { UserProfile } from "@/lib/types";
+import { RotateCcw } from "lucide-react";
+import { NotificationCenter } from "@/components/notifications/notification-center";
+import { GlobalSearch } from "@/components/search/global-search";
+import { Button } from "@/components/ui/button";
+import { useState } from "react";
 
 interface HeaderProps {
-  userProfile: UserProfile
-}
-
-function getRoleDisplayName(role: UserProfile['role']): string {
-  const roleNames: Record<UserProfile['role'], string> = {
-    admin: 'Administrator',
-    doctor: 'Doctor',
-    receptionist: 'Receptionist',
-    attendant: 'Service Attendant',
-    service_attendant: 'Service Attendant',
-    pharmacist: 'Pharmacist'
-  }
-  return roleNames[role]
+  userProfile: UserProfile;
 }
 
 export function Header({ userProfile }: HeaderProps) {
+  const [isResetting, setIsResetting] = useState(false);
+
+  const handleResetDatabase = async () => {
+    // if (
+    //   !confirm(
+    //     "Are you sure you want to reset the database? This will delete all data except users, user profiles, patients, and medicine masters."
+    //   )
+    // ) {
+    //   return;
+    // }
+
+    setIsResetting(true);
+    try {
+      const response = await fetch("/api/admin/reset-database", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+      });
+
+      if (response.ok) {
+        console.log("Database reset successfully!");
+        // window.location.reload();
+      } else {
+        const error = await response.text();
+        console.error(`Failed to reset database: ${error}`);
+      }
+    } catch (error) {
+      console.error(`Error resetting database: ${error}`);
+    } finally {
+      setIsResetting(false);
+    }
+  };
+
   return (
     <header className="bg-white border-b border-gray-200 px-6 py-4">
       <div className="flex items-center justify-between">
         <div className="flex items-center space-x-4">
           <GlobalSearch userProfile={userProfile} />
         </div>
-        
+
         <div className="flex items-center space-x-4">
-          <NotificationCenter 
-            userId={userProfile.id} 
+          {userProfile.role === "admin" && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={handleResetDatabase}
+              disabled={isResetting}
+            >
+              <RotateCcw
+                className={`h-4 w-4 mr-2 ${isResetting ? "animate-spin" : ""}`}
+              />
+              {isResetting ? "Resetting..." : "Reset DB"}
+            </Button>
+          )}
+          <NotificationCenter
+            userId={userProfile.id}
             userRole={userProfile.role}
           />
-          
-          <div className="flex items-center space-x-3">
-            <div className="text-right">
-              <p className="text-sm font-medium text-gray-900">
-                {userProfile.full_name}
-              </p>
-              <p className="text-xs text-gray-500">
-                {getRoleDisplayName(userProfile.role)}
-              </p>
-            </div>
-            <div className="bg-gray-200 rounded-full p-2">
-              <User className="h-5 w-5 text-gray-600" />
-            </div>
-          </div>
         </div>
       </div>
     </header>
-  )
+  );
 }

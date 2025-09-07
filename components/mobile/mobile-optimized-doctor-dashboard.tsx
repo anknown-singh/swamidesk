@@ -212,7 +212,7 @@ export function MobileOptimizedDoctorDashboard() {
 
   const startConsultation = (patientId: string) => {
     // Mock function - would navigate to consultation page
-    alert(`Starting consultation for patient ${patientId}`)
+    console.log(`Starting consultation for patient ${patientId}`)
   }
 
   const handleRefresh = () => {
@@ -254,7 +254,7 @@ export function MobileOptimizedDoctorDashboard() {
             subtitle={`${stats?.todayPatients.completed || 0} completed`}
             icon={Users}
             color="blue"
-            onClick={() => alert('View all patients')}
+            onClick={() => console.log('View all patients')}
           />
           
           <MobileMetricCard
@@ -263,7 +263,7 @@ export function MobileOptimizedDoctorDashboard() {
             subtitle="Patients waiting"
             icon={Clock}
             color="orange"
-            onClick={() => alert('View queue details')}
+            onClick={() => console.log('View queue details')}
           />
           
           <MobileMetricCard
@@ -272,7 +272,7 @@ export function MobileOptimizedDoctorDashboard() {
             subtitle="Written today"
             icon={FileText}
             color="green"
-            onClick={() => alert('View prescriptions')}
+            onClick={() => console.log('View prescriptions')}
           />
           
           <MobileMetricCard
@@ -281,7 +281,7 @@ export function MobileOptimizedDoctorDashboard() {
             subtitle="Assigned today"
             icon={Activity}
             color="purple"
-            onClick={() => alert('View procedures')}
+            onClick={() => console.log('View procedures')}
           />
         </MobileStatsGrid>
       </MobileSection>
@@ -312,7 +312,7 @@ export function MobileOptimizedDoctorDashboard() {
             <MobileCard title="Quick Actions" compact>
               <div className="space-y-2">
                 <TouchButton
-                  onClick={() => alert('Opening consultation workflow')}
+                  onClick={() => console.log('Opening consultation workflow')}
                   variant="primary"
                   className="w-full"
                   size="sm"
@@ -321,7 +321,7 @@ export function MobileOptimizedDoctorDashboard() {
                   Start Consultation
                 </TouchButton>
                 <TouchButton
-                  onClick={() => alert('Opening prescription pad')}
+                  onClick={() => console.log('Opening prescription pad')}
                   variant="secondary"
                   className="w-full"
                   size="sm"
@@ -330,7 +330,7 @@ export function MobileOptimizedDoctorDashboard() {
                   Write Prescription
                 </TouchButton>
                 <TouchButton
-                  onClick={() => alert('Opening patient history')}
+                  onClick={() => console.log('Opening patient history')}
                   variant="default"
                   className="w-full"
                   size="sm"
@@ -359,7 +359,7 @@ export function MobileOptimizedDoctorDashboard() {
           }))}
           emptyMessage={loading ? "Loading patients..." : "No patients in queue"}
           maxItems={8}
-          onViewAll={() => alert('View all patients in queue')}
+          onViewAll={() => console.log('View all patients in queue')}
         />
 
         {/* Today's Activity Summary */}

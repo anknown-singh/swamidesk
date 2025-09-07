@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { toast } from '@/lib/toast'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -111,7 +110,6 @@ export default function PatientQueuePage() {
     if (nextPatient) {
       router.push(`/doctor/consultations/${nextPatient.id}`)
     } else {
-      toast.error('No patients waiting for consultation')
     }
   }
 

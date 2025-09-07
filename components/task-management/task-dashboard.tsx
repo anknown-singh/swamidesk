@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from '@/lib/toast'
 
 // Types
 import { 
@@ -130,7 +129,6 @@ export function TaskDashboard({ className }: TaskDashboardProps) {
 
     } catch (error) {
       console.error('Error loading dashboard data:', error)
-      toast.error('Failed to load task dashboard')
     } finally {
       setLoading(false)
     }

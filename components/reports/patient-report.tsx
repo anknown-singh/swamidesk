@@ -502,7 +502,7 @@ export function PatientReport({ patient, visits, reportType = 'complete', classN
   const handlePrint = (template: string) => {
     const printWindow = window.open('', '_blank')
     if (!printWindow) {
-      alert('Please allow pop-ups for this site to enable printing')
+      console.warn('Please allow pop-ups for this site to enable printing')
       return
     }
 

@@ -253,7 +253,7 @@ export default function ConsultationDetailPage() {
       
       setVisit(prev => prev ? { ...prev, ...editedVisit } : null)
       setError(null)
-      alert('Consultation updated successfully!')
+      console.log('Consultation updated successfully!')
     } catch (error) {
       console.error('Error saving visit:', error)
       setError('Failed to save consultation details')
@@ -584,6 +584,7 @@ export default function ConsultationDetailPage() {
                 value={editedVisit.status || 'waiting'}
                 onChange={(e) => setEditedVisit(prev => ({ ...prev, status: e.target.value as Visit['status'] }))}
                 className="w-full p-2 border rounded-md"
+                aria-label="Visit status"
               >
                 <option value="waiting">Waiting</option>
                 <option value="in_consultation">In Consultation</option>
@@ -612,6 +613,7 @@ export default function ConsultationDetailPage() {
                     value={newPrescription.medicine_id}
                     onChange={(e) => setNewPrescription(prev => ({ ...prev, medicine_id: e.target.value }))}
                     className="w-full p-2 border rounded-md"
+                    aria-label="Select medicine for prescription"
                   >
                     <option value="">Select medicine...</option>
                     {availableMedicines.map(medicine => (
@@ -746,6 +748,7 @@ export default function ConsultationDetailPage() {
                     value={newTreatment.service_id}
                     onChange={(e) => setNewTreatment(prev => ({ ...prev, service_id: e.target.value }))}
                     className="w-full p-2 border rounded-md"
+                    aria-label="Select service or procedure"
                   >
                     <option value="">Select service...</option>
                     {availableServices.map(service => (
@@ -761,6 +764,7 @@ export default function ConsultationDetailPage() {
                     value={newTreatment.status}
                     onChange={(e) => setNewTreatment(prev => ({ ...prev, status: e.target.value }))}
                     className="w-full p-2 border rounded-md"
+                    aria-label="Treatment status"
                   >
                     <option value="planned">Planned</option>
                     <option value="in_progress">In Progress</option>

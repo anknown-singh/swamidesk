@@ -15,7 +15,6 @@ import {
   ActivityIcon,
 } from 'lucide-react'
 import { WorkflowManager, type PatientStatus } from '@/lib/workflow-manager'
-import { toast } from '@/lib/toast'
 
 interface Patient {
   id: string
@@ -158,7 +157,6 @@ export function PatientTracker({
       setWorkflowSummary(summary)
     } catch (error) {
       console.error('Error fetching patients:', error)
-      toast.error('Failed to load patient data')
     } finally {
       setLoading(false)
     }
@@ -269,14 +267,11 @@ export function PatientTracker({
       }
       
       if (result?.success) {
-        toast.success(result.message)
         fetchPatients() // Refresh the list
       } else {
-        toast.error(result?.message || 'Action failed')
       }
     } catch (error) {
       console.error('Error handling patient action:', error)
-      toast.error('Failed to perform action')
     }
   }
 

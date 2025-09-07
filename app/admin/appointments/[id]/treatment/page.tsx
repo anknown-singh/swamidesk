@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
-import { toast } from '@/lib/toast'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -33,7 +32,7 @@ export default function TreatmentWorkflowPage() {
           .select(`
             *,
             patients(id, full_name, phone, email, date_of_birth, gender, address, emergency_contact_phone),
-            users!appointments_doctor_id_fkey(id, full_name, email, phone, department, specialization)
+            users!appointments_doctor_id_fkey(\n              id, full_name, email, phone,\n              user_profiles(department, specialization)\n            )
           `)
           .eq('id', appointmentId)
           .single()
@@ -51,7 +50,6 @@ export default function TreatmentWorkflowPage() {
       } catch (err) {
         console.error('Error loading appointment:', err)
         setError(err instanceof Error ? err.message : 'Failed to load appointment')
-        toast.error('Failed to load appointment details')
       } finally {
         setLoading(false)
       }
@@ -89,14 +87,12 @@ export default function TreatmentWorkflowPage() {
         .update({ status: 'in_progress' })
         .eq('id', appointmentId)
       
-      toast.success('Treatment session started')
       
       // Navigate to treatment workflow with the visit ID
       router.push(`/doctor/patients/${appointment.patient_id}/treatment?visitId=${visit.id}&appointmentId=${appointmentId}`)
       
     } catch (error) {
       console.error('Error starting treatment:', error)
-      toast.error('Failed to start treatment workflow')
     }
   }
   
@@ -114,11 +110,9 @@ export default function TreatmentWorkflowPage() {
       if (error) throw error
       
       setAppointment(prev => prev ? { ...prev, status: newStatus as any } : null)
-      toast.success(`Appointment status updated to ${newStatus}`)
       
     } catch (error) {
       console.error('Error updating status:', error)
-      toast.error('Failed to update appointment status')
     }
   }
 
@@ -249,14 +243,14 @@ export default function TreatmentWorkflowPage() {
             <div>
               <p className="font-medium text-lg">{appointment.users?.full_name}</p>
               <p className="text-sm text-muted-foreground">
-                {appointment.users?.department}
+                {appointment.users?.user_profiles?.department || 'General'}
               </p>
             </div>
-            {appointment.users?.specialization && (
+            {appointment.users?.user_profiles?.specialization && (
               <div>
                 <p className="text-sm font-medium">Specialization</p>
                 <p className="text-sm text-muted-foreground">
-                  {appointment.users.specialization}
+                  {appointment.users.user_profiles?.specialization || 'General Practice'}
                 </p>
               </div>
             )}

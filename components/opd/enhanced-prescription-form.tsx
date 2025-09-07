@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from '@/lib/toast'
 
 // Types
 import { Prescription } from '@/lib/types'
@@ -250,7 +249,6 @@ export function EnhancedPrescriptionForm({
     )
 
     if (validPrescriptions.length === 0) {
-      toast.error('At least one prescription with medication is required')
       return
     }
 
@@ -284,12 +282,10 @@ export function EnhancedPrescriptionForm({
 
       if (error) throw error
 
-      toast.success('Prescriptions saved successfully')
       onSave?.(validPrescriptions)
 
     } catch (err) {
       console.error('Error saving prescriptions:', err)
-      toast.error('Failed to save prescriptions')
     } finally {
       setSaving(false)
     }

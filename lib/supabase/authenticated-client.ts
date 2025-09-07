@@ -53,7 +53,7 @@ export function createAuthenticatedClient(): SupabaseClient {
               // Check if we're in a browser environment
               if (typeof window !== 'undefined') {
                 // Provide user-friendly error message
-                alert('Please log in to continue. You will be redirected to the login page.')
+                console.warn('Please log in to continue. You will be redirected to the login page.')
                 window.location.href = '/login'
               }
             }

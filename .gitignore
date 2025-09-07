@@ -73,3 +73,9 @@ setup-database.js
 .env.local
 .env.production
 .env*.local
+
+# SSL certificates and keys
+*.crt
+*.key
+*.pem
+prod-ca-2021.crt

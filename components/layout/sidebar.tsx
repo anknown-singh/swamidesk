@@ -15,17 +15,17 @@ import {
   Stethoscope,
   ClipboardList,
   BarChart3,
-  LogOut,
   Home,
   Clock,
   Package,
   CreditCard,
   UserCog,
-  Pill,
   ShoppingCart,
   TrendingUp,
   BookOpen,
   GitBranch,
+  User,
+  LogOut,
 } from "lucide-react";
 
 interface SidebarItem {
@@ -67,6 +67,12 @@ const sidebarItems: SidebarItem[] = [
     href: "/appointment-management",
     label: "Appointment Status",
     icon: ClipboardList,
+    roles: ["admin", "receptionist"],
+  },
+  {
+    href: "/workflow-requests",
+    label: "Workflow Requests",
+    icon: GitBranch,
     roles: ["admin", "receptionist"],
   },
   // Doctor specific
@@ -215,6 +221,18 @@ interface SidebarProps {
   userProfile: UserProfile;
 }
 
+function getRoleDisplayName(role: UserProfile["role"]): string {
+  const roleNames: Record<UserProfile["role"], string> = {
+    admin: "Administrator",
+    doctor: "Doctor",
+    receptionist: "Receptionist",
+    attendant: "Service Attendant",
+    service_attendant: "Service Attendant",
+    pharmacist: "Pharmacist",
+  };
+  return roleNames[role];
+}
+
 export function Sidebar({ userProfile }: SidebarProps) {
   const pathname = usePathname();
   const { logout } = useAuth();
@@ -270,16 +288,19 @@ export function Sidebar({ userProfile }: SidebarProps) {
       </nav>
 
       <div className="border-t p-4">
-        <div className="flex items-center mb-4">
-          <div className="ml-2">
-            <p className="text-sm font-medium">{userProfile.full_name}</p>
-            <p className="text-xs text-muted-foreground capitalize">
-              {userProfile.role.replace("_", " ")}
+        <div className="flex items-center space-x-3 mb-4">
+          <div className="bg-gray-200 rounded-full p-2">
+            <User className="h-5 w-5 text-gray-600" />
+          </div>
+          <div className="text-left">
+            <p className="text-sm font-medium text-gray-900">
+              {userProfile.full_name}
+            </p>
+            <p className="text-xs text-gray-500 capitalize">
+              {getRoleDisplayName(userProfile.role)}
             </p>
             {userProfile.department && (
-              <p className="text-xs text-muted-foreground">
-                {userProfile.department}
-              </p>
+              <p className="text-xs text-gray-500">{userProfile.department}</p>
             )}
           </div>
         </div>

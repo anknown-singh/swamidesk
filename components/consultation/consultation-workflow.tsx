@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from '@/lib/toast'
 
 // Types
 import { 
@@ -200,11 +199,9 @@ export function ConsultationWorkflow({ visitId, onComplete, onCancel }: Consulta
         .eq('id', visitId)
 
       setConsultationSession(session)
-      toast.success('Consultation started')
 
     } catch (err) {
       console.error('Error starting consultation:', err)
-      toast.error('Failed to start consultation')
     } finally {
       setSaving(false)
     }
@@ -229,11 +226,9 @@ export function ConsultationWorkflow({ visitId, onComplete, onCancel }: Consulta
           .eq('id', consultationSession.id)
 
         setCurrentStep(newStep)
-        toast.success(`Moved to ${STEP_LABELS[newStep]}`)
 
       } catch (err) {
         console.error('Error updating step:', err)
-        toast.error('Failed to proceed to next step')
       } finally {
         setSaving(false)
       }
@@ -268,7 +263,6 @@ export function ConsultationWorkflow({ visitId, onComplete, onCancel }: Consulta
       )
 
       if (!hasFinalDiagnosis) {
-        toast.error('Cannot complete consultation: At least one final diagnosis is required')
         return
       }
 
@@ -314,9 +308,7 @@ export function ConsultationWorkflow({ visitId, onComplete, onCancel }: Consulta
 
       // Show appropriate success message
       if (hasInvestigations) {
-        toast.success('Consultation completed! Follow-up required for investigation results.')
       } else {
-        toast.success('Consultation completed successfully!')
       }
       
       if (onComplete) {
@@ -327,7 +319,6 @@ export function ConsultationWorkflow({ visitId, onComplete, onCancel }: Consulta
 
     } catch (err) {
       console.error('Error completing consultation:', err)
-      toast.error('Failed to complete consultation')
     } finally {
       setSaving(false)
     }

@@ -100,7 +100,10 @@ const fetchAppointments = async (startDate?: Date, endDate?: Date): Promise<Appo
     .select(`
       *,
       patients(id, full_name, phone, email, date_of_birth, gender, address, emergency_contact_phone, created_at, updated_at),
-      users!appointments_doctor_id_fkey(id, full_name, email, phone, department, specialization, created_at, updated_at)
+      users!appointments_doctor_id_fkey(
+        id, full_name, email, phone, created_at, updated_at,
+        user_profiles(department, specialization)
+      )
     `)
     .order('scheduled_date', { ascending: true })
     .order('scheduled_time', { ascending: true })
@@ -154,10 +157,12 @@ const fetchAppointments = async (startDate?: Date, endDate?: Date): Promise<Appo
       full_name: string
       email: string
       phone?: string
-      department: string
-      specialization?: string
       created_at: string
       updated_at: string
+      user_profiles?: {
+        department?: string
+        specialization?: string
+      }
     }
   }
   return (data as AppointmentData[]).map((apt: AppointmentData) => ({
@@ -197,8 +202,8 @@ const fetchAppointments = async (startDate?: Date, endDate?: Date): Promise<Appo
       full_name: apt.users.full_name,
       email: apt.users.email,
       phone: apt.users.phone || null,
-      department: apt.users.department,
-      specialization: apt.users.specialization || null,
+      department: apt.users.user_profiles?.department || 'general',
+      specialization: apt.users.user_profiles?.specialization || null,
       password_hash: 'hashed_password',
       is_active: true,
       created_at: apt.users.created_at,

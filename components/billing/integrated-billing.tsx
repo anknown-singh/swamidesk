@@ -19,7 +19,6 @@ import {
   CheckCircleIcon
 } from 'lucide-react'
 import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
-import { toast } from '@/lib/toast'
 import { workflowManager } from '@/lib/workflow-manager'
 
 interface Patient {
@@ -118,7 +117,6 @@ export function IntegratedBilling() {
       setBillablePatients(data || [])
     } catch (error) {
       console.error('Error fetching billable patients:', error)
-      toast.error('Failed to load billable patients')
     } finally {
       setLoading(false)
     }
@@ -259,7 +257,6 @@ export function IntegratedBilling() {
       setInvoice(generatedInvoice)
     } catch (error) {
       console.error('Error generating invoice:', error)
-      toast.error('Failed to generate invoice')
       setSelectedPatient(null)
     } finally {
       setGenerating(false)
@@ -270,7 +267,6 @@ export function IntegratedBilling() {
     if (!selectedPatient || !invoice) return
 
     if (!paymentMethod) {
-      toast.error('Please select a payment method')
       return
     }
 
@@ -315,7 +311,6 @@ export function IntegratedBilling() {
         throw new Error(billingResult.message)
       }
 
-      toast.success(`Payment processed successfully! ${billingResult.message}`)
       
       // Reset form and refresh patients
       setSelectedPatient(null)
@@ -328,7 +323,6 @@ export function IntegratedBilling() {
 
     } catch (error) {
       console.error('Error processing payment:', error)
-      toast.error('Failed to process payment')
     } finally {
       setGenerating(false)
     }
@@ -623,7 +617,6 @@ export function IntegratedBilling() {
                     {selectedPatient.patients?.email && (
                       <Button 
                         variant="outline"
-                        onClick={() => toast.info('Email feature coming soon')}
                         className="flex-1"
                       >
                         <MailIcon className="h-4 w-4 mr-2" />

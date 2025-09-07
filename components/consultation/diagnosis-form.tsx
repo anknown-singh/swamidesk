@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from '@/lib/toast'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
 
 // Types
@@ -212,7 +211,6 @@ export function DiagnosisForm({ consultationId, onNext, onPrevious }: DiagnosisF
         }
       } catch (err) {
         console.error('Error loading diagnoses:', err)
-        toast.error('Failed to load existing diagnoses')
       } finally {
         setLoading(false)
       }
@@ -281,7 +279,6 @@ export function DiagnosisForm({ consultationId, onNext, onPrevious }: DiagnosisF
     )
     
     if (validDiagnoses.length === 0) {
-      toast.error('At least one diagnosis is required')
       return
     }
 
@@ -289,11 +286,9 @@ export function DiagnosisForm({ consultationId, onNext, onPrevious }: DiagnosisF
       setSaving(true)
       setErrors({})
       await forceSave() // Force save current data
-      toast.success('Diagnoses saved successfully')
       onNext()
     } catch (err) {
       console.error('Error saving diagnoses:', err)
-      toast.error('Failed to save diagnoses')
     } finally {
       setSaving(false)
     }

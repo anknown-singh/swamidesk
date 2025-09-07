@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from '@/lib/toast'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
 
 // Types
@@ -292,7 +291,6 @@ export function ExaminationForm({ consultationId, onNext, onPrevious }: Examinat
         }
       } catch (err) {
         console.error('Error loading examination data:', err)
-        toast.error('Failed to load existing examination data')
       } finally {
         setLoading(false)
       }
@@ -377,11 +375,9 @@ export function ExaminationForm({ consultationId, onNext, onPrevious }: Examinat
       setSaving(true)
       setErrors({})
       await forceSave() // Force save current data
-      toast.success('Examination findings saved successfully')
       onNext()
     } catch (err) {
       console.error('Error saving examination:', err)
-      toast.error('Failed to save examination findings')
     } finally {
       setSaving(false)
     }

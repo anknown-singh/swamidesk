@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from '@/lib/toast'
 import { useRouter } from 'next/navigation'
 
 // Types  
@@ -162,7 +161,6 @@ export function ConsultationSummary({ consultationId, onPrevious, onComplete }: 
 
       } catch (err) {
         console.error('Error loading consultation data:', err)
-        toast.error('Failed to load consultation summary')
       } finally {
         setLoading(false)
       }
@@ -181,7 +179,6 @@ export function ConsultationSummary({ consultationId, onPrevious, onComplete }: 
       )
 
       if (!hasFinalDiagnosis) {
-        toast.error('Cannot complete consultation: At least one final diagnosis is required')
         return
       }
 
@@ -218,12 +215,9 @@ export function ConsultationSummary({ consultationId, onPrevious, onComplete }: 
 
         // If investigations are ordered, show appropriate message
         if (hasInvestigations) {
-          toast.success('Consultation completed! Follow-up required for investigation results.')
         } else {
-          toast.success('Consultation completed successfully!')
-        }
+          }
       } else {
-        toast.success('Consultation completed successfully!')
       }
       
       if (onComplete) {
@@ -234,7 +228,6 @@ export function ConsultationSummary({ consultationId, onPrevious, onComplete }: 
 
     } catch (err) {
       console.error('Error completing consultation:', err)
-      toast.error('Failed to complete consultation')
     } finally {
       setCompleting(false)
     }
@@ -242,12 +235,10 @@ export function ConsultationSummary({ consultationId, onPrevious, onComplete }: 
 
   const exportSummary = () => {
     // This would generate a PDF or printable summary
-    toast.info('Export functionality coming soon')
   }
 
   const sendToPatient = () => {
     // This would email the summary to the patient
-    toast.info('Email functionality coming soon')
   }
 
   // Validation helper functions

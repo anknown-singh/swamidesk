@@ -2,7 +2,6 @@
 
 import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { toast } from '@/lib/toast'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Users, Clock, FileText, Activity, AlertTriangle, BookOpen, ExternalLink } from 'lucide-react'
 import { createClient } from '@/lib/supabase/client'
@@ -365,7 +364,6 @@ export default function DoctorDashboard() {
                   if (nextPatient) {
                     router.push(`/doctor/consultations/${nextPatient.id}`)
                   } else {
-                    toast.error('No patients waiting for consultation')
                   }
                 }}
                 className="text-left p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"

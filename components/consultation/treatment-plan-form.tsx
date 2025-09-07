@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from '@/lib/toast'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
 import { createSellOrderFromTreatmentPlan } from '@/lib/services/sell-order-service'
 
@@ -264,15 +263,12 @@ export function TreatmentPlanForm({ consultationId, onNext, onPrevious }: Treatm
 
               if (sellOrderResult.success) {
                 console.log('✅ Sell order created successfully:', sellOrderResult.sellOrder?.order_number)
-                toast.success(`Treatment plan saved and sell order ${sellOrderResult.sellOrder?.order_number} created`)
               } else {
                 console.error('❌ Failed to create sell order:', sellOrderResult.error)
-                toast.error('Treatment plan saved but sell order creation failed')
               }
             }
           } catch (sellOrderError) {
             console.error('Error creating sell order:', sellOrderError)
-            toast.error('Treatment plan saved but sell order creation failed')
           }
         }
       },
@@ -370,7 +366,6 @@ export function TreatmentPlanForm({ consultationId, onNext, onPrevious }: Treatm
         }
       } catch (err) {
         console.error('Error loading treatment plan:', err)
-        toast.error('Failed to load existing treatment plan')
       } finally {
         setLoading(false)
       }
@@ -519,14 +514,12 @@ export function TreatmentPlanForm({ consultationId, onNext, onPrevious }: Treatm
       
       // Note: Follow-up appointment creation would be handled separately
       // to avoid complications with data access during treatment plan saving
-      toast.success('Treatment plan saved successfully')
 
       onNext()
     } catch (err) {
       console.error('Error saving treatment plan:', err)
       const errorMessage = err instanceof Error ? err.message : String(err)
       if (!errorMessage.includes('relation') && !errorMessage.includes('does not exist')) {
-        toast.error('Failed to save treatment plan')
       }
     } finally {
       setSaving(false)

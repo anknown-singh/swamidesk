@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from '@/lib/toast'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
 
 // Types
@@ -207,7 +206,6 @@ export function ChiefComplaintsForm({ consultationId, visitData, onNext }: Chief
         console.error('Error loading complaints:', err)
         // Don't show error toast for missing table - it's expected during initial setup
         if (!err.message?.includes('relation') && !err.message?.includes('does not exist')) {
-          toast.error('Failed to load existing complaints')
         }
       } finally {
         setLoading(false)
@@ -221,18 +219,15 @@ export function ChiefComplaintsForm({ consultationId, visitData, onNext }: Chief
     // Validate required fields
     const validComplaints = formData.complaints.filter(c => c.complaint.trim() !== '')
     if (validComplaints.length === 0) {
-      toast.error('At least one complaint is required')
       return
     }
 
     try {
       setSaving(true)
       await forceSave() // Force save current data
-      toast.success('Chief complaints saved successfully')
       onNext()
     } catch (err) {
       console.error('Error saving complaints:', err)
-      toast.error('Failed to save chief complaints')
     } finally {
       setSaving(false)
     }

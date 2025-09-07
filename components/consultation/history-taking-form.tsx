@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from '@/lib/toast'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -152,7 +151,6 @@ export function HistoryTakingForm({ consultationId, onNext, onPrevious }: Histor
       } catch (err: any) {
         console.error('Error loading history:', err)
         if (!err.message?.includes('relation') && !err.message?.includes('does not exist')) {
-          toast.error('Failed to load existing history')
         }
       } finally {
         setLoading(false)
@@ -166,11 +164,9 @@ export function HistoryTakingForm({ consultationId, onNext, onPrevious }: Histor
     try {
       setSaving(true)
       await forceSave() // Force save current data
-      toast.success('Medical history saved successfully')
       onNext()
     } catch (err) {
       console.error('Error saving history:', err)
-      toast.error('Failed to save medical history')
     } finally {
       setSaving(false)
     }

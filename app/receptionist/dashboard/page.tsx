@@ -160,13 +160,13 @@ export default function ReceptionistDashboard() {
             ) : (
               <div className="text-2xl font-bold">{stats?.todayPatients || 0}</div>
             )}
-            <p className="text-xs text-muted-foreground">
+            <div className="text-xs text-muted-foreground">
               {loading ? (
                 <Skeleton className="h-3 w-24" />
               ) : (
                 `${getGrowthText(stats?.todayPatients || 0, stats?.yesterdayPatients || 0)} from yesterday`
               )}
-            </p>
+            </div>
           </CardContent>
         </Card>
         

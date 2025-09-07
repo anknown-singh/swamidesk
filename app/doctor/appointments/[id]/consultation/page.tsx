@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useRouter } from 'next/navigation'
 import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
-import { toast } from '@/lib/toast'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -33,7 +32,10 @@ export default function DoctorConsultationWorkflowPage() {
           .select(`
             *,
             patients(id, full_name, phone, email, date_of_birth, gender, address, emergency_contact_phone, created_at, updated_at),
-            users!appointments_doctor_id_fkey(id, full_name, email, phone, department, specialization, created_at, updated_at)
+            users!appointments_doctor_id_fkey(
+              id, full_name, email, phone, created_at, updated_at,
+              user_profiles(department, specialization)
+            )
           `)
           .eq('id', appointmentId)
           .single()
@@ -41,6 +43,20 @@ export default function DoctorConsultationWorkflowPage() {
         if (error) throw error
         if (!data) throw new Error('Appointment not found')
         
+        // Type-safe data access for users with user_profiles
+        interface UserWithProfile {
+          id: string
+          full_name: string
+          email: string
+          phone: string
+          created_at: string
+          updated_at: string
+          user_profiles?: {
+            department?: string
+            specialization?: string
+          }
+        }
+
         // Transform to match our type structure
         const transformedAppointment: Appointment = {
           ...data,
@@ -57,17 +73,17 @@ export default function DoctorConsultationWorkflowPage() {
             updated_at: data.patients.updated_at || '',
           } : undefined,
           doctor: data.users ? {
-            id: data.users.id,
+            id: (data.users as UserWithProfile).id,
             role: 'doctor' as const,
-            full_name: data.users.full_name,
-            email: data.users.email,
-            phone: data.users.phone,
-            department: data.users.department,
-            specialization: data.users.specialization,
+            full_name: (data.users as UserWithProfile).full_name,
+            email: (data.users as UserWithProfile).email,
+            phone: (data.users as UserWithProfile).phone,
+            department: (data.users as UserWithProfile).user_profiles?.department || 'general',
+            specialization: (data.users as UserWithProfile).user_profiles?.specialization || null,
             password_hash: '',
             is_active: true,
-            created_at: data.users.created_at || '',
-            updated_at: data.users.updated_at || '',
+            created_at: (data.users as UserWithProfile).created_at || '',
+            updated_at: (data.users as UserWithProfile).updated_at || '',
           } : undefined
         }
         
@@ -76,7 +92,6 @@ export default function DoctorConsultationWorkflowPage() {
       } catch (err) {
         console.error('Error loading appointment:', err)
         setError(err instanceof Error ? err.message : 'Failed to load appointment')
-        toast.error('Failed to load appointment details')
       } finally {
         setLoading(false)
       }
@@ -106,11 +121,9 @@ export default function DoctorConsultationWorkflowPage() {
       if (error) throw error
       
       setAppointment(prev => prev ? { ...prev, status: newStatus as any } : null)
-      toast.success(`Appointment status updated to ${newStatus}`)
       
     } catch (error) {
       console.error('Error updating status:', error)
-      toast.error('Failed to update appointment status')
     }
   }
 

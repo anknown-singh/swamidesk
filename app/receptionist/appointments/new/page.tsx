@@ -15,7 +15,6 @@ import {
 import { AppointmentBookingForm } from '@/components/appointments/appointment-booking-form'
 import type { AppointmentBookingForm as AppointmentBookingFormData, AppointmentType } from '@/lib/types'
 import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
-import { toast } from '@/lib/toast'
 
 
 export default function NewAppointmentPage() {
@@ -27,6 +26,14 @@ export default function NewAppointmentPage() {
   const preFilledTime = searchParams.get('time')
   const preFilledDoctorId = searchParams.get('doctorId')
   
+  // Additional params from workflow requests
+  const preFilledPatientId = searchParams.get('patientId')
+  const preFilledAppointmentType = searchParams.get('appointmentType') as AppointmentType
+  const workflowRequestId = searchParams.get('workflowRequestId')
+  const preFilledNotes = searchParams.get('notes')
+  const preFilledPriority = searchParams.get('priority') === 'true'
+  const opdId = searchParams.get('opdId')
+  
   const [isSubmitting, setIsSubmitting] = useState(false)
 
   const handleSubmit = async (formData: AppointmentBookingFormData) => {
@@ -35,37 +42,63 @@ export default function NewAppointmentPage() {
 
     try {
       // Create the appointment
+      const appointmentData: any = {
+        patient_id: formData.patient_id,
+        doctor_id: formData.doctor_id,
+        department: formData.department,
+        appointment_type: formData.appointment_type,
+        status: 'scheduled',
+        scheduled_date: formData.scheduled_date,
+        scheduled_time: formData.scheduled_time,
+        duration: formData.duration || 30,
+        title: formData.title || `${formData.appointment_type} appointment`,
+        description: formData.description,
+        notes: formData.notes,
+        patient_notes: formData.patient_notes,
+        priority: formData.priority || false,
+        created_by: formData.created_by
+      };
+
+      // Add OPD ID if available (links appointment to specific OPD session)
+      if (opdId) {
+        appointmentData.opd_id = opdId;
+      }
+
       const { data: appointment, error: appointmentError } = await supabase
         .from('appointments')
-        .insert({
-          patient_id: formData.patient_id,
-          doctor_id: formData.doctor_id,
-          department: formData.department,
-          appointment_type: formData.appointment_type,
-          status: 'scheduled',
-          scheduled_date: formData.scheduled_date,
-          scheduled_time: formData.scheduled_time,
-          duration: formData.duration || 30,
-          title: formData.title || `${formData.appointment_type} appointment`,
-          description: formData.description,
-          notes: formData.notes,
-          patient_notes: formData.patient_notes,
-          priority: formData.priority || false,
-          created_by: formData.created_by
-        })
+        .insert(appointmentData)
         .select()
         .single()
 
       if (appointmentError) throw appointmentError
 
-      toast.success('Appointment booked successfully!')
+      // If this came from a workflow request, mark it as completed
+      if (workflowRequestId) {
+        const { error: workflowUpdateError } = await supabase
+          .from('workflow_requests')
+          .update({
+            status: 'approved',
+            response_notes: `Appointment scheduled for ${formData.scheduled_date} at ${formData.scheduled_time}`,
+            responded_at: new Date().toISOString(),
+          })
+          .eq('id', workflowRequestId)
+
+        if (workflowUpdateError) {
+          console.error('Error updating workflow request:', workflowUpdateError)
+          // Don't fail the appointment creation, just log the error
+        }
+      }
+
       
-      // Redirect back to appointments list
-      router.push('/receptionist/appointments?created=true')
+      // Redirect back to appointments list or workflow requests if came from there
+      if (workflowRequestId) {
+        router.push('/receptionist/workflow-requests?appointment=created')
+      } else {
+        router.push('/receptionist/appointments?created=true')
+      }
 
     } catch (error: any) {
       console.error('Error creating appointment:', error)
-      toast.error(error.message || 'Failed to book appointment')
     } finally {
       setIsSubmitting(false)
     }
@@ -76,8 +109,10 @@ export default function NewAppointmentPage() {
   }
 
   const getInitialData = (): Partial<AppointmentBookingFormData> => {
+    
     const initialData: Partial<AppointmentBookingFormData> = {}
     
+    // Original pre-filled data
     if (preFilledDate) {
       initialData.scheduled_date = preFilledDate
     }
@@ -88,6 +123,24 @@ export default function NewAppointmentPage() {
     
     if (preFilledDoctorId) {
       initialData.doctor_id = preFilledDoctorId
+    }
+    
+    // New pre-filled data from workflow requests
+    if (preFilledPatientId) {
+      initialData.patient_id = preFilledPatientId
+    }
+    
+    if (preFilledAppointmentType) {
+      initialData.appointment_type = preFilledAppointmentType
+    }
+    
+    if (preFilledNotes) {
+      initialData.patient_notes = preFilledNotes
+      initialData.description = preFilledNotes
+    }
+    
+    if (preFilledPriority !== undefined) {
+      initialData.priority = preFilledPriority
     }
     
     return initialData
@@ -117,15 +170,18 @@ export default function NewAppointmentPage() {
       </div>
 
       {/* Pre-filled Information Card */}
-      {(preFilledDate || preFilledTime || preFilledDoctorId) && (
+      {(preFilledDate || preFilledTime || preFilledDoctorId || preFilledPatientId || preFilledAppointmentType || opdId) && (
         <Card className="border-blue-200 bg-blue-50">
           <CardHeader>
             <CardTitle className="flex items-center gap-2 text-blue-900">
               <CheckCircleIcon className="h-5 w-5" />
-              Pre-selected Appointment Details
+              {workflowRequestId ? 'Follow-up Request Details' : 'Pre-selected Appointment Details'}
             </CardTitle>
             <CardDescription className="text-blue-800">
-              The following details have been pre-filled from your selection
+              {workflowRequestId 
+                ? 'The following details have been pre-filled from the workflow request' 
+                : 'The following details have been pre-filled from your selection'
+              }
             </CardDescription>
           </CardHeader>
           <CardContent>
@@ -159,6 +215,41 @@ export default function NewAppointmentPage() {
                   <span className="font-medium">Doctor:</span>
                   <Badge variant="outline" className="text-blue-700">
                     Selected Doctor
+                  </Badge>
+                </div>
+              )}
+              {preFilledPatientId && (
+                <div className="flex items-center gap-2">
+                  <StethoscopeIcon className="h-4 w-4 text-blue-600" />
+                  <span className="font-medium">Patient:</span>
+                  <Badge variant="outline" className="text-blue-700">
+                    Pre-selected
+                  </Badge>
+                </div>
+              )}
+              {preFilledAppointmentType && (
+                <div className="flex items-center gap-2">
+                  <CalendarIcon className="h-4 w-4 text-blue-600" />
+                  <span className="font-medium">Type:</span>
+                  <Badge variant="outline" className="text-blue-700">
+                    {preFilledAppointmentType.replace('_', ' ').toUpperCase()}
+                  </Badge>
+                </div>
+              )}
+              {opdId && (
+                <div className="flex items-center gap-2">
+                  <StethoscopeIcon className="h-4 w-4 text-blue-600" />
+                  <span className="font-medium">OPD Session:</span>
+                  <Badge variant="outline" className="text-blue-700">
+                    {opdId.slice(-8)}
+                  </Badge>
+                </div>
+              )}
+              {preFilledPriority && (
+                <div className="flex items-center gap-2">
+                  <span className="font-medium">Priority:</span>
+                  <Badge variant="outline" className="text-red-700 border-red-300">
+                    HIGH PRIORITY
                   </Badge>
                 </div>
               )}

@@ -5,7 +5,6 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Badge } from '@/components/ui/badge'
 import { createSellOrderFromTreatmentPlan } from '@/lib/services/sell-order-service'
-import { toast } from '@/lib/toast'
 import { Pill, ShoppingCart, User, Calendar } from 'lucide-react'
 
 export function TreatmentPlanOrders() {
@@ -43,14 +42,11 @@ export function TreatmentPlanOrders() {
 
       if (result.success) {
         setLastCreatedOrder(result.sellOrder?.order_number || null)
-        toast.success(`Sell order ${result.sellOrder?.order_number} created successfully!`)
         console.log('✅ Test successful:', result.sellOrder)
       } else {
-        toast.error(`Failed to create sell order: ${result.error}`)
         console.error('❌ Test failed:', result.error)
       }
     } catch (error) {
-      toast.error('Error creating sell order')
       console.error('❌ Error:', error)
     } finally {
       setLoading(false)

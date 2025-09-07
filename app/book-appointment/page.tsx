@@ -45,7 +45,7 @@ export default function BookAppointmentPage() {
 
       if (error) {
         console.error('❌ Error creating appointment:', error)
-        alert('Error submitting appointment request. Please try again.')
+        console.error('Error submitting appointment request. Please try again.')
         return
       }
 
@@ -55,7 +55,7 @@ export default function BookAppointmentPage() {
 
     } catch (error) {
       console.error('Error booking appointment:', error)
-      alert('Error submitting appointment request. Please try again.')
+      console.error('Error submitting appointment request. Please try again.')
     }
   }
 

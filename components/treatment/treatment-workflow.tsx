@@ -3,7 +3,6 @@
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from '@/lib/toast'
 
 // Types
 import { 
@@ -196,11 +195,9 @@ export function TreatmentWorkflow({ visitId, onComplete, onCancel }: TreatmentWo
         .eq('id', visitId)
 
       setTreatmentSession(session)
-      toast.success('Treatment workflow started')
 
     } catch (err) {
       console.error('Error starting treatment:', err)
-      toast.error('Failed to start treatment workflow')
     } finally {
       setSaving(false)
     }
@@ -225,11 +222,9 @@ export function TreatmentWorkflow({ visitId, onComplete, onCancel }: TreatmentWo
           .eq('id', treatmentSession.id)
 
         setCurrentStep(newStep)
-        toast.success(`Moved to ${STEP_LABELS[newStep]}`)
 
       } catch (err) {
         console.error('Error updating step:', err)
-        toast.error('Failed to proceed to next step')
       } finally {
         setSaving(false)
       }
@@ -273,7 +268,6 @@ export function TreatmentWorkflow({ visitId, onComplete, onCancel }: TreatmentWo
         })
         .eq('id', visitId)
 
-      toast.success('Treatment workflow completed successfully')
       
       if (onComplete) {
         onComplete()
@@ -283,7 +277,6 @@ export function TreatmentWorkflow({ visitId, onComplete, onCancel }: TreatmentWo
 
     } catch (err) {
       console.error('Error completing treatment:', err)
-      toast.error('Failed to complete treatment workflow')
     } finally {
       setSaving(false)
     }

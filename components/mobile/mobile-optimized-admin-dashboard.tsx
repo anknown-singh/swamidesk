@@ -215,7 +215,7 @@ export function MobileOptimizedAdminDashboard() {
       description: 'Download reports',
       icon: Download,
       color: 'orange',
-      onClick: () => alert('Export feature coming soon!')
+      onClick: () => console.log('Export feature coming soon!')
     }
   ]
 
@@ -371,7 +371,7 @@ export function MobileOptimizedAdminDashboard() {
           }))}
           emptyMessage="No recent activity"
           maxItems={4}
-          onViewAll={() => alert('View all activity coming soon!')}
+          onViewAll={() => console.log('View all activity coming soon!')}
         />
 
         {/* Today's Overview */}

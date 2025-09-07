@@ -119,7 +119,7 @@ export default function TreatmentPlanDetailPage() {
       
       setTreatmentPlan(prev => prev ? { ...prev, ...editedPlan } : null)
       setError(null)
-      alert('Treatment plan updated successfully!')
+      console.log('Treatment plan updated successfully!')
     } catch (error) {
       console.error('Error saving treatment plan:', error)
       setError('Failed to save treatment plan details')

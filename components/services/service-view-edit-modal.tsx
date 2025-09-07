@@ -18,7 +18,6 @@ import {
   StethoscopeIcon,
 } from 'lucide-react'
 import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
-import { toast } from '@/lib/toast'
 
 interface Service {
   id: string
@@ -86,11 +85,9 @@ export function ServiceViewEditModal({
 
       onUpdate(data)
       setMode('view')
-      toast.success('Service updated successfully!')
 
     } catch (error) {
       console.error('Error updating service:', error)
-      toast.error('Failed to update service. Please try again.')
     } finally {
       setSaving(false)
     }

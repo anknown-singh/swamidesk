@@ -2,7 +2,6 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
-import { toast } from '@/lib/toast'
 import { createClient } from '@/lib/supabase/client'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -161,12 +160,10 @@ export default function AddToQueuePage() {
   // Add appointments to queue
   const addAppointmentsToQueue = async () => {
     if (selectedAppointments.length === 0) {
-      toast.error('Please select at least one appointment')
       return
     }
 
     if (!chiefComplaint.trim()) {
-      toast.error('Please enter chief complaint')
       return
     }
 
@@ -219,12 +216,10 @@ export default function AddToQueuePage() {
 
       if (updateError) throw updateError
 
-      toast.success(`${visits.length} appointment(s) added to queue`)
       router.push('/receptionist/queue')
 
     } catch (error) {
       console.error('Error adding appointments to queue:', error)
-      toast.error('Failed to add appointments to queue')
     } finally {
       setSubmitting(false)
     }
@@ -233,17 +228,14 @@ export default function AddToQueuePage() {
   // Add existing patient to queue
   const addPatientToQueue = async () => {
     if (!selectedPatient) {
-      toast.error('Please select a patient')
       return
     }
 
     if (!selectedDoctor) {
-      toast.error('Please select a doctor')
       return
     }
 
     if (!chiefComplaint.trim()) {
-      toast.error('Please enter chief complaint')
       return
     }
 
@@ -278,12 +270,10 @@ export default function AddToQueuePage() {
       if (error) throw error
 
       const selectedPatientData = patients.find(p => p.id === selectedPatient)
-      toast.success(`${selectedPatientData?.full_name} added to queue with token #${nextTokenNumber}`)
       router.push('/receptionist/queue')
 
     } catch (error) {
       console.error('Error adding patient to queue:', error)
-      toast.error('Failed to add patient to queue')
     } finally {
       setSubmitting(false)
     }
@@ -292,17 +282,14 @@ export default function AddToQueuePage() {
   // Register new patient and add to queue
   const registerAndAddToQueue = async () => {
     if (!newPatientForm.full_name.trim() || !newPatientForm.phone.trim()) {
-      toast.error('Please fill in patient name and phone number')
       return
     }
 
     if (!selectedDoctor) {
-      toast.error('Please select a doctor')
       return
     }
 
     if (!chiefComplaint.trim()) {
-      toast.error('Please enter chief complaint')
       return
     }
 
@@ -350,12 +337,10 @@ export default function AddToQueuePage() {
 
       if (visitError) throw visitError
 
-      toast.success(`${newPatient.full_name} registered and added to queue with token #${nextTokenNumber}`)
       router.push('/receptionist/queue')
 
     } catch (error) {
       console.error('Error registering patient:', error)
-      toast.error('Failed to register and add patient to queue')
     } finally {
       setSubmitting(false)
     }

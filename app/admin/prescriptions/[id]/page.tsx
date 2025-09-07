@@ -151,7 +151,7 @@ export default function PrescriptionDetailPage() {
       
       setPrescription(prev => prev ? { ...prev, ...editedPrescription } : null)
       setError(null)
-      alert('Prescription updated successfully!')
+      console.log('Prescription updated successfully!')
     } catch (error) {
       console.error('Error saving prescription:', error)
       setError('Failed to save prescription details')

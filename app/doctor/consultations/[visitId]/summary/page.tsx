@@ -140,12 +140,12 @@ export default function ConsultationSummaryPage() {
 
   const exportSummary = () => {
     // Export functionality - could generate PDF
-    alert('Export functionality coming soon')
+    console.log('Export functionality coming soon')
   }
 
   const sendToPatient = () => {
     // Email functionality
-    alert('Email functionality coming soon')
+    console.log('Email functionality coming soon')
   }
 
   if (loading) {

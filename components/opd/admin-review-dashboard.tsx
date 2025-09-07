@@ -17,7 +17,6 @@ import {
   FileTextIcon,
 } from 'lucide-react'
 import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
-import { toast } from '@/lib/toast'
 import { WorkflowManager } from '@/lib/workflow-manager'
 
 interface Patient {
@@ -89,7 +88,6 @@ export function AdminReviewDashboard() {
       setReviewQueue(data || [])
     } catch (error) {
       console.error('Error fetching review queue:', error)
-      toast.error('Failed to load admin review queue')
     } finally {
       setLoading(false)
     }
@@ -130,7 +128,6 @@ export function AdminReviewDashboard() {
       )
 
       if (!allReviewed) {
-        toast.error('Please review all procedures before saving')
         return
       }
 
@@ -163,8 +160,6 @@ export function AdminReviewDashboard() {
 
       if (error) throw error
 
-      toast.success('Review completed and saved successfully!')
-      toast.info(`Next Step: ${routingResult.nextStep} - ${routingResult.message}`)
       
       // Refresh the queue
       fetchReviewQueue()
@@ -172,7 +167,6 @@ export function AdminReviewDashboard() {
 
     } catch (error) {
       console.error('Error saving review:', error)
-      toast.error('Failed to save review')
     } finally {
       setUpdating(false)
     }

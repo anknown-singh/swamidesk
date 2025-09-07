@@ -152,7 +152,7 @@ function DefaultErrorFallback({ error, errorInfo, resetError, errorId }: ErrorFa
     }
     
     navigator.clipboard.writeText(JSON.stringify(errorDetails, null, 2))
-      .then(() => alert('Error details copied to clipboard'))
+      .then(() => console.log('Error details copied to clipboard'))
       .catch(() => console.error('Failed to copy error details'))
   }
 

@@ -28,8 +28,10 @@ import { ProperCalendar } from '@/components/appointments/proper-calendar'
 interface Doctor {
   id: string
   full_name: string
-  department: string
-  specialization: string
+  user_profiles?: {
+    department?: string
+    specialization?: string
+  }
 }
 
 interface Patient {
@@ -80,7 +82,10 @@ export default function AdminAppointmentsPage() {
         .select(`
           *,
           patients(id, full_name, phone, email, date_of_birth, gender, address, emergency_contact_phone, created_at, updated_at),
-          users!appointments_doctor_id_fkey(id, full_name, email, phone, department, specialization, created_at, updated_at)
+          users!appointments_doctor_id_fkey(
+            id, full_name, email, phone, created_at, updated_at,
+            user_profiles(department, specialization)
+          )
         `)
         .order('scheduled_date', { ascending: true })
         .order('scheduled_time', { ascending: true })
@@ -123,10 +128,12 @@ export default function AdminAppointmentsPage() {
           full_name: string
           email: string
           phone: string
-          department: string
-          specialization: string
           created_at: string
           updated_at: string
+          user_profiles?: {
+            department?: string
+            specialization?: string
+          }
         }
       }
 
@@ -168,8 +175,8 @@ export default function AdminAppointmentsPage() {
           full_name: apt.users.full_name,
           email: apt.users.email,
           phone: apt.users.phone,
-          department: apt.users.department,
-          specialization: apt.users.specialization,
+          department: apt.users.user_profiles?.department || 'general',
+          specialization: apt.users.user_profiles?.specialization || null,
           password_hash: 'hashed_password',
           is_active: true,
           created_at: apt.users.created_at,
@@ -192,7 +199,7 @@ export default function AdminAppointmentsPage() {
       const [doctorsResult, patientsResult] = await Promise.all([
         supabase
           .from('users')
-          .select('id, full_name, department, specialization')
+          .select('id, full_name, user_profiles(department, specialization)')
           .eq('role', 'doctor')
           .eq('is_active', true),
         supabase
@@ -218,7 +225,7 @@ export default function AdminAppointmentsPage() {
   // Create new appointment
   const handleCreateAppointment = async () => {
     if (!newAppointment.patient_id || !newAppointment.doctor_id || !newAppointment.scheduled_date || !newAppointment.scheduled_time) {
-      alert('Please fill in all required fields')
+      console.error('Please fill in all required fields')
       return
     }
 
@@ -232,7 +239,7 @@ export default function AdminAppointmentsPage() {
     )
 
     if (!availabilityCheck.available) {
-      alert(`Cannot create appointment: ${availabilityCheck.message}${availabilityCheck.conflicts ? '\n\nConflicts:\n' + availabilityCheck.conflicts.join('\n') : ''}`)
+      console.error(`Cannot create appointment: ${availabilityCheck.message}${availabilityCheck.conflicts ? '\n\nConflicts:\n' + availabilityCheck.conflicts.join('\n') : ''}`)
       return
     }
 
@@ -279,7 +286,7 @@ export default function AdminAppointmentsPage() {
       setShowCreateForm(false)
       fetchAppointments()
       
-      alert('Appointment created successfully!')
+      console.log('Appointment created successfully!')
     } catch (error) {
       console.error('Error creating appointment:', error)
       
@@ -290,18 +297,18 @@ export default function AdminAppointmentsPage() {
         
         // Provide user-friendly error messages based on common issues
         if (errorMessage.includes('Authentication failed')) {
-          alert('Authentication required. Please ensure you are logged in and try again.')
+          console.error('Authentication required. Please ensure you are logged in and try again.')
         } else if (errorMessage.includes('violates row-level security')) {
-          alert('Permission denied. Please ensure you have the necessary permissions to create appointments.')
+          console.error('Permission denied. Please ensure you have the necessary permissions to create appointments.')
         } else if (errorMessage.includes('duplicate key value')) {
-          alert('This appointment slot may already be taken. Please choose a different time.')
+          console.error('This appointment slot may already be taken. Please choose a different time.')
         } else if (errorMessage.includes('foreign key constraint')) {
-          alert('Invalid doctor or patient selected. Please refresh the page and try again.')
+          console.error('Invalid doctor or patient selected. Please refresh the page and try again.')
         } else {
-          alert(`Error creating appointment: ${errorMessage}. Please check browser console for details.`)
+          console.error(`Error creating appointment: ${errorMessage}. Please check browser console for details.`)
         }
       } else {
-        alert('Unexpected error creating appointment. Please ensure you are logged in and try again.')
+        console.error('Unexpected error creating appointment. Please ensure you are logged in and try again.')
       }
     }
   }
@@ -356,7 +363,7 @@ export default function AdminAppointmentsPage() {
         break
       case 'reschedule':
         // TODO: Implement reschedule functionality
-        alert(`Reschedule appointment for ${appointment.patients?.full_name}`)
+        console.log(`Reschedule appointment for ${appointment.patients?.full_name}`)
         break
       default:
         console.log('Unknown action:', action)
@@ -383,7 +390,7 @@ export default function AdminAppointmentsPage() {
 
   const handleUpdateAppointment = async () => {
     if (!editAppointment.patient_id || !editAppointment.doctor_id || !editAppointment.scheduled_date || !editAppointment.scheduled_time) {
-      alert('Please fill in all required fields')
+      console.error('Please fill in all required fields')
       return
     }
 
@@ -398,7 +405,7 @@ export default function AdminAppointmentsPage() {
     )
 
     if (!availabilityCheck.available) {
-      alert(`Cannot update appointment: ${availabilityCheck.message}${availabilityCheck.conflicts ? '\n\nConflicts:\n' + availabilityCheck.conflicts.join('\n') : ''}`)
+      console.error(`Cannot update appointment: ${availabilityCheck.message}${availabilityCheck.conflicts ? '\n\nConflicts:\n' + availabilityCheck.conflicts.join('\n') : ''}`)
       return
     }
 
@@ -429,17 +436,17 @@ export default function AdminAppointmentsPage() {
       
       if (count === 0) {
         console.warn('⚠️ No rows were updated. Check if appointment ID exists:', editAppointment.id)
-        alert('Warning: No appointment was updated. The appointment may have been deleted.')
+        console.error('Warning: No appointment was updated. The appointment may have been deleted.')
         return
       }
       
       setShowEditModal(false)
       fetchAppointments()
       
-      alert('Appointment updated successfully!')
+      console.log('Appointment updated successfully!')
     } catch (error) {
       console.error('Error updating appointment:', error)
-      alert('Error updating appointment. Please try again.')
+      console.error('Error updating appointment. Please try again.')
     }
   }
 
@@ -455,10 +462,10 @@ export default function AdminAppointmentsPage() {
       if (error) throw error
       
       fetchAppointments()
-      alert('Appointment request approved successfully!')
+      console.log('Appointment request approved successfully!')
     } catch (error) {
       console.error('Error approving appointment:', error)
-      alert('Error approving appointment. Please try again.')
+      console.error('Error approving appointment. Please try again.')
     }
   }
 
@@ -478,10 +485,10 @@ export default function AdminAppointmentsPage() {
       if (error) throw error
       
       fetchAppointments()
-      alert('Appointment request rejected successfully!')
+      console.log('Appointment request rejected successfully!')
     } catch (error) {
       console.error('Error rejecting appointment:', error)
-      alert('Error rejecting appointment. Please try again.')
+      console.error('Error rejecting appointment. Please try again.')
     }
   }
 
@@ -497,10 +504,10 @@ export default function AdminAppointmentsPage() {
       if (error) throw error
       
       fetchAppointments()
-      alert('Appointment cancelled successfully!')
+      console.log('Appointment cancelled successfully!')
     } catch (error) {
       console.error('Error cancelling appointment:', error)
-      alert('Error cancelling appointment. Please try again.')
+      console.error('Error cancelling appointment. Please try again.')
     }
   }
 
@@ -516,10 +523,10 @@ export default function AdminAppointmentsPage() {
       if (error) throw error
       
       fetchAppointments()
-      alert('Appointment marked as completed!')
+      console.log('Appointment marked as completed!')
     } catch (error) {
       console.error('Error completing appointment:', error)
-      alert('Error updating appointment. Please try again.')
+      console.error('Error updating appointment. Please try again.')
     }
   }
 
@@ -539,7 +546,7 @@ export default function AdminAppointmentsPage() {
       
       setSelectedAppointments([])
       fetchAppointments()
-      alert('Appointments cancelled successfully!')
+      console.log('Appointments cancelled successfully!')
     } catch (error) {
       console.error('Error cancelling appointments:', error)
     }
@@ -784,7 +791,7 @@ export default function AdminAppointmentsPage() {
                   setNewAppointment(prev => ({
                     ...prev, 
                     doctor_id: value,
-                    department: doctor?.department || ''
+                    department: doctor?.user_profiles?.department || ''
                   }))
                 }}>
                   <SelectTrigger>
@@ -793,7 +800,7 @@ export default function AdminAppointmentsPage() {
                   <SelectContent>
                     {doctors.map(doctor => (
                       <SelectItem key={doctor.id} value={doctor.id}>
-                        Dr. {doctor.full_name} - {doctor.specialization}
+                        Dr. {doctor.full_name} - {doctor.user_profiles?.specialization || 'General'}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1443,7 +1450,7 @@ export default function AdminAppointmentsPage() {
                     setEditAppointment(prev => ({
                       ...prev, 
                       doctor_id: value,
-                      department: doctor?.department || ''
+                      department: doctor?.user_profiles?.department || ''
                     }))
                   }}>
                     <SelectTrigger>
@@ -1452,7 +1459,7 @@ export default function AdminAppointmentsPage() {
                     <SelectContent>
                       {doctors.map(doctor => (
                         <SelectItem key={doctor.id} value={doctor.id}>
-                          {doctor.full_name} - {doctor.specialization}
+                          {doctor.full_name} - {doctor.user_profiles?.specialization || 'General'}
                         </SelectItem>
                       ))}
                     </SelectContent>

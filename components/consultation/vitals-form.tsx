@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react'
 import { createClient } from '@/lib/supabase/client'
-import { toast } from '@/lib/toast'
 import { useAutoSave } from '@/lib/hooks/useAutoSave'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -126,7 +125,6 @@ export function VitalsForm({ consultationId, onNext, onPrevious }: VitalsFormPro
       } catch (err) {
         console.error('Error loading vitals:', err)
         if (!err.message?.includes('relation') && !err.message?.includes('does not exist')) {
-          toast.error('Failed to load existing vitals')
         }
       } finally {
         setLoading(false)
@@ -150,11 +148,9 @@ export function VitalsForm({ consultationId, onNext, onPrevious }: VitalsFormPro
     try {
       setSaving(true)
       await forceSave() // Force save current data
-      toast.success('Vital signs saved successfully')
       onNext()
     } catch (err) {
       console.error('Error saving vitals:', err)
-      toast.error('Failed to save vital signs')
     } finally {
       setSaving(false)
     }

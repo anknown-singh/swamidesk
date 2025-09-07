@@ -250,10 +250,10 @@ export function ProcedureExecution() {
         }
       }))
       
-      alert('Procedure started successfully')
+      console.log('Procedure started successfully')
     } catch (error) {
       console.error('Error starting procedure:', error)
-      alert('Failed to start procedure')
+      console.error('Failed to start procedure')
     } finally {
       setProcessingProcedure(null)
     }
@@ -314,14 +314,14 @@ export function ProcedureExecution() {
       )
 
       if (result.success) {
-        alert(`Procedure completed! ${result.message}`)
+        console.log(`Procedure completed! ${result.message}`)
         fetchPendingProcedures() // Refresh the list
       } else {
-        alert(`Procedure completed but routing failed: ${result.message}`)
+        console.error(`Procedure completed but routing failed: ${result.message}`)
       }
     } catch (error) {
       console.error('Error completing procedure:', error)
-      alert('Failed to complete procedure')
+      console.error('Failed to complete procedure')
     } finally {
       setProcessingProcedure(null)
     }
