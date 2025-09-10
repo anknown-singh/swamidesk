@@ -715,6 +715,235 @@ CREATE TABLE payments (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
+-- 30. CONSULTATION_TEMPLATES TABLE
+CREATE TABLE consultation_templates (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    specialty VARCHAR(100),
+    condition VARCHAR(200),
+    template_data JSONB NOT NULL,
+    chief_complaints_template JSONB,
+    history_template JSONB,
+    examination_template JSONB,
+    common_diagnoses TEXT[],
+    common_investigations TEXT[],
+    common_treatments JSONB,
+    created_by UUID REFERENCES users(id),
+    is_active BOOLEAN DEFAULT true,
+    usage_count INTEGER DEFAULT 0,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 31. AUDIT_LOG TABLE
+CREATE TABLE audit_log (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    user_id UUID REFERENCES users(id),
+    table_name VARCHAR(100) NOT NULL,
+    record_id UUID,
+    action VARCHAR(20) NOT NULL,
+    old_values JSONB,
+    new_values JSONB,
+    ip_address INET,
+    user_agent TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 32. CONSULTATION_SESSIONS TABLE
+CREATE TABLE consultation_sessions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    visit_id UUID REFERENCES visits(id),
+    doctor_id UUID REFERENCES users(id),
+    patient_id UUID REFERENCES patients(id),
+    started_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    ended_at TIMESTAMP WITH TIME ZONE,
+    current_step VARCHAR(50) DEFAULT 'chief_complaints',
+    is_completed BOOLEAN DEFAULT false,
+    total_duration_minutes INTEGER,
+    consultation_data JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 33. WORKFLOW_REQUESTS TABLE
+CREATE TABLE workflow_requests (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    patient_id UUID NOT NULL REFERENCES patients(id),
+    request_type VARCHAR(50) NOT NULL,
+    priority VARCHAR(20) DEFAULT 'medium',
+    status VARCHAR(20) DEFAULT 'pending',
+    requested_by UUID NOT NULL REFERENCES user_profiles(id),
+    assigned_to UUID REFERENCES user_profiles(id),
+    request_details JSONB NOT NULL DEFAULT '{}',
+    response_notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    responded_at TIMESTAMP WITH TIME ZONE,
+    completed_at TIMESTAMP WITH TIME ZONE
+);
+
+-- 34. TREATMENT_SESSIONS TABLE
+CREATE TABLE treatment_sessions (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    treatment_plan_id UUID NOT NULL REFERENCES treatment_plans(id),
+    session_number INTEGER NOT NULL,
+    scheduled_date DATE NOT NULL,
+    scheduled_time TIME,
+    actual_start_time TIMESTAMP WITH TIME ZONE,
+    actual_end_time TIMESTAMP WITH TIME ZONE,
+    notes TEXT,
+    conducted_by UUID REFERENCES users(id),
+    status VARCHAR(20) DEFAULT 'scheduled',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 35. CONSULTATION_CHIEF_COMPLAINTS TABLE
+CREATE TABLE consultation_chief_complaints (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    consultation_id UUID REFERENCES consultation_sessions(id),
+    complaint TEXT NOT NULL,
+    duration VARCHAR(100),
+    severity INTEGER CHECK (severity >= 1 AND severity <= 10),
+    associated_symptoms TEXT[],
+    onset VARCHAR(100),
+    character VARCHAR(100),
+    location VARCHAR(100),
+    radiation VARCHAR(100),
+    aggravating_factors TEXT[],
+    relieving_factors TEXT[],
+    timing VARCHAR(100),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 36. CONSULTATION_HISTORY TABLE
+CREATE TABLE consultation_history (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    consultation_id UUID REFERENCES consultation_sessions(id),
+    history_type VARCHAR(50) NOT NULL,
+    content JSONB NOT NULL,
+    summary_text TEXT,
+    relevant_negatives TEXT[],
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 37. CONSULTATION_VITALS TABLE
+CREATE TABLE consultation_vitals (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    consultation_id UUID REFERENCES consultation_sessions(id),
+    temperature NUMERIC(4,1),
+    pulse_rate INTEGER,
+    blood_pressure_systolic INTEGER,
+    blood_pressure_diastolic INTEGER,
+    respiratory_rate INTEGER,
+    oxygen_saturation INTEGER CHECK (oxygen_saturation >= 0 AND oxygen_saturation <= 100),
+    height_cm NUMERIC(5,2),
+    weight_kg NUMERIC(5,2),
+    bmi NUMERIC(4,1),
+    pain_score INTEGER CHECK (pain_score >= 0 AND pain_score <= 10),
+    recorded_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    recorded_by UUID REFERENCES users(id)
+);
+
+-- 38. EXAMINATION_FINDINGS TABLE
+CREATE TABLE examination_findings (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    consultation_id UUID REFERENCES consultation_sessions(id),
+    examination_type VARCHAR(50) NOT NULL,
+    findings JSONB NOT NULL,
+    normal_findings TEXT[],
+    abnormal_findings TEXT[],
+    clinical_significance TEXT,
+    examination_order INTEGER DEFAULT 1,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 39. INVESTIGATION_ORDERS TABLE
+CREATE TABLE investigation_orders (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    consultation_id UUID REFERENCES consultation_sessions(id),
+    investigation_type VARCHAR(100) NOT NULL,
+    investigation_name VARCHAR(200) NOT NULL,
+    investigation_code VARCHAR(50),
+    category VARCHAR(100),
+    urgency VARCHAR(20) DEFAULT 'routine',
+    clinical_indication TEXT,
+    instructions TEXT,
+    expected_date DATE,
+    cost_estimate NUMERIC(8,2),
+    status VARCHAR(20) DEFAULT 'ordered',
+    results JSONB,
+    results_summary TEXT,
+    interpretation TEXT,
+    follow_up_required BOOLEAN DEFAULT false,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 40. CONSULTATION_DIAGNOSES TABLE
+CREATE TABLE consultation_diagnoses (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    consultation_id UUID REFERENCES consultation_sessions(id),
+    diagnosis_type VARCHAR(20) NOT NULL,
+    diagnosis_text TEXT NOT NULL,
+    icd10_code VARCHAR(10),
+    icd10_description TEXT,
+    confidence_level INTEGER CHECK (confidence_level >= 1 AND confidence_level <= 5),
+    is_primary BOOLEAN DEFAULT false,
+    supporting_evidence TEXT[],
+    ruling_out_evidence TEXT[],
+    clinical_notes TEXT,
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 41. CONSULTATION_TREATMENT_PLANS TABLE
+CREATE TABLE consultation_treatment_plans (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    consultation_id UUID REFERENCES consultation_sessions(id),
+    treatment_type VARCHAR(50) NOT NULL,
+    primary_treatment TEXT NOT NULL,
+    treatment_goals TEXT[],
+    plan_details JSONB NOT NULL,
+    medications JSONB,
+    lifestyle_modifications TEXT[],
+    dietary_advice TEXT,
+    activity_restrictions TEXT[],
+    home_care_instructions TEXT[],
+    procedures JSONB,
+    pre_operative_requirements TEXT[],
+    post_operative_care TEXT[],
+    risk_assessment TEXT,
+    consent_required BOOLEAN DEFAULT false,
+    follow_up_required BOOLEAN DEFAULT true,
+    follow_up_days INTEGER,
+    follow_up_instructions TEXT,
+    warning_signs TEXT[],
+    emergency_instructions TEXT,
+    estimated_cost NUMERIC(10,2),
+    insurance_approval_needed BOOLEAN DEFAULT false,
+    referral_required BOOLEAN DEFAULT false,
+    referral_specialty VARCHAR(100),
+    special_instructions TEXT,
+    patient_education_provided TEXT[],
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 42. CONSULTATION_PROGRESS_NOTES TABLE
+CREATE TABLE consultation_progress_notes (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    consultation_id UUID REFERENCES consultation_sessions(id),
+    note_type VARCHAR(20) DEFAULT 'progress',
+    note_text TEXT NOT NULL,
+    clinical_changes TEXT,
+    plan_modifications TEXT,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
 -- =====================================================
 -- STEP 9: Create Essential Functions
 -- =====================================================
