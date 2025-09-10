@@ -112,6 +112,29 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
+-- Purchase order number generation function
+CREATE OR REPLACE FUNCTION generate_purchase_order_number()
+RETURNS TEXT AS $$
+DECLARE
+    year_suffix TEXT;
+    next_number INTEGER;
+    order_number TEXT;
+BEGIN
+    year_suffix := TO_CHAR(CURRENT_DATE, 'YYYY');
+    
+    SELECT COALESCE(MAX(
+        CAST(SUBSTRING(order_number FROM 'PO-' || year_suffix || '-(\\d+)') AS INTEGER)
+    ), 0) + 1
+    INTO next_number
+    FROM purchase_orders
+    WHERE order_number LIKE 'PO-' || year_suffix || '-%';
+    
+    order_number := 'PO-' || year_suffix || '-' || LPAD(next_number::TEXT, 3, '0');
+    
+    RETURN order_number;
+END;
+$$ LANGUAGE plpgsql;
+
 -- =====================================================
 -- STEP 4: Core System Tables (9 tables)
 -- =====================================================
@@ -346,7 +369,7 @@ CREATE TABLE pharmacy_issues (
 -- 13. PURCHASE_ORDERS TABLE
 CREATE TABLE purchase_orders (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    order_number VARCHAR(50) UNIQUE NOT NULL,
+    order_number VARCHAR(50) UNIQUE NOT NULL DEFAULT generate_purchase_order_number(),
     supplier_name VARCHAR(255) NOT NULL,
     supplier_contact VARCHAR(255),
     supplier_address TEXT,
@@ -978,29 +1001,6 @@ BEGIN
         NEW.appointment_number := generate_appointment_number();
     END IF;
     RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
--- Purchase order number generation function
-CREATE OR REPLACE FUNCTION generate_purchase_order_number()
-RETURNS TEXT AS $$
-DECLARE
-    year_suffix TEXT;
-    next_number INTEGER;
-    order_number TEXT;
-BEGIN
-    year_suffix := TO_CHAR(CURRENT_DATE, 'YYYY');
-    
-    SELECT COALESCE(MAX(
-        CAST(SUBSTRING(order_number FROM 'PO-' || year_suffix || '-(\\d+)') AS INTEGER)
-    ), 0) + 1
-    INTO next_number
-    FROM purchase_orders
-    WHERE order_number LIKE 'PO-' || year_suffix || '-%';
-    
-    order_number := 'PO-' || year_suffix || '-' || LPAD(next_number::TEXT, 3, '0');
-    
-    RETURN order_number;
 END;
 $$ LANGUAGE plpgsql;
 
