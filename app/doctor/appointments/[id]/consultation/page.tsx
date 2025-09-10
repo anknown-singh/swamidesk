@@ -202,32 +202,32 @@ export default function DoctorConsultationWorkflowPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <p className="font-medium text-lg">{appointment.patient?.name}</p>
+              <p className="font-medium text-lg">{appointment.patients?.full_name}</p>
               <p className="text-sm text-muted-foreground">
-                {appointment.patient?.mobile} • {appointment.patient?.email}
+                {appointment.patients?.phone} • {appointment.patients?.email}
               </p>
             </div>
-            {appointment.patient?.dob && (
+            {appointment.patients?.date_of_birth && (
               <div>
                 <p className="text-sm font-medium">Date of Birth</p>
                 <p className="text-sm text-muted-foreground">
-                  {new Date(appointment.patient.dob).toLocaleDateString()}
+                  {new Date(appointment.patients.date_of_birth).toLocaleDateString()}
                 </p>
               </div>
             )}
-            {appointment.patient?.gender && (
+            {appointment.patients?.gender && (
               <div>
                 <p className="text-sm font-medium">Gender</p>
                 <p className="text-sm text-muted-foreground capitalize">
-                  {appointment.patient.gender}
+                  {appointment.patients.gender}
                 </p>
               </div>
             )}
-            {appointment.patient?.address && (
+            {appointment.patients?.address && (
               <div>
                 <p className="text-sm font-medium">Address</p>
                 <p className="text-sm text-muted-foreground">
-                  {appointment.patient.address}
+                  {appointment.patients.address}
                 </p>
               </div>
             )}
@@ -244,31 +244,31 @@ export default function DoctorConsultationWorkflowPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             <div>
-              <p className="font-medium text-lg">{appointment.doctor?.full_name}</p>
+              <p className="font-medium text-lg">{appointment.users?.full_name}</p>
               <p className="text-sm text-muted-foreground">
-                {appointment.doctor?.department}
+                {appointment.users?.department}
               </p>
             </div>
-            {appointment.doctor?.specialization && (
+            {appointment.users?.specialization && (
               <div>
                 <p className="text-sm font-medium">Specialization</p>
                 <p className="text-sm text-muted-foreground">
-                  {appointment.doctor.specialization}
+                  {appointment.users.specialization}
                 </p>
               </div>
             )}
-            {appointment.doctor?.phone && (
+            {appointment.users?.phone && (
               <div>
                 <p className="text-sm font-medium">Phone</p>
                 <p className="text-sm text-muted-foreground">
-                  {appointment.doctor.phone}
+                  {appointment.users.phone}
                 </p>
               </div>
             )}
             <div>
               <p className="text-sm font-medium">Email</p>
               <p className="text-sm text-muted-foreground">
-                {appointment.doctor?.email}
+                {appointment.users?.email}
               </p>
             </div>
           </CardContent>

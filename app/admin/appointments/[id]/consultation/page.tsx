@@ -207,14 +207,14 @@ export default function ConsultationWorkflowPage() {
             <div>
               <p className="font-medium text-lg">{appointment.users?.full_name}</p>
               <p className="text-sm text-muted-foreground">
-                {appointment.users?.user_profiles?.department || 'General'}
+                {appointment.users?.department || 'General'}
               </p>
             </div>
             {appointment.users?.specialization && (
               <div>
                 <p className="text-sm font-medium">Specialization</p>
                 <p className="text-sm text-muted-foreground">
-                  {appointment.users.user_profiles?.specialization || 'General Practice'}
+                  {appointment.users?.specialization || 'General Practice'}
                 </p>
               </div>
             )}

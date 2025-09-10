@@ -70,7 +70,7 @@ export default function AdminPatientQueuePage() {
           checked_in_at,
           visit_date,
           doctor_id,
-          patients!inner(full_name, phone),
+          patients(full_name, phone),
           users!visits_doctor_id_fkey(full_name, department)
         `)
         .eq('visit_date', new Date().toISOString().split('T')[0])
@@ -88,11 +88,11 @@ export default function AdminPatientQueuePage() {
       if (queueError) throw queueError
 
       // Process queue data
-      const queuePatients: QueuePatient[] = queueResult?.map(visit => ({
+      const queuePatients: QueuePatient[] = queueResult?.map((visit: any) => ({
         id: visit.id,
         token_number: visit.token_number,
-        patient_name: visit.patients?.[0]?.full_name || 'Unknown',
-        patient_mobile: visit.patients?.[0]?.phone || '',
+        patient_name: visit.patients?.full_name || 'Unknown',
+        patient_mobile: visit.patients?.phone || '',
         doctor_name: visit.users?.full_name || 'Unknown Doctor',
         doctor_id: visit.doctor_id,
         checked_in_at: visit.checked_in_at,

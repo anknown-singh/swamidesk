@@ -162,6 +162,8 @@ export function AppointmentBookingForm({
     patient_notes: "",
     priority: false,
     services: [],
+    notes: "",
+    created_by: "",
     ...initialData,
   });
 
@@ -184,9 +186,10 @@ export function AppointmentBookingForm({
     submit: null,
     general: null,
   });
-  const [validationErrors, setValidationErrors] = useState<ValidationErrors>(
-    {}
-  );
+  const [validationErrors, setValidationErrors] = useState<ValidationErrors>({
+    department: null,
+    appointment_type: null
+  });
   const [retryCount, setRetryCount] = useState({
     patients: 0,
     doctors: 0,
@@ -321,7 +324,10 @@ export function AppointmentBookingForm({
   );
 
   const validateForm = useCallback((): boolean => {
-    const newValidationErrors: ValidationErrors = {};
+    const newValidationErrors: ValidationErrors = {
+      department: null,
+      appointment_type: null
+    };
 
     if (!formData.patient_id) {
       newValidationErrors.patient_id = "Please select a patient";
@@ -782,7 +788,10 @@ export function AppointmentBookingForm({
 
     // Clear previous errors
     clearError("submit");
-    setValidationErrors({});
+    setValidationErrors({
+      department: null,
+      appointment_type: null
+    });
 
     // Validate form
     if (!validateForm()) {

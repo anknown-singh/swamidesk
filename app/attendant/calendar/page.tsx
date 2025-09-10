@@ -373,8 +373,8 @@ export default function AttendantCalendarPage() {
               </CardHeader>
               <CardContent className="space-y-4">
                 <div>
-                  <h4 className="font-medium">{stats.nextProcedure.patient?.name}</h4>
-                  <p className="text-sm text-muted-foreground">{stats.nextProcedure.doctor?.full_name}</p>
+                  <h4 className="font-medium">{stats.nextProcedure.patients?.full_name}</h4>
+                  <p className="text-sm text-muted-foreground">{stats.nextProcedure.users?.full_name}</p>
                   <p className="text-sm text-muted-foreground">Duration: {stats.nextProcedure.duration}min</p>
                   <div className="flex items-center gap-2 mt-2">
                     <Badge variant="outline">{stats.nextProcedure.status}</Badge>
@@ -485,8 +485,8 @@ export default function AttendantCalendarPage() {
             <div className="grid gap-4 md:grid-cols-3">
               <div>
                 <h4 className="font-medium mb-2">Patient</h4>
-                <p className="text-sm">{selectedAppointment.patient?.name}</p>
-                <p className="text-xs text-muted-foreground">{selectedAppointment.patient?.mobile}</p>
+                <p className="text-sm">{selectedAppointment.patients?.full_name}</p>
+                <p className="text-xs text-muted-foreground">{selectedAppointment.patients?.phone}</p>
                 <div className="flex gap-2 mt-2">
                   <Button 
                     size="sm" 
@@ -510,8 +510,8 @@ export default function AttendantCalendarPage() {
               </div>
               <div>
                 <h4 className="font-medium mb-2">Doctor</h4>
-                <p className="text-sm">{selectedAppointment.doctor?.full_name}</p>
-                <p className="text-xs text-muted-foreground">{selectedAppointment.doctor?.department}</p>
+                <p className="text-sm">{selectedAppointment.users?.full_name}</p>
+                <p className="text-xs text-muted-foreground">{selectedAppointment.users?.department}</p>
               </div>
               <div>
                 <h4 className="font-medium mb-2">Procedure Info</h4>

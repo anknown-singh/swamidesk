@@ -545,7 +545,7 @@ export function RoleBasedCalendar({
         // Debug for today's filtering
         if (currentDay.toDateString() === new Date().toDateString()) {
           console.log(
-            `🔍 Filtering appointment ${apt.patient?.name}: date=${dateMatch}, doctor=${doctorMatch} (filterDoctorId=${filterDoctorId}, apt.doctor_id=${apt.doctor_id})`
+            `🔍 Filtering appointment ${apt.patients?.full_name}: date=${dateMatch}, doctor=${doctorMatch} (filterDoctorId=${filterDoctorId}, apt.doctor_id=${apt.doctor_id})`
           );
         }
 
@@ -565,7 +565,7 @@ export function RoleBasedCalendar({
             console.log(
               `🔍 Time ${time}: Found ${matchingAppointments.length} appointments`,
               matchingAppointments.map(
-                (a) => `${a.patient?.name} (${a.scheduled_time})`
+                (a) => `${a.patients?.full_name} (${a.scheduled_time})`
               )
             );
           }
@@ -575,7 +575,7 @@ export function RoleBasedCalendar({
               `🕐 Checking time slot ${time} against ${dayAppointments.length} today appointments:`,
               dayAppointments.map(
                 (a) =>
-                  `${a.patient?.name} ${a.scheduled_time} -> ${normalizeTime(
+                  `${a.patients?.full_name} ${a.scheduled_time} -> ${normalizeTime(
                     a.scheduled_time
                   )} (matches: ${
                     normalizeTime(a.scheduled_time) === normalizeTime(time)

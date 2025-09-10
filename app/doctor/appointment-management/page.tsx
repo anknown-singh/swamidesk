@@ -152,10 +152,13 @@ export default function DoctorAppointmentManagementPage() {
             phone: string;
             created_at: string;
             updated_at: string;
-            user_profiles: Array<{
+            user_profiles?: Array<{
               department: string;
               specialization: string;
-            }>;
+            }> | {
+              department: string;
+              specialization: string;
+            };
           };
         }
 
@@ -226,8 +229,12 @@ export default function DoctorAppointmentManagementPage() {
                   full_name: apt.users.full_name,
                   email: apt.users.email || "",
                   phone: apt.users.phone,
-                  department: apt.users.department || null,
-                  specialization: apt.users.specialization || null,
+                  department: Array.isArray(apt.users.user_profiles) 
+                    ? apt.users.user_profiles[0]?.department 
+                    : apt.users.user_profiles?.department || null,
+                  specialization: Array.isArray(apt.users.user_profiles) 
+                    ? apt.users.user_profiles[0]?.specialization 
+                    : apt.users.user_profiles?.specialization || null,
                   password_hash: "",
                   is_active: true,
                   created_at: apt.users.created_at,

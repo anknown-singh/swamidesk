@@ -28,10 +28,8 @@ import { ProperCalendar } from '@/components/appointments/proper-calendar'
 interface Doctor {
   id: string
   full_name: string
-  user_profiles?: {
-    department?: string
-    specialization?: string
-  }
+  department?: string
+  specialization?: string
 }
 
 interface Patient {
@@ -199,7 +197,11 @@ export default function AdminAppointmentsPage() {
       const [doctorsResult, patientsResult] = await Promise.all([
         supabase
           .from('users')
-          .select('id, full_name, user_profiles(department, specialization)')
+          .select(`
+            id, 
+            full_name,
+            user_profiles!inner(department, specialization)
+          `)
           .eq('role', 'doctor')
           .eq('is_active', true),
         supabase
@@ -208,7 +210,15 @@ export default function AdminAppointmentsPage() {
           .limit(100)
       ])
 
-      if (doctorsResult.data) setDoctors(doctorsResult.data)
+      if (doctorsResult.data) {
+        const mappedDoctors = doctorsResult.data.map((doctor: any) => ({
+          id: doctor.id,
+          full_name: doctor.full_name,
+          department: doctor.user_profiles?.[0]?.department || doctor.user_profiles?.department,
+          specialization: doctor.user_profiles?.[0]?.specialization || doctor.user_profiles?.specialization
+        }))
+        setDoctors(mappedDoctors)
+      }
       if (patientsResult.data) setPatients(patientsResult.data)
     } catch (error) {
       console.error('Error fetching doctors and patients:', error)
@@ -791,7 +801,7 @@ export default function AdminAppointmentsPage() {
                   setNewAppointment(prev => ({
                     ...prev, 
                     doctor_id: value,
-                    department: doctor?.user_profiles?.department || ''
+                    department: doctor?.department || ''
                   }))
                 }}>
                   <SelectTrigger>
@@ -800,7 +810,7 @@ export default function AdminAppointmentsPage() {
                   <SelectContent>
                     {doctors.map(doctor => (
                       <SelectItem key={doctor.id} value={doctor.id}>
-                        Dr. {doctor.full_name} - {doctor.user_profiles?.specialization || 'General'}
+                        Dr. {doctor.full_name} - {doctor.specialization || 'General'}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -1450,7 +1460,7 @@ export default function AdminAppointmentsPage() {
                     setEditAppointment(prev => ({
                       ...prev, 
                       doctor_id: value,
-                      department: doctor?.user_profiles?.department || ''
+                      department: doctor?.department || ''
                     }))
                   }}>
                     <SelectTrigger>
@@ -1459,7 +1469,7 @@ export default function AdminAppointmentsPage() {
                     <SelectContent>
                       {doctors.map(doctor => (
                         <SelectItem key={doctor.id} value={doctor.id}>
-                          {doctor.full_name} - {doctor.user_profiles?.specialization || 'General'}
+                          {doctor.full_name} - {doctor.specialization || 'General'}
                         </SelectItem>
                       ))}
                     </SelectContent>

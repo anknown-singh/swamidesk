@@ -7,12 +7,14 @@ import { createClient } from '@/lib/supabase/client'
 // Types
 import { 
   TreatmentSession, 
-  TreatmentStep, 
   TreatmentStatus,
   Visit,
   Patient,
   UserProfile 
 } from '@/lib/types'
+
+// Local types
+type TreatmentStep = 'treatment_planning' | 'goals_setting' | 'scheduling' | 'progress_tracking' | 'monitoring' | 'review' | 'completed'
 
 // Components
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -133,7 +135,7 @@ export function TreatmentWorkflow({ visitId, onComplete, onCancel }: TreatmentWo
         // Handle missing table gracefully
         if (sessionError.message?.includes('does not exist') || 
             sessionError.message?.includes('404') ||
-            sessionError.status === 404) {
+            (sessionError as any).status === 404) {
           console.warn('Treatment sessions table does not exist yet - this is expected for new installations')
         } else {
           throw sessionError
@@ -379,8 +381,8 @@ export function TreatmentWorkflow({ visitId, onComplete, onCancel }: TreatmentWo
                   Duration: {Math.round((Date.now() - startTime.getTime()) / 60000)} min
                 </span>
               </div>
-              <Badge variant={treatmentSession.is_completed ? 'success' : 'default'}>
-                {treatmentSession.is_completed ? 'Completed' : 'In Progress'}
+              <Badge variant={treatmentSession.status === 'completed' ? 'secondary' : 'default'}>
+                {treatmentSession.status === 'completed' ? 'Completed' : 'In Progress'}
               </Badge>
             </div>
           </CardContent>

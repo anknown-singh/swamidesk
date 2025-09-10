@@ -232,8 +232,8 @@ export default function AttendantAppointmentManagementPage() {
   // Filter appointments based on search, status, and view
   const filteredAppointments = appointments.filter(appointment => {
     const matchesSearch = !searchTerm || 
-      appointment.patient?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      appointment.doctor?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      appointment.patients?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      appointment.users?.full_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
       appointment.department?.toLowerCase().includes(searchTerm.toLowerCase())
     
     const matchesStatus = statusFilter === 'all' || appointment.status === statusFilter
@@ -474,7 +474,7 @@ export default function AttendantAppointmentManagementPage() {
                       <div className="flex items-center justify-between">
                         <div className="space-y-2">
                           <div className="flex items-center gap-2">
-                            <h3 className="font-medium">{appointment.patient?.name}</h3>
+                            <h3 className="font-medium">{appointment.patients?.full_name}</h3>
                             <Badge className={statusInfo.color}>
                               {statusInfo.label}
                             </Badge>
@@ -491,7 +491,7 @@ export default function AttendantAppointmentManagementPage() {
                             </div>
                             <div className="flex items-center gap-2">
                               <UserIcon className="h-3 w-3" />
-                              Dr. {appointment.doctor?.full_name} • {appointment.department}
+                              Dr. {appointment.users?.full_name} • {appointment.department}
                             </div>
                             <div className="flex items-center gap-2">
                               <MapPinIcon className="h-3 w-3" />
@@ -561,15 +561,15 @@ export default function AttendantAppointmentManagementPage() {
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <p className="text-sm font-medium">Patient Name</p>
-                        <p className="text-sm text-muted-foreground">{selectedAppointment.patient?.name}</p>
+                        <p className="text-sm text-muted-foreground">{selectedAppointment.patients?.full_name}</p>
                       </div>
                       <div>
                         <p className="text-sm font-medium">Contact</p>
-                        <p className="text-sm text-muted-foreground">{selectedAppointment.patient?.mobile}</p>
+                        <p className="text-sm text-muted-foreground">{selectedAppointment.patients?.phone}</p>
                       </div>
                       <div>
                         <p className="text-sm font-medium">Doctor</p>
-                        <p className="text-sm text-muted-foreground">Dr. {selectedAppointment.doctor?.full_name}</p>
+                        <p className="text-sm text-muted-foreground">Dr. {selectedAppointment.users?.full_name}</p>
                       </div>
                       <div>
                         <p className="text-sm font-medium">Department</p>

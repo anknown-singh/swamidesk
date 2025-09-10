@@ -415,13 +415,13 @@ export default function AdminCalendarPage() {
             <div className="grid gap-4 md:grid-cols-3">
               <div>
                 <h4 className="font-medium mb-2">Patient</h4>
-                <p className="text-sm">{selectedAppointment.patient?.name}</p>
-                <p className="text-xs text-muted-foreground">{selectedAppointment.patient?.mobile}</p>
+                <p className="text-sm">{selectedAppointment.patients?.full_name}</p>
+                <p className="text-xs text-muted-foreground">{selectedAppointment.patients?.phone}</p>
               </div>
               <div>
                 <h4 className="font-medium mb-2">Doctor</h4>
-                <p className="text-sm">{selectedAppointment.doctor?.full_name}</p>
-                <p className="text-xs text-muted-foreground">{selectedAppointment.doctor?.department}</p>
+                <p className="text-sm">{selectedAppointment.users?.full_name}</p>
+                <p className="text-xs text-muted-foreground">{selectedAppointment.users?.department}</p>
               </div>
               <div>
                 <h4 className="font-medium mb-2">Details</h4>
