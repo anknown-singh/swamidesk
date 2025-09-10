@@ -3,14 +3,14 @@
 -- Fixed to match actual table schema
 
 INSERT INTO medicine_master (
-  name, generic_name, brand_names, category, subcategory, therapeutic_class,
-  dosage_forms, strengths, standard_dosage_adult, standard_dosage_pediatric,
-  routes, indications, contraindications, side_effects, interactions,
-  pregnancy_category, controlled_substance, prescription_required, is_active
+  generic_name, brand_name, manufacturer, strength, dosage_form, composition,
+  therapeutic_class, pharmacological_class, schedule, pack_size, mrp,
+  category, indications, contraindications, side_effects, drug_interactions,
+  storage_conditions, expiry_period, is_active
 ) VALUES
 
-('Ibuprofen', 'Ibuprofen', ARRAY['Advil', 'Motrin', 'Brufen'], 'Analgesic', 'NSAID', 'Anti-inflammatory', ARRAY['Tablet', 'Suspension', 'Gel'], ARRAY['200mg', '400mg', '600mg'], '200-400mg every 6-8 hours', '5-10mg/kg every 6-8 hours', ARRAY['Oral', 'Topical'], ARRAY['Pain', 'Inflammation', 'Fever'], ARRAY['Peptic ulcer', 'Severe heart failure'], ARRAY['GI upset', 'Dizziness'], ARRAY['Warfarin', 'ACE inhibitors'], 'C', FALSE, FALSE, TRUE),
-('Aspirin', 'Acetylsalicylic acid', ARRAY['Disprin', 'Ecosprin'], 'Analgesic', 'NSAID', 'Antiplatelet', ARRAY['Tablet', 'Dispersible tablet'], ARRAY['75mg', '150mg', '325mg'], '75-325mg daily', 'Avoid in children <16 years', ARRAY['Oral'], ARRAY['Cardiovascular protection', 'Pain', 'Fever'], ARRAY['Children <16 years', 'Active bleeding'], ARRAY['GI bleeding', 'Tinnitus'], ARRAY['Warfarin', 'Methotrexate'], 'D', FALSE, FALSE, TRUE),
+('Ibuprofen', 'Advil', 'Pfizer', '400mg', 'Tablet', 'Ibuprofen 400mg', 'Anti-inflammatory', 'NSAID', 'OTC', '10 tablets', 45.00, 'Analgesic', 'Pain, Inflammation, Fever', 'Peptic ulcer, Severe heart failure', 'GI upset, Dizziness', 'Warfarin, ACE inhibitors', 'Store at room temperature', '3 years', TRUE),
+('Aspirin', 'Disprin', 'Bayer', '325mg', 'Tablet', 'Acetylsalicylic acid 325mg', 'Antiplatelet', 'NSAID', 'OTC', '10 tablets', 25.00, 'Analgesic', 'Cardiovascular protection, Pain, Fever', 'Children under 16 years, Active bleeding', 'GI bleeding, Tinnitus', 'Warfarin, Methotrexate', 'Store in dry place', '2 years', TRUE),
 ('Diclofenac', 'Diclofenac', ARRAY['Voltaren', 'Voveran'], 'Analgesic', 'NSAID', 'Anti-inflammatory', ARRAY['Tablet', 'Injection', 'Gel'], ARRAY['50mg', '75mg', '25mg'], '50mg twice daily', '1-3mg/kg/day', ARRAY['Oral', 'IM', 'Topical'], ARRAY['Arthritis', 'Post-operative pain'], ARRAY['Severe cardiac disease', 'Active GI bleeding'], ARRAY['Headache', 'Dizziness', 'GI upset'], ARRAY['Lithium', 'Digoxin'], 'C', FALSE, TRUE, TRUE),
 ('Tramadol', 'Tramadol', ARRAY['Ultram', 'Tramal'], 'Analgesic', 'Opioid analgesic', 'Moderate pain relief', ARRAY['Tablet', 'Injection', 'Drops'], ARRAY['50mg', '100mg'], '50-100mg every 6 hours', '1-2mg/kg every 6 hours', ARRAY['Oral', 'IV', 'IM'], ARRAY['Moderate to severe pain'], ARRAY['Seizure disorders', 'MAO inhibitor use'], ARRAY['Nausea', 'Dizziness', 'Constipation'], ARRAY['MAO inhibitors', 'SSRIs'], 'C', TRUE, TRUE, TRUE),
 ('Codeine', 'Codeine', ARRAY['Codeine Phosphate'], 'Analgesic', 'Opioid analgesic', 'Mild to moderate pain', ARRAY['Tablet', 'Syrup'], ARRAY['15mg', '30mg', '60mg'], '15-60mg every 4-6 hours', '0.5-1mg/kg every 4-6 hours', ARRAY['Oral'], ARRAY['Mild to moderate pain', 'Cough'], ARRAY['Respiratory depression', 'Children <12 years'], ARRAY['Drowsiness', 'Constipation'], ARRAY['CNS depressants'], 'C', TRUE, TRUE, TRUE),
