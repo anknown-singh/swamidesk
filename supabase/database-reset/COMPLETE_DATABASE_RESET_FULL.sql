@@ -410,7 +410,7 @@ CREATE TABLE invoices (
 -- 12. PURCHASE_ORDERS TABLE
 CREATE TABLE purchase_orders (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    order_number VARCHAR(50) UNIQUE NOT NULL,
+    order_number VARCHAR(50) UNIQUE NOT NULL DEFAULT generate_purchase_order_number(),
     supplier_name VARCHAR(255) NOT NULL,
     supplier_contact VARCHAR(255),
     supplier_address TEXT,
@@ -562,14 +562,20 @@ CREATE TABLE pharmacy_issues (
 CREATE TABLE purchase_order_items (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     purchase_order_id UUID NOT NULL REFERENCES purchase_orders(id) ON DELETE CASCADE,
-    medicine_id UUID REFERENCES medicines(id),
-    quantity INTEGER NOT NULL,
-    unit_price DECIMAL(8,2) NOT NULL,
-    total_price DECIMAL(8,2) NOT NULL,
-    received_quantity INTEGER DEFAULT 0,
-    batch_number VARCHAR(50),
+    medicine_name VARCHAR(255) NOT NULL,
+    salt_content VARCHAR(255),
+    company_name VARCHAR(255) NOT NULL,
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    unit_price DECIMAL(10,2) NOT NULL CHECK (unit_price >= 0),
+    batch_number VARCHAR(100),
     expiry_date DATE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+    scheme_offer TEXT,
+    gst_percentage DECIMAL(5,2) NOT NULL DEFAULT 18.00 CHECK (gst_percentage >= 0 AND gst_percentage <= 100),
+    gst_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    total_price DECIMAL(10,2) NOT NULL DEFAULT 0,
+    received_quantity INTEGER DEFAULT 0 CHECK (received_quantity >= 0),
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
 );
 
 -- 22. SELL_ORDER_ITEMS TABLE
