@@ -5,6 +5,14 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.3.0](https://github.com/anknown-singh/swamidesk/compare/v2.2.0...v2.3.0) (2025-09-10)
+
+
+### Features
+
+* comprehensive supabase infrastructure improvements and database relationship fixes ([bd305f7](https://github.com/anknown-singh/swamidesk/commit/bd305f7215f7010e434bc0c3ad905e775fff6d75))
+* implement opd record integration with doctor calendar navigation ([a5a1133](https://github.com/anknown-singh/swamidesk/commit/a5a1133a7cecbd78bb471bc0a96ca9cc4e266f44))
+
 ## [2.2.0](https://github.com/anknown-singh/swamidesk/compare/v2.1.0...v2.2.0) (2025-09-03)
 
 
