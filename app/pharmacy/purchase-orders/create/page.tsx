@@ -38,24 +38,8 @@ interface Supplier {
 
 interface Medicine {
   id: string;
-  name: string;
-  generic_name: string | null;
-  brand_names: string[] | null;
-  category: string | null;
-  subcategory: string | null;
-  therapeutic_class: string | null;
-  dosage_forms: string[] | null;
-  strengths: string[] | null;
-  standard_dosage_adult: string | null;
-  standard_dosage_pediatric: string | null;
-  routes: string[] | null;
-  indications: string[] | null;
-  contraindications: string[] | null;
-  side_effects: string[] | null;
-  interactions: string[] | null;
-  pregnancy_category: string | null;
-  controlled_substance: boolean;
-  prescription_required: boolean;
+  generic_name: string;
+  category: string;
   is_active: boolean;
 }
 
@@ -193,7 +177,7 @@ export default function CreatePurchaseOrderPage() {
         .from("medicine_master")
         .select("*")
         .eq("is_active", true)
-        .order("name");
+        .order("generic_name");
 
       if (medicinesError) throw medicinesError;
 
@@ -275,11 +259,11 @@ export default function CreatePurchaseOrderPage() {
   const selectMedicineForItem = (medicine: Medicine, index: number) => {
     // Use default wholesale price since medicine_master doesn't have unit_price
     const wholesalePrice = 100; // Default wholesale price
-    updateOrderItem(index, "medicine_name", medicine.name);
+    updateOrderItem(index, "medicine_name", medicine.generic_name);
     updateOrderItem(
       index,
       "salt_content",
-      medicine.generic_name || medicine.strengths?.[0] || ""
+      medicine.generic_name || ""
     );
     updateOrderItem(index, "company_name", "Generic Manufacturer"); // medicine_master doesn't have manufacturer
     updateOrderItem(index, "unit_price", parseFloat(wholesalePrice.toFixed(2)));
@@ -317,13 +301,10 @@ export default function CreatePurchaseOrderPage() {
 
   const filteredMedicines = medicines.filter(
     (medicine) =>
-      medicine.name.toLowerCase().includes(searchMedicine.toLowerCase()) ||
+      medicine.generic_name.toLowerCase().includes(searchMedicine.toLowerCase()) ||
       medicine.generic_name
-        ?.toLowerCase()
-        .includes(searchMedicine.toLowerCase()) ||
-      medicine.brand_names?.some((brand) =>
-        brand.toLowerCase().includes(searchMedicine.toLowerCase())
-      )
+        .toLowerCase()
+        .includes(searchMedicine.toLowerCase())
   );
 
   const createPurchaseOrder = async () => {
@@ -667,7 +648,7 @@ export default function CreatePurchaseOrderPage() {
                         <SearchableDropdown
                           options={filteredMedicines.map(medicine => ({
                             id: medicine.id || '',
-                            label: medicine.name,
+                            label: medicine.generic_name,
                             secondaryLabel: `${medicine.generic_name} • ${medicine.category || "Generic"}`,
                             data: medicine
                           }))}
