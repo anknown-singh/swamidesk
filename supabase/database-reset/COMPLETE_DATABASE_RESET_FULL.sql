@@ -236,16 +236,16 @@ CREATE TABLE services (
 -- 4. MEDICINES TABLE
 CREATE TABLE medicines (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    generic_name VARCHAR(255) NOT NULL,
-    brand_name VARCHAR(255),
-    strength VARCHAR(50),
-    dosage_form VARCHAR(50),
-    manufacturer VARCHAR(255),
-    category VARCHAR(100),
-    unit_price DECIMAL(8,2),
+    name VARCHAR(255) NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    manufacturer VARCHAR(200),
+    batch_number VARCHAR(100),
+    expiry_date DATE,
+    unit_price DECIMAL(8,2) NOT NULL DEFAULT 0,
+    stock_quantity INTEGER NOT NULL DEFAULT 0,
     minimum_stock INTEGER DEFAULT 10,
-    maximum_stock INTEGER DEFAULT 1000,
-    supplier VARCHAR(255),
+    dosage_form VARCHAR(50),
+    strength VARCHAR(100),
     is_active BOOLEAN DEFAULT true,
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
@@ -1224,25 +1224,6 @@ CREATE TRIGGER trigger_update_treatment_sessions_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- =====================================================
--- STEP 12: Insert Essential Sample Data
--- =====================================================
-
--- Insert sample admin user
-INSERT INTO users (id, email, full_name, role, phone, is_active) VALUES 
-('550e8400-e29b-41d4-a716-446655440000', 'admin@swamicare.com', 'System Administrator', 'admin', '+91-9876543210', true);
-
--- Insert admin profile
-INSERT INTO user_profiles (user_id, department, qualification, bio) VALUES
-('550e8400-e29b-41d4-a716-446655440000', 'Administration', 'IT Administration', 'System Administrator with full access to SwamIDesk');
-
--- Insert sample service categories
-INSERT INTO services (name, category, base_price, duration_minutes) VALUES
-('General Consultation', 'Consultation', 500.00, 30),
-('Follow-up Consultation', 'Consultation', 300.00, 15),
-('Health Checkup', 'Preventive', 1500.00, 45),
-('Blood Pressure Check', 'Vital Signs', 100.00, 10),
-('Blood Sugar Test', 'Laboratory', 200.00, 15);
 
 COMMIT;
 
