@@ -118,7 +118,7 @@ RETURNS TEXT AS $$
 DECLARE
     year_suffix TEXT;
     next_number INTEGER;
-    order_number TEXT;
+    new_order_number TEXT;
 BEGIN
     year_suffix := TO_CHAR(CURRENT_DATE, 'YYYY');
     
@@ -129,9 +129,9 @@ BEGIN
     FROM purchase_orders
     WHERE order_number LIKE 'PO-' || year_suffix || '-%';
     
-    order_number := 'PO-' || year_suffix || '-' || LPAD(next_number::TEXT, 3, '0');
+    new_order_number := 'PO-' || year_suffix || '-' || LPAD(next_number::TEXT, 3, '0');
     
-    RETURN order_number;
+    RETURN new_order_number;
 END;
 $$ LANGUAGE plpgsql;
 

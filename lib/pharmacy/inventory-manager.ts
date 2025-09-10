@@ -66,10 +66,7 @@ export class InventoryManager {
             updated_at: new Date().toISOString()
           }
 
-          // Update supplier info if provided
-          if (item.supplier_name) {
-            updateData.supplier = item.supplier_name
-          }
+          // Note: supplier info is tracked in purchase_orders, not in medicines table
 
           // Update batch/expiry if this is newer information
           if (item.batch_number) {
@@ -205,7 +202,6 @@ export class InventoryManager {
         .insert([{
           name: item.medicine_name,
           manufacturer: item.company_name || 'Unknown',
-          supplier: item.supplier_name || 'Unknown',
           category: 'General',
           dosage_form: 'Unknown',
           unit_price: item.unit_price,
