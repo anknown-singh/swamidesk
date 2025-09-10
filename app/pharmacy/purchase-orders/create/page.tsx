@@ -286,7 +286,6 @@ export default function CreatePurchaseOrderPage() {
 
     setSearchMedicine("");
     setShowMedicineDropdown(false);
-    setSelectedMedicineIndex(-1);
   };
 
 
@@ -849,7 +848,7 @@ export default function CreatePurchaseOrderPage() {
 
                 {orderItems.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
-                    Click "Add Item" to start adding medicines to your purchase
+                    Click &quot;Add Item&quot; to start adding medicines to your purchase
                     order
                   </div>
                 )}
