@@ -105,7 +105,7 @@ export default function AttendantCalendarPage() {
           .select(`
             *,
             patients(id, full_name, phone),
-            users!appointments_doctor_id_fkey(id, full_name, department)
+            users!appointments_doctor_id_fkey(id, full_name, user_profiles(department))
           `)
           .eq('scheduled_date', today)
           .eq('appointment_type', 'procedure')

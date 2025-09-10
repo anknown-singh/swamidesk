@@ -1,13 +1,19 @@
-'use client'
+"use client";
 
-import { useState, useEffect, useCallback } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { 
-  ChevronLeftIcon, 
-  ChevronRightIcon, 
-  CalendarIcon, 
+import { useState, useEffect, useCallback } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import {
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  CalendarIcon,
   ClockIcon,
   UserIcon,
   StethoscopeIcon,
@@ -19,70 +25,101 @@ import {
   CheckIcon,
   XIcon,
   AlertTriangleIcon,
-  TableIcon
-} from 'lucide-react'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { createAuthenticatedClient } from '@/lib/supabase/authenticated-client'
-import type { Appointment, AppointmentStatus, AppointmentType, UserProfile, UserRole } from '@/lib/types'
+} from "lucide-react";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { createAuthenticatedClient } from "@/lib/supabase/authenticated-client";
+import type {
+  Appointment,
+  AppointmentStatus,
+  AppointmentType,
+  UserProfile,
+  UserRole,
+} from "@/lib/types";
 
 interface RoleBasedCalendarProps {
-  userRole: 'admin' | 'doctor' | 'receptionist' | 'attendant' | 'patient'
-  userId?: string
-  onAppointmentSelect?: (appointment: Appointment) => void
-  onSlotSelect?: (date: string, time: string, doctorId?: string) => void
-  onBookAppointment?: () => void
-  onEditAppointment?: (appointment: Appointment) => void
-  onApproveAppointment?: (appointment: Appointment) => void
-  onCancelAppointment?: (appointment: Appointment) => void
-  selectedDoctorId?: string
-  viewMode?: 'week' | 'day' | 'table'
-  readonly?: boolean
+  userRole: "admin" | "doctor" | "receptionist" | "attendant" | "patient";
+  userId?: string;
+  onAppointmentSelect?: (appointment: Appointment) => void;
+  onSlotSelect?: (date: string, time: string, doctorId?: string) => void;
+  onBookAppointment?: () => void;
+  onEditAppointment?: (appointment: Appointment) => void;
+  onApproveAppointment?: (appointment: Appointment) => void;
+  onCancelAppointment?: (appointment: Appointment) => void;
+  selectedDoctorId?: string;
+  viewMode?: "week" | "day" | "table";
+  readonly?: boolean;
 }
 
 interface CalendarSlot {
-  time: string
-  appointment?: Appointment
-  isAvailable: boolean
-  doctorId?: string
+  time: string;
+  appointment?: Appointment;
+  isAvailable: boolean;
+  doctorId?: string;
 }
 
 interface CalendarDay {
-  date: Date
-  dayName: string
-  slots: CalendarSlot[]
-  isToday: boolean
-  isSelected: boolean
+  date: Date;
+  dayName: string;
+  slots: CalendarSlot[];
+  isToday: boolean;
+  isSelected: boolean;
 }
 
 const timeSlots = [
-  '08:00', '08:30', '09:00', '09:30', '10:00', '10:30', '11:00', '11:30', '12:00', '12:30',
-  '13:00', '13:30', '14:00', '14:30', '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30'
-]
+  "08:00",
+  "08:30",
+  "09:00",
+  "09:30",
+  "10:00",
+  "10:30",
+  "11:00",
+  "11:30",
+  "12:00",
+  "12:30",
+  "13:00",
+  "13:30",
+  "14:00",
+  "14:30",
+  "15:00",
+  "15:30",
+  "16:00",
+  "16:30",
+  "17:00",
+  "17:30",
+  "18:00",
+  "18:30",
+];
 
 // Normalize time format to HH:MM
 const normalizeTime = (time: string): string => {
-  if (!time) return ''
-  
+  if (!time) return "";
+
   // Remove seconds if present (HH:MM:SS -> HH:MM)
-  const timeParts = time.split(':')
+  const timeParts = time.split(":");
   if (timeParts.length >= 2) {
-    const hours = timeParts[0]!.padStart(2, '0')
-    const minutes = timeParts[1].padStart(2, '0')
-    return `${hours}:${minutes}`
+    const hours = timeParts[0]!.padStart(2, "0");
+    const minutes = timeParts[1].padStart(2, "0");
+    return `${hours}:${minutes}`;
   }
-  
+
   // Handle AM/PM format
-  if (time.includes('AM') || time.includes('PM')) {
+  if (time.includes("AM") || time.includes("PM")) {
     try {
-      const date = new Date(`1970-01-01 ${time}`)
-      return date.toTimeString().slice(0, 5) // HH:MM format
+      const date = new Date(`1970-01-01 ${time}`);
+      return date.toTimeString().slice(0, 5); // HH:MM format
     } catch {
-      return time
+      return time;
     }
   }
-  
-  return time
-}
+
+  return time;
+};
 
 export function RoleBasedCalendar({
   userRole,
@@ -94,78 +131,79 @@ export function RoleBasedCalendar({
   onApproveAppointment,
   onCancelAppointment,
   selectedDoctorId,
-  viewMode = 'week',
-  readonly = false
+  viewMode = "week",
+  readonly = false,
 }: RoleBasedCalendarProps) {
-  const [currentDate, setCurrentDate] = useState(new Date())
-  const [selectedDate, setSelectedDate] = useState(new Date())
-  const [filterDoctorId, setFilterDoctorId] = useState(selectedDoctorId || (userRole === 'doctor' ? userId : 'all'))
-  const [view, setView] = useState<'week' | 'day' | 'table'>(viewMode)
-  const [appointments, setAppointments] = useState<Appointment[]>([])
-  const [doctors, setDoctors] = useState<UserProfile[]>([])
-  const [loading, setLoading] = useState(true)
-  const [isConnected, setIsConnected] = useState(true)
-  const [lastUpdated, setLastUpdated] = useState<Date>(new Date())
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [selectedDate, setSelectedDate] = useState(new Date());
+  const [filterDoctorId, setFilterDoctorId] = useState(
+    selectedDoctorId || (userRole === "doctor" ? userId : "all")
+  );
+  const [view, setView] = useState<"week" | "day" | "table">(viewMode);
+  const [appointments, setAppointments] = useState<Appointment[]>([]);
+  const [doctors, setDoctors] = useState<UserProfile[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [isConnected, setIsConnected] = useState(true);
+  const [lastUpdated, setLastUpdated] = useState<Date>(new Date());
 
   // Role-based permissions
-  const canBook = userRole === 'admin' || userRole === 'receptionist'
-  const canEdit = userRole === 'admin' || userRole === 'receptionist'
-  const canApprove = userRole === 'admin'
-  const canViewAll = userRole === 'admin' || userRole === 'receptionist'
-  const isPatientView = userRole === 'patient'
-  const isDoctorView = userRole === 'doctor'
+  const canBook = userRole === "admin" || userRole === "receptionist";
+  const canEdit = userRole === "admin" || userRole === "receptionist";
+  const canApprove = userRole === "admin";
+  const canViewAll = userRole === "admin" || userRole === "receptionist";
+  const isPatientView = userRole === "patient";
+  const isDoctorView = userRole === "doctor";
 
   // Fetch doctors
   const fetchDoctors = useCallback(async (): Promise<UserProfile[]> => {
-    const supabase = createAuthenticatedClient()
+    const supabase = createAuthenticatedClient();
     const { data, error } = await supabase
-      .from('users')
-      .select('*')
-      .eq('role', 'doctor')
-      .eq('is_active', true)
-      .order('full_name')
-    
+      .from("users")
+      .select("*")
+      .eq("role", "doctor")
+      .eq("is_active", true)
+      .order("full_name");
+
     if (error) {
-      console.error('Error fetching doctors:', error)
-      return []
+      console.error("Error fetching doctors:", error);
+      return [];
     }
-    
+
     interface DatabaseDoctor {
-      id: string
-      full_name: string
-      role: UserRole
-      department: string | null
-      specialization: string | null
-      email: string | null
-      phone: string | null
-      is_active: boolean
-      password_hash: string
-      created_at: string
-      updated_at: string
+      id: string;
+      full_name: string;
+      role: UserRole;
+      department: string | null;
+      specialization: string | null;
+      email: string | null;
+      phone: string | null;
+      is_active: boolean;
+      password_hash: string;
+      created_at: string;
+      updated_at: string;
     }
-    
+
     return (data as DatabaseDoctor[]).map((doctor) => ({
       id: doctor.id,
       full_name: doctor.full_name,
       role: doctor.role,
-      department: doctor.department || 'general',
+      department: doctor.department || "general",
       specialization: doctor.specialization || null,
       email: doctor.email,
       phone: doctor.phone || null,
-      password_hash: 'hashed_password',
+      password_hash: "hashed_password",
       is_active: doctor.is_active,
       created_at: doctor.created_at,
-      updated_at: doctor.updated_at
-    }))
-  }, [])
+      updated_at: doctor.updated_at,
+    }));
+  }, []);
 
   // Fetch appointments with role-based filtering
-  const fetchAppointments = useCallback(async (startDate?: Date, endDate?: Date): Promise<Appointment[]> => {
-    const supabase = createAuthenticatedClient()
-    
-    let query = supabase
-      .from('appointments')
-      .select(`
+  const fetchAppointments = useCallback(
+    async (startDate?: Date, endDate?: Date): Promise<Appointment[]> => {
+      const supabase = createAuthenticatedClient();
+
+      let query = supabase.from("appointments").select(`
         *,
         patients(id, full_name, phone, email, date_of_birth, gender, address, emergency_contact_phone, created_at, updated_at),
         users!appointments_doctor_id_fkey(
@@ -177,368 +215,482 @@ export function RoleBasedCalendar({
           updated_at,
           user_profiles!inner(department, specialization)
         )
-      `)
-    
-    // Role-based filtering
-    if (userRole === 'doctor' && userId) {
-      query = query.eq('doctor_id', userId)
-    } else if (userRole === 'patient' && userId) {
-      query = query.eq('patient_id', userId)
-    }
-    
-    if (startDate && endDate) {
+      `);
+
+      // Role-based filtering
+      if (userRole === "doctor" && userId) {
+        query = query.eq("doctor_id", userId);
+      } else if (userRole === "patient" && userId) {
+        query = query.eq("patient_id", userId);
+      }
+
+      if (startDate && endDate) {
+        query = query
+          .gte("scheduled_date", startDate.toISOString().split("T")[0])
+          .lte("scheduled_date", endDate.toISOString().split("T")[0]);
+      }
+
       query = query
-        .gte('scheduled_date', startDate.toISOString().split('T')[0])
-        .lte('scheduled_date', endDate.toISOString().split('T')[0])
-    }
-    
-    query = query
-      .order('scheduled_date', { ascending: true })
-      .order('scheduled_time', { ascending: true })
-    
-    const { data, error } = await query
-    
-    if (error) {
-      console.error('Error fetching appointments:', error)
-      return []
-    }
-    
-    interface DatabaseAppointment {
-      id: string
-      patient_id: string
-      doctor_id: string
-      department: string
-      appointment_type: string
-      status: string
-      scheduled_date: string
-      scheduled_time: string
-      duration?: number
-      title?: string
-      priority?: boolean
-      is_recurring?: boolean
-      reminder_sent?: boolean
-      confirmation_sent?: boolean
-      confirmed_at?: string
-      created_by: string
-      created_at: string
-      updated_at: string
-      patients?: {
-        id: string
-        full_name: string
-        phone: string
-        email: string
-        date_of_birth: string
-        gender: string
-        address: string
-        emergency_contact_phone: string
-        created_at: string
-        updated_at: string
+        .order("scheduled_date", { ascending: true })
+        .order("scheduled_time", { ascending: true });
+
+      const { data, error } = await query;
+
+      if (error) {
+        console.error("Error fetching appointments:", error);
+        return [];
       }
-      users?: {
-        id: string
-        full_name: string
-        email: string
-        phone: string
-        created_at: string
-        updated_at: string
-        user_profiles: {
-          department: string
-          specialization: string
-        }[]
+
+      interface DatabaseAppointment {
+        id: string;
+        patient_id: string;
+        doctor_id: string;
+        department: string;
+        appointment_type: string;
+        status: string;
+        scheduled_date: string;
+        scheduled_time: string;
+        duration?: number;
+        title?: string;
+        priority?: boolean;
+        is_recurring?: boolean;
+        reminder_sent?: boolean;
+        confirmation_sent?: boolean;
+        confirmed_at?: string;
+        created_by: string;
+        created_at: string;
+        updated_at: string;
+        opd_id?: string;
+        patients?: {
+          id: string;
+          full_name: string;
+          phone: string;
+          email: string;
+          date_of_birth: string;
+          gender: string;
+          address: string;
+          emergency_contact_phone: string;
+          created_at: string;
+          updated_at: string;
+        };
+        users?: {
+          id: string;
+          full_name: string;
+          email: string;
+          phone: string;
+          created_at: string;
+          updated_at: string;
+          user_profiles: {
+            department: string;
+            specialization: string;
+          }[];
+        };
       }
-    }
-    
-    return (data as DatabaseAppointment[]).map((apt) => ({
-      id: apt.id,
-      patient_id: apt.patient_id,
-      doctor_id: apt.doctor_id,
-      department: apt.department,
-      appointment_type: apt.appointment_type as AppointmentType,
-      status: apt.status as AppointmentStatus,
-      scheduled_date: apt.scheduled_date,
-      scheduled_time: apt.scheduled_time,
-      duration: apt.duration || 30,
-      title: apt.title || 'Appointment',
-      priority: apt.priority || false,
-      is_recurring: apt.is_recurring || false,
-      reminder_sent: apt.reminder_sent || false,
-      confirmation_sent: apt.confirmation_sent || false,
-      created_by: apt.created_by,
-      created_at: apt.created_at,
-      updated_at: apt.updated_at,
-      patient: apt.patients ? {
-        id: apt.patients.id,
-        name: apt.patients.full_name,
-        mobile: apt.patients.phone,
-        dob: apt.patients.date_of_birth,
-        gender: apt.patients.gender as 'male' | 'female' | 'other' | null,
-        address: apt.patients.address,
-        email: apt.patients.email,
-        emergency_contact: apt.patients.emergency_contact_phone,
+
+      return (data as DatabaseAppointment[]).map((apt) => ({
+        id: apt.id,
+        appointment_number: null,
+        patient_id: apt.patient_id,
+        doctor_id: apt.doctor_id,
+        department: apt.department,
+        appointment_type: apt.appointment_type as AppointmentType,
+        status: apt.status as AppointmentStatus,
+        scheduled_date: apt.scheduled_date,
+        scheduled_time: apt.scheduled_time,
+        duration: apt.duration || 30,
+        estimated_end_time: null,
+        title: apt.title || "Appointment",
+        description: null,
+        chief_complaint: null,
+        notes: null,
+        patient_notes: null,
+        priority: apt.priority || false,
+        is_recurring: apt.is_recurring || false,
+        recurrence_type: null,
+        recurrence_end_date: null,
+        parent_appointment_id: null,
+        reminder_sent: apt.reminder_sent || false,
+        confirmation_sent: apt.confirmation_sent || false,
+        confirmed_at: apt.confirmed_at || null,
+        estimated_cost: null,
+        actual_cost: null,
+        arrived_at: null,
+        started_at: null,
+        completed_at: null,
+        cancelled_at: null,
+        cancellation_reason: null,
         created_by: apt.created_by,
-        created_at: apt.patients.created_at,
-        updated_at: apt.patients.updated_at,
-      } : undefined,
-      doctor: apt.users ? {
-        id: apt.users.id,
-        role: 'doctor' as const,
-        full_name: apt.users.full_name,
-        email: apt.users.email,
-        phone: apt.users.phone || null,
-        department: apt.users.department || null,
-        specialization: apt.users.specialization || null,
-        password_hash: 'hashed_password',
-        is_active: true,
-        created_at: apt.users.created_at,
-        updated_at: apt.users.updated_at
-      } : undefined
-    }))
-  }, [userRole, userId])
+        created_at: apt.created_at,
+        updated_at: apt.updated_at,
+        opd_id: apt.opd_id || null,
+        patient: apt.patients
+          ? {
+              id: apt.patients.id,
+              name: apt.patients.full_name,
+              mobile: apt.patients.phone,
+              dob: apt.patients.date_of_birth,
+              gender: apt.patients.gender as "male" | "female" | "other" | null,
+              address: apt.patients.address,
+              email: apt.patients.email,
+              emergency_contact: apt.patients.emergency_contact_phone,
+              created_by: apt.created_by,
+              created_at: apt.patients.created_at,
+              updated_at: apt.patients.updated_at,
+            }
+          : undefined,
+        doctor: apt.users
+          ? {
+              id: apt.users.id,
+              role: "doctor" as const,
+              full_name: apt.users.full_name,
+              email: apt.users.email,
+              phone: apt.users.phone || null,
+              department: apt.users.user_profiles?.[0]?.department || null,
+              specialization: apt.users.user_profiles?.[0]?.specialization || null,
+              password_hash: "hashed_password",
+              is_active: true,
+              created_at: apt.users.created_at,
+              updated_at: apt.users.updated_at,
+            }
+          : undefined,
+        // Add patients relation for consistency with expected Appointment interface  
+        patients: apt.patients ? {
+          id: apt.patients.id,
+          full_name: apt.patients.full_name,
+          phone: apt.patients.phone,
+          email: apt.patients.email,
+          date_of_birth: apt.patients.date_of_birth,
+          gender: apt.patients.gender as 'male' | 'female' | 'other' | null,
+          address: apt.patients.address,
+          emergency_contact_name: null,
+          emergency_contact_phone: apt.patients.emergency_contact_phone,
+          medical_history: null,
+          allergies: null,
+          notes: null,
+          created_by: apt.created_by,
+          created_at: apt.patients.created_at,
+          updated_at: apt.patients.updated_at,
+        } : undefined,
+        // Add users relation for consistency
+        users: apt.users ? {
+          id: apt.users.id,
+          role: 'doctor' as const,
+          full_name: apt.users.full_name,
+          email: apt.users.email,
+          phone: apt.users.phone,
+          department: apt.users.user_profiles?.[0]?.department || null,
+          specialization: apt.users.user_profiles?.[0]?.specialization || null,
+          password_hash: 'hashed_password',
+          is_active: true,
+          created_at: apt.users.created_at,
+          updated_at: apt.users.updated_at,
+        } : undefined,
+      }));
+    },
+    [userRole, userId]
+  );
 
   // Load data callback
   const loadData = useCallback(async () => {
-    setLoading(true)
+    setLoading(true);
     try {
-      const startDate = new Date(currentDate)
-      startDate.setDate(currentDate.getDate() - 7)
-      const endDate = new Date(currentDate)
-      endDate.setDate(currentDate.getDate() + 14)
+      const startDate = new Date(currentDate);
+      startDate.setDate(currentDate.getDate() - 7);
+      const endDate = new Date(currentDate);
+      endDate.setDate(currentDate.getDate() + 14);
 
       const [fetchedAppointments, fetchedDoctors] = await Promise.all([
         fetchAppointments(startDate, endDate),
-        canViewAll ? fetchDoctors() : []
-      ])
+        canViewAll ? fetchDoctors() : [],
+      ]);
 
-      setAppointments(fetchedAppointments)
-      setDoctors(fetchedDoctors)
-      setLastUpdated(new Date())
+      setAppointments(fetchedAppointments);
+      setDoctors(fetchedDoctors);
+      setLastUpdated(new Date());
     } catch (error) {
-      console.error('Error loading calendar data:', error)
-      setIsConnected(false)
+      console.error("Error loading calendar data:", error);
+      setIsConnected(false);
     } finally {
-      setLoading(false)
+      setLoading(false);
     }
-  }, [currentDate, fetchAppointments, fetchDoctors, canViewAll])
+  }, [currentDate, fetchAppointments, fetchDoctors, canViewAll]);
 
   // Load data on mount and date changes
   useEffect(() => {
-    loadData()
-  }, [loadData])
+    loadData();
+  }, [loadData]);
 
   // Debug appointment data (can be removed in production)
   useEffect(() => {
-    console.log('📅 RoleBasedCalendar - useEffect triggered with appointments:', appointments.length)
+    console.log(
+      "📅 RoleBasedCalendar - useEffect triggered with appointments:",
+      appointments.length
+    );
     if (appointments.length > 0) {
-      console.log('📅 RoleBasedCalendar - All appointments:', appointments.map(a => ({
-        id: a.id,
-        patient: a.patient?.name,
-        doctor: a.doctor?.full_name,
-        date: a.scheduled_date,
-        time: a.scheduled_time,
-        normalizedTime: normalizeTime(a.scheduled_time),
-        status: a.status,
-        type: a.appointment_type,
-        department: a.department,
-        doctor_id: a.doctor_id,
-        priority: a.priority
-      })))
-      
-      const today = new Date().toDateString()
-      console.log('📅 Today is:', today)
-      
-      const todayAppointments = appointments.filter(apt => {
-        const aptDate = new Date(apt.scheduled_date)
-        console.log('📅 Comparing dates:', apt.scheduled_date, 'vs', today, '=', aptDate.toDateString() === today)
-        return aptDate.toDateString() === today
-      })
-      console.log('📅 Today appointments:', todayAppointments.length)
-      console.log('📅 Today appointments details:', todayAppointments.map(a => ({
-        id: a.id,
-        patient: a.patient?.name,
-        time: a.scheduled_time,
-        normalizedTime: normalizeTime(a.scheduled_time),
-        date: a.scheduled_date,
-        status: a.status
-      })))
-      console.log('📅 Available time slots:', timeSlots)
+      console.log(
+        "📅 RoleBasedCalendar - All appointments:",
+        appointments.map((a) => ({
+          id: a.id,
+          patient: a.patients?.full_name,
+          doctor: a.users?.full_name,
+          date: a.scheduled_date,
+          time: a.scheduled_time,
+          normalizedTime: normalizeTime(a.scheduled_time),
+          status: a.status,
+          type: a.appointment_type,
+          department: a.department,
+          doctor_id: a.doctor_id,
+          priority: a.priority,
+        }))
+      );
+
+      const today = new Date().toDateString();
+      console.log("📅 Today is:", today);
+
+      const todayAppointments = appointments.filter((apt) => {
+        const aptDate = new Date(apt.scheduled_date);
+        console.log(
+          "📅 Comparing dates:",
+          apt.scheduled_date,
+          "vs",
+          today,
+          "=",
+          aptDate.toDateString() === today
+        );
+        return aptDate.toDateString() === today;
+      });
+      console.log("📅 Today appointments:", todayAppointments.length);
+      console.log(
+        "📅 Today appointments details:",
+        todayAppointments.map((a) => ({
+          id: a.id,
+          patient: a.patients?.full_name,
+          time: a.scheduled_time,
+          normalizedTime: normalizeTime(a.scheduled_time),
+          date: a.scheduled_date,
+          status: a.status,
+        }))
+      );
+      console.log("📅 Available time slots:", timeSlots);
     } else {
-      console.log('📅 RoleBasedCalendar - No appointments loaded yet')
+      console.log("📅 RoleBasedCalendar - No appointments loaded yet");
     }
-  }, [appointments])
+  }, [appointments]);
 
   // Manual refresh
   const handleRefresh = useCallback(() => {
-    loadData()
-  }, [loadData])
+    loadData();
+  }, [loadData]);
 
   const getStatusColor = (status: AppointmentStatus) => {
     switch (status) {
-      case 'pending': return 'bg-yellow-100 text-yellow-800 border-yellow-200'
-      case 'requested': return 'bg-orange-100 text-orange-800 border-orange-200'
-      case 'confirmed': return 'bg-green-100 text-green-800 border-green-200'
-      case 'scheduled': return 'bg-blue-100 text-blue-800 border-blue-200'
-      case 'arrived': return 'bg-purple-100 text-purple-800 border-purple-200'
-      case 'in_progress': return 'bg-indigo-100 text-indigo-800 border-indigo-200'
-      case 'completed': return 'bg-gray-100 text-gray-800 border-gray-200'
-      case 'cancelled': return 'bg-red-100 text-red-800 border-red-200'
-      case 'no_show': return 'bg-stone-100 text-stone-800 border-stone-200'
-      case 'rescheduled': return 'bg-cyan-100 text-cyan-800 border-cyan-200'
-      default: return 'bg-gray-100 text-gray-800 border-gray-200'
+      case "pending":
+        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+      case "requested":
+        return "bg-orange-100 text-orange-800 border-orange-200";
+      case "confirmed":
+        return "bg-green-100 text-green-800 border-green-200";
+      case "scheduled":
+        return "bg-blue-100 text-blue-800 border-blue-200";
+      case "arrived":
+        return "bg-purple-100 text-purple-800 border-purple-200";
+      case "in_progress":
+        return "bg-indigo-100 text-indigo-800 border-indigo-200";
+      case "completed":
+        return "bg-gray-100 text-gray-800 border-gray-200";
+      case "cancelled":
+        return "bg-red-100 text-red-800 border-red-200";
+      case "no_show":
+        return "bg-stone-100 text-stone-800 border-stone-200";
+      case "rescheduled":
+        return "bg-cyan-100 text-cyan-800 border-cyan-200";
+      default:
+        return "bg-gray-100 text-gray-800 border-gray-200";
     }
-  }
+  };
 
   const getTableAppointments = () => {
-    const filteredAppointments = appointments.filter(apt => {
-      const doctorMatch = (filterDoctorId === 'all' || apt.doctor_id === filterDoctorId)
-      return doctorMatch
-    }).sort((a, b) => {
-      // Sort by date first, then by time
-      if (a.scheduled_date !== b.scheduled_date) {
-        return a.scheduled_date.localeCompare(b.scheduled_date)
-      }
-      return a.scheduled_time.localeCompare(b.scheduled_time)
-    })
-    return filteredAppointments
-  }
+    const filteredAppointments = appointments
+      .filter((apt) => {
+        const doctorMatch =
+          filterDoctorId === "all" || apt.doctor_id === filterDoctorId;
+        return doctorMatch;
+      })
+      .sort((a, b) => {
+        // Sort by date first, then by time
+        if (a.scheduled_date !== b.scheduled_date) {
+          return a.scheduled_date.localeCompare(b.scheduled_date);
+        }
+        return a.scheduled_time.localeCompare(b.scheduled_time);
+      });
+    return filteredAppointments;
+  };
 
   const getWeekDays = (date: Date): CalendarDay[] => {
-    const startOfWeek = new Date(date)
-    const day = startOfWeek.getDay()
-    startOfWeek.setDate(startOfWeek.getDate() - day)
+    const startOfWeek = new Date(date);
+    const day = startOfWeek.getDay();
+    startOfWeek.setDate(startOfWeek.getDate() - day);
 
-    const days: CalendarDay[] = []
+    const days: CalendarDay[] = [];
     for (let i = 0; i < 7; i++) {
-      const currentDay = new Date(startOfWeek)
-      currentDay.setDate(startOfWeek.getDate() + i)
-      
-      const dayAppointments = appointments.filter(apt => {
-        const aptDate = new Date(apt.scheduled_date)
-        const dateMatch = aptDate.toDateString() === currentDay.toDateString()
-        const doctorMatch = (filterDoctorId === 'all' || apt.doctor_id === filterDoctorId)
-        
+      const currentDay = new Date(startOfWeek);
+      currentDay.setDate(startOfWeek.getDate() + i);
+
+      const dayAppointments = appointments.filter((apt) => {
+        const aptDate = new Date(apt.scheduled_date);
+        const dateMatch = aptDate.toDateString() === currentDay.toDateString();
+        const doctorMatch =
+          filterDoctorId === "all" || apt.doctor_id === filterDoctorId;
+
         // Debug for today's filtering
         if (currentDay.toDateString() === new Date().toDateString()) {
-          console.log(`🔍 Filtering appointment ${apt.patient?.name}: date=${dateMatch}, doctor=${doctorMatch} (filterDoctorId=${filterDoctorId}, apt.doctor_id=${apt.doctor_id})`)
+          console.log(
+            `🔍 Filtering appointment ${apt.patient?.name}: date=${dateMatch}, doctor=${doctorMatch} (filterDoctorId=${filterDoctorId}, apt.doctor_id=${apt.doctor_id})`
+          );
         }
-        
-        return dateMatch && doctorMatch
-      })
 
-      const slots: CalendarSlot[] = timeSlots.map(time => {
-        const matchingAppointments = dayAppointments.filter(apt => {
-          const normalizedAptTime = normalizeTime(apt.scheduled_time)
-          const normalizedSlotTime = normalizeTime(time)
-          return normalizedAptTime === normalizedSlotTime
-        })
-        
+        return dateMatch && doctorMatch;
+      });
+
+      const slots: CalendarSlot[] = timeSlots.map((time) => {
+        const matchingAppointments = dayAppointments.filter((apt) => {
+          const normalizedAptTime = normalizeTime(apt.scheduled_time);
+          const normalizedSlotTime = normalizeTime(time);
+          return normalizedAptTime === normalizedSlotTime;
+        });
+
         // Debug: Log all appointments for today if it's today
         if (currentDay.toDateString() === new Date().toDateString()) {
           if (matchingAppointments.length > 0) {
-            console.log(`🔍 Time ${time}: Found ${matchingAppointments.length} appointments`, matchingAppointments.map(a => `${a.patient?.name} (${a.scheduled_time})`))
+            console.log(
+              `🔍 Time ${time}: Found ${matchingAppointments.length} appointments`,
+              matchingAppointments.map(
+                (a) => `${a.patient?.name} (${a.scheduled_time})`
+              )
+            );
           }
           // Also log when checking appointments to see the matching process
           if (dayAppointments.length > 0) {
-            console.log(`🕐 Checking time slot ${time} against ${dayAppointments.length} today appointments:`, dayAppointments.map(a => `${a.patient?.name} ${a.scheduled_time} -> ${normalizeTime(a.scheduled_time)} (matches: ${normalizeTime(a.scheduled_time) === normalizeTime(time)})`))
+            console.log(
+              `🕐 Checking time slot ${time} against ${dayAppointments.length} today appointments:`,
+              dayAppointments.map(
+                (a) =>
+                  `${a.patient?.name} ${a.scheduled_time} -> ${normalizeTime(
+                    a.scheduled_time
+                  )} (matches: ${
+                    normalizeTime(a.scheduled_time) === normalizeTime(time)
+                  })`
+              )
+            );
           }
         }
-        
+
         // For now, just take the first appointment, but we could enhance this to show multiple
-        const appointment = matchingAppointments[0]
-        
+        const appointment = matchingAppointments[0];
+
         return {
           time,
           appointment,
           isAvailable: !appointment,
-          doctorId: filterDoctorId !== 'all' ? filterDoctorId : undefined,
+          doctorId: filterDoctorId !== "all" ? filterDoctorId : undefined,
           // Add extra appointments info for potential future enhancement
-          extraAppointments: matchingAppointments.length > 1 ? matchingAppointments.slice(1) : undefined
-        }
-      })
+          extraAppointments:
+            matchingAppointments.length > 1
+              ? matchingAppointments.slice(1)
+              : undefined,
+        };
+      });
 
       days.push({
         date: currentDay,
-        dayName: currentDay.toLocaleDateString('en-US', { weekday: 'short' }),
+        dayName: currentDay.toLocaleDateString("en-US", { weekday: "short" }),
         slots,
         isToday: currentDay.toDateString() === new Date().toDateString(),
-        isSelected: currentDay.toDateString() === selectedDate.toDateString()
-      })
+        isSelected: currentDay.toDateString() === selectedDate.toDateString(),
+      });
     }
-    return days
-  }
+    return days;
+  };
 
   const getSingleDay = (date: Date): CalendarDay => {
-    const dayAppointments = appointments.filter(apt => {
-      const aptDate = new Date(apt.scheduled_date)
-      return aptDate.toDateString() === date.toDateString() &&
-             (filterDoctorId === 'all' || apt.doctor_id === filterDoctorId)
-    })
+    const dayAppointments = appointments.filter((apt) => {
+      const aptDate = new Date(apt.scheduled_date);
+      return (
+        aptDate.toDateString() === date.toDateString() &&
+        (filterDoctorId === "all" || apt.doctor_id === filterDoctorId)
+      );
+    });
 
-    const slots: CalendarSlot[] = timeSlots.map(time => {
-      const appointment = dayAppointments.find(apt => {
-        const normalizedAptTime = normalizeTime(apt.scheduled_time)
-        const normalizedSlotTime = normalizeTime(time)
-        return normalizedAptTime === normalizedSlotTime
-      })
+    const slots: CalendarSlot[] = timeSlots.map((time) => {
+      const appointment = dayAppointments.find((apt) => {
+        const normalizedAptTime = normalizeTime(apt.scheduled_time);
+        const normalizedSlotTime = normalizeTime(time);
+        return normalizedAptTime === normalizedSlotTime;
+      });
       return {
         time,
         appointment,
         isAvailable: !appointment,
-        doctorId: filterDoctorId !== 'all' ? filterDoctorId : undefined
-      }
-    })
+        doctorId: filterDoctorId !== "all" ? filterDoctorId : undefined,
+      };
+    });
 
     return {
       date,
-      dayName: date.toLocaleDateString('en-US', { weekday: 'long' }),
+      dayName: date.toLocaleDateString("en-US", { weekday: "long" }),
       slots,
       isToday: date.toDateString() === new Date().toDateString(),
-      isSelected: date.toDateString() === selectedDate.toDateString()
-    }
-  }
+      isSelected: date.toDateString() === selectedDate.toDateString(),
+    };
+  };
 
-  const navigateWeek = (direction: 'prev' | 'next') => {
-    const newDate = new Date(currentDate)
-    newDate.setDate(currentDate.getDate() + (direction === 'next' ? 7 : -7))
-    setCurrentDate(newDate)
-  }
+  const navigateWeek = (direction: "prev" | "next") => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(currentDate.getDate() + (direction === "next" ? 7 : -7));
+    setCurrentDate(newDate);
+  };
 
-  const navigateDay = (direction: 'prev' | 'next') => {
-    const newDate = new Date(currentDate)
-    newDate.setDate(currentDate.getDate() + (direction === 'next' ? 1 : -1))
-    setCurrentDate(newDate)
-    setSelectedDate(newDate)
-  }
+  const navigateDay = (direction: "prev" | "next") => {
+    const newDate = new Date(currentDate);
+    newDate.setDate(currentDate.getDate() + (direction === "next" ? 1 : -1));
+    setCurrentDate(newDate);
+    setSelectedDate(newDate);
+  };
 
   const handleSlotClick = (day: CalendarDay, slot: CalendarSlot) => {
     if (slot.appointment && onAppointmentSelect) {
-      onAppointmentSelect(slot.appointment)
+      onAppointmentSelect(slot.appointment);
     } else if (slot.isAvailable && onSlotSelect && (canBook || !readonly)) {
       onSlotSelect(
-        day.date.toISOString().split('T')[0],
+        day.date.toISOString().split("T")[0],
         slot.time,
         slot.doctorId
-      )
+      );
     }
-  }
+  };
 
-  const handleAppointmentAction = (action: string, appointment: Appointment, event?: React.MouseEvent) => {
-    event?.stopPropagation()
-    
+  const handleAppointmentAction = (
+    action: string,
+    appointment: Appointment,
+    event?: React.MouseEvent
+  ) => {
+    event?.stopPropagation();
+
     switch (action) {
-      case 'view':
-        onAppointmentSelect?.(appointment)
-        break
-      case 'edit':
-        onEditAppointment?.(appointment)
-        break
-      case 'approve':
-        onApproveAppointment?.(appointment)
-        break
-      case 'cancel':
-        onCancelAppointment?.(appointment)
-        break
+      case "view":
+        onAppointmentSelect?.(appointment);
+        break;
+      case "edit":
+        onEditAppointment?.(appointment);
+        break;
+      case "approve":
+        onApproveAppointment?.(appointment);
+        break;
+      case "cancel":
+        onCancelAppointment?.(appointment);
+        break;
     }
-  }
+  };
 
   if (loading) {
     return (
@@ -552,34 +704,55 @@ export function RoleBasedCalendar({
           </div>
         </CardContent>
       </Card>
-    )
+    );
   }
 
-  const calendarData = view === 'week' ? getWeekDays(currentDate) : view === 'table' ? null : [getSingleDay(currentDate)]
-  const tableAppointments = view === 'table' ? getTableAppointments() : []
+  const calendarData =
+    view === "week"
+      ? getWeekDays(currentDate)
+      : view === "table"
+      ? null
+      : [getSingleDay(currentDate)];
+  const tableAppointments = view === "table" ? getTableAppointments() : [];
 
   const getWeekRange = () => {
-    const weekDays = getWeekDays(currentDate)
-    const firstDay = weekDays[0].date
-    const lastDay = weekDays[6].date
-    
+    const weekDays = getWeekDays(currentDate);
+    const firstDay = weekDays[0].date;
+    const lastDay = weekDays[6].date;
+
     if (firstDay.getMonth() === lastDay.getMonth()) {
-      return `${firstDay.getDate()} - ${lastDay.getDate()} ${firstDay.toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}`
+      return `${firstDay.getDate()} - ${lastDay.getDate()} ${firstDay.toLocaleDateString(
+        "en-US",
+        { month: "long", year: "numeric" }
+      )}`;
     } else {
-      return `${firstDay.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${lastDay.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+      return `${firstDay.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+      })} - ${lastDay.toLocaleDateString("en-US", {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+      })}`;
     }
-  }
+  };
 
   const getRoleTitle = () => {
     switch (userRole) {
-      case 'admin': return 'Admin Calendar - All Appointments'
-      case 'doctor': return 'My Schedule'
-      case 'receptionist': return 'Appointment Calendar'
-      case 'attendant': return 'Procedure Schedule'
-      case 'patient': return 'My Appointments'
-      default: return 'Calendar'
+      case "admin":
+        return "Admin Calendar - All Appointments";
+      case "doctor":
+        return "My Schedule";
+      case "receptionist":
+        return "Appointment Calendar";
+      case "attendant":
+        return "Procedure Schedule";
+      case "patient":
+        return "My Appointments";
+      default:
+        return "Calendar";
     }
-  }
+  };
 
   return (
     <Card className="w-full">
@@ -590,20 +763,26 @@ export function RoleBasedCalendar({
               <CalendarIcon className="h-5 w-5" />
               {getRoleTitle()}
               <div className="flex items-center gap-2 ml-4">
-                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                <div
+                  className={`w-2 h-2 rounded-full ${
+                    isConnected ? "bg-green-500" : "bg-red-500"
+                  }`}
+                />
                 <span className="text-xs text-muted-foreground">
-                  {isConnected ? 'Live' : 'Offline'}
+                  {isConnected ? "Live" : "Offline"}
                 </span>
               </div>
             </CardTitle>
             <CardDescription className="flex items-center gap-4">
               <span>
-                {view === 'week' ? getWeekRange() : currentDate.toLocaleDateString('en-US', { 
-                  weekday: 'long',
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
+                {view === "week"
+                  ? getWeekRange()
+                  : currentDate.toLocaleDateString("en-US", {
+                      weekday: "long",
+                      year: "numeric",
+                      month: "long",
+                      day: "numeric",
+                    })}
               </span>
               <span className="text-xs">
                 Last updated: {lastUpdated.toLocaleTimeString()}
@@ -611,16 +790,18 @@ export function RoleBasedCalendar({
             </CardDescription>
           </div>
           <div className="flex items-center gap-2">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
               onClick={handleRefresh}
               disabled={loading}
             >
-              <RefreshCwIcon className={`h-4 w-4 mr-2 ${loading ? 'animate-spin' : ''}`} />
+              <RefreshCwIcon
+                className={`h-4 w-4 mr-2 ${loading ? "animate-spin" : ""}`}
+              />
               Refresh
             </Button>
-            
+
             {canViewAll && doctors.length > 0 && (
               <Select value={filterDoctorId} onValueChange={setFilterDoctorId}>
                 <SelectTrigger className="w-48">
@@ -637,54 +818,58 @@ export function RoleBasedCalendar({
                 </SelectContent>
               </Select>
             )}
-            
+
             <div className="flex items-center gap-1 border rounded-md">
-              <Button 
-                variant={view === 'day' ? 'default' : 'ghost'} 
+              <Button
+                variant={view === "day" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setView('day')}
+                onClick={() => setView("day")}
               >
                 Day
               </Button>
-              <Button 
-                variant={view === 'week' ? 'default' : 'ghost'} 
+              <Button
+                variant={view === "week" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setView('week')}
+                onClick={() => setView("week")}
               >
                 Week
               </Button>
-              <Button 
-                variant={view === 'table' ? 'default' : 'ghost'} 
+              <Button
+                variant={view === "table" ? "default" : "ghost"}
                 size="sm"
-                onClick={() => setView('table')}
+                onClick={() => setView("table")}
               >
                 Table
               </Button>
             </div>
 
-            {view !== 'table' && (
+            {view !== "table" && (
               <div className="flex items-center gap-1">
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
-                  onClick={() => view === 'week' ? navigateWeek('prev') : navigateDay('prev')}
+                  onClick={() =>
+                    view === "week" ? navigateWeek("prev") : navigateDay("prev")
+                  }
                 >
                   <ChevronLeftIcon className="h-4 w-4" />
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
                   onClick={() => {
-                    setCurrentDate(new Date())
-                    setSelectedDate(new Date())
+                    setCurrentDate(new Date());
+                    setSelectedDate(new Date());
                   }}
                 >
                   Today
                 </Button>
-                <Button 
-                  variant="outline" 
+                <Button
+                  variant="outline"
                   size="sm"
-                  onClick={() => view === 'week' ? navigateWeek('next') : navigateDay('next')}
+                  onClick={() =>
+                    view === "week" ? navigateWeek("next") : navigateDay("next")
+                  }
                 >
                   <ChevronRightIcon className="h-4 w-4" />
                 </Button>
@@ -702,12 +887,14 @@ export function RoleBasedCalendar({
       </CardHeader>
 
       <CardContent>
-        {view === 'table' ? (
+        {view === "table" ? (
           /* Table View */
           <div className="space-y-4">
             {tableAppointments.length === 0 ? (
               <div className="text-center py-8">
-                <div className="text-muted-foreground">No appointments found</div>
+                <div className="text-muted-foreground">
+                  No appointments found
+                </div>
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -717,7 +904,7 @@ export function RoleBasedCalendar({
                       <th className="text-left p-3 font-medium">Date</th>
                       <th className="text-left p-3 font-medium">Time</th>
                       <th className="text-left p-3 font-medium">
-                        {isPatientView ? 'Doctor' : 'Patient'}
+                        {isPatientView ? "Doctor" : "Patient"}
                       </th>
                       {!isDoctorView && !isPatientView && (
                         <th className="text-left p-3 font-medium">Doctor</th>
@@ -731,29 +918,35 @@ export function RoleBasedCalendar({
                   </thead>
                   <tbody>
                     {tableAppointments.map((appointment, index) => (
-                      <tr 
+                      <tr
                         key={appointment.id}
                         className={`border-b hover:bg-gray-50 cursor-pointer ${
-                          appointment.priority ? 'bg-red-50' : ''
+                          appointment.priority ? "bg-red-50" : ""
                         }`}
                         onClick={() => onAppointmentSelect?.(appointment)}
                       >
                         <td className="p-3">
                           <div className="font-medium">
-                            {new Date(appointment.scheduled_date).toLocaleDateString('en-US', {
-                              weekday: 'short',
-                              month: 'short', 
-                              day: 'numeric'
+                            {new Date(
+                              appointment.scheduled_date
+                            ).toLocaleDateString("en-US", {
+                              weekday: "short",
+                              month: "short",
+                              day: "numeric",
                             })}
                           </div>
                           <div className="text-xs text-muted-foreground">
-                            {new Date(appointment.scheduled_date).toLocaleDateString()}
+                            {new Date(
+                              appointment.scheduled_date
+                            ).toLocaleDateString()}
                           </div>
                         </td>
                         <td className="p-3">
                           <div className="flex items-center gap-1">
                             <ClockIcon className="h-3 w-3" />
-                            <span className="font-medium">{normalizeTime(appointment.scheduled_time)}</span>
+                            <span className="font-medium">
+                              {normalizeTime(appointment.scheduled_time)}
+                            </span>
                           </div>
                         </td>
                         <td className="p-3">
@@ -761,10 +954,14 @@ export function RoleBasedCalendar({
                             <UserIcon className="h-4 w-4 text-muted-foreground" />
                             <div>
                               <div className="font-medium">
-                                {isPatientView ? appointment.doctor?.full_name : appointment.patient?.name}
+                                {isPatientView
+                                  ? appointment.users?.full_name
+                                  : appointment.patients?.full_name}
                               </div>
                               <div className="text-xs text-muted-foreground">
-                                {isPatientView ? appointment.doctor?.phone : appointment.patient?.mobile}
+                                {isPatientView
+                                  ? appointment.users?.phone
+                                  : appointment.patients?.phone}
                               </div>
                             </div>
                           </div>
@@ -773,12 +970,17 @@ export function RoleBasedCalendar({
                           <td className="p-3">
                             <div className="flex items-center gap-2">
                               <StethoscopeIcon className="h-4 w-4 text-muted-foreground" />
-                              <span>{appointment.doctor?.full_name || 'Not assigned'}</span>
+                              <span>
+                                {appointment.users?.full_name ||
+                                  "Not assigned"}
+                              </span>
                             </div>
                           </td>
                         )}
                         <td className="p-3">
-                          <span className="capitalize">{appointment.appointment_type}</span>
+                          <span className="capitalize">
+                            {appointment.appointment_type}
+                          </span>
                         </td>
                         <td className="p-3">
                           <span>{appointment.department}</span>
@@ -788,7 +990,10 @@ export function RoleBasedCalendar({
                             {appointment.priority && (
                               <AlertTriangleIcon className="h-4 w-4 text-red-500" />
                             )}
-                            <Badge variant="outline" className={getStatusColor(appointment.status)}>
+                            <Badge
+                              variant="outline"
+                              className={getStatusColor(appointment.status)}
+                            >
                               {appointment.status}
                             </Badge>
                           </div>
@@ -803,7 +1008,13 @@ export function RoleBasedCalendar({
                                 size="sm"
                                 variant="ghost"
                                 className="h-8 w-8 p-0"
-                                onClick={(e) => handleAppointmentAction('view', appointment, e)}
+                                onClick={(e) =>
+                                  handleAppointmentAction(
+                                    "view",
+                                    appointment,
+                                    e
+                                  )
+                                }
                               >
                                 <EyeIcon className="h-4 w-4" />
                               </Button>
@@ -813,27 +1024,48 @@ export function RoleBasedCalendar({
                                 size="sm"
                                 variant="ghost"
                                 className="h-8 w-8 p-0"
-                                onClick={(e) => handleAppointmentAction('edit', appointment, e)}
+                                onClick={(e) =>
+                                  handleAppointmentAction(
+                                    "edit",
+                                    appointment,
+                                    e
+                                  )
+                                }
                               >
                                 <EditIcon className="h-4 w-4" />
                               </Button>
                             )}
-                            {onApproveAppointment && canApprove && (appointment.status === 'pending' || appointment.status === 'requested') && (
-                              <Button
-                                size="sm"
-                                variant="ghost"
-                                className="h-8 w-8 p-0"
-                                onClick={(e) => handleAppointmentAction('approve', appointment, e)}
-                              >
-                                <CheckIcon className="h-4 w-4" />
-                              </Button>
-                            )}
+                            {onApproveAppointment &&
+                              canApprove &&
+                              (appointment.status === "pending" ||
+                                appointment.status === "requested") && (
+                                <Button
+                                  size="sm"
+                                  variant="ghost"
+                                  className="h-8 w-8 p-0"
+                                  onClick={(e) =>
+                                    handleAppointmentAction(
+                                      "approve",
+                                      appointment,
+                                      e
+                                    )
+                                  }
+                                >
+                                  <CheckIcon className="h-4 w-4" />
+                                </Button>
+                              )}
                             {onCancelAppointment && (canEdit || canApprove) && (
                               <Button
                                 size="sm"
                                 variant="ghost"
                                 className="h-8 w-8 p-0"
-                                onClick={(e) => handleAppointmentAction('cancel', appointment, e)}
+                                onClick={(e) =>
+                                  handleAppointmentAction(
+                                    "cancel",
+                                    appointment,
+                                    e
+                                  )
+                                }
                               >
                                 <XIcon className="h-4 w-4" />
                               </Button>
@@ -850,15 +1082,24 @@ export function RoleBasedCalendar({
         ) : (
           /* Calendar View */
           <>
-            <div className="grid gap-4" style={{ gridTemplateColumns: view === 'week' ? 'repeat(7, 1fr)' : '1fr' }}>
+            <div
+              className="grid gap-4"
+              style={{
+                gridTemplateColumns: view === "week" ? "repeat(7, 1fr)" : "1fr",
+              }}
+            >
               {calendarData?.map((day, dayIndex) => (
                 <div key={dayIndex} className="space-y-2">
                   {/* Day Header */}
-                  <div className={`text-center p-2 rounded-lg border ${
-                    day.isToday ? 'bg-blue-50 border-blue-200 text-blue-900' : 
-                    day.isSelected ? 'bg-gray-100 border-gray-300' : 
-                    'bg-gray-50 border-gray-200'
-                  }`}>
+                  <div
+                    className={`text-center p-2 rounded-lg border ${
+                      day.isToday
+                        ? "bg-blue-50 border-blue-200 text-blue-900"
+                        : day.isSelected
+                        ? "bg-gray-100 border-gray-300"
+                        : "bg-gray-50 border-gray-200"
+                    }`}
+                  >
                     <div className="font-medium">{day.dayName}</div>
                     <div className="text-sm text-muted-foreground">
                       {day.date.getDate()}
@@ -871,11 +1112,13 @@ export function RoleBasedCalendar({
                       <div
                         key={slotIndex}
                         className={`p-2 rounded border text-xs cursor-pointer transition-colors min-h-[3.5rem] relative ${
-                          slot.appointment 
-                            ? `${getStatusColor(slot.appointment.status)} hover:opacity-80` 
-                            : canBook && !readonly 
-                              ? 'bg-gray-50 border-gray-200 hover:bg-gray-100'
-                              : 'bg-gray-50 border-gray-200'
+                          slot.appointment
+                            ? `${getStatusColor(
+                                slot.appointment.status
+                              )} hover:opacity-80`
+                            : canBook && !readonly
+                            ? "bg-gray-50 border-gray-200 hover:bg-gray-100"
+                            : "bg-gray-50 border-gray-200"
                         }`}
                         onClick={() => handleSlotClick(day, slot)}
                       >
@@ -884,7 +1127,7 @@ export function RoleBasedCalendar({
                             <ClockIcon className="h-3 w-3" />
                             <span className="font-medium">{slot.time}</span>
                           </div>
-                          
+
                           {/* Action buttons for appointments */}
                           {slot.appointment && (
                             <div className="flex items-center gap-1">
@@ -893,7 +1136,13 @@ export function RoleBasedCalendar({
                                   size="sm"
                                   variant="ghost"
                                   className="h-5 w-5 p-0"
-                                  onClick={(e) => handleAppointmentAction('view', slot.appointment!, e)}
+                                  onClick={(e) =>
+                                    handleAppointmentAction(
+                                      "view",
+                                      slot.appointment!,
+                                      e
+                                    )
+                                  }
                                 >
                                   <EyeIcon className="h-3 w-3" />
                                 </Button>
@@ -903,53 +1152,83 @@ export function RoleBasedCalendar({
                                   size="sm"
                                   variant="ghost"
                                   className="h-5 w-5 p-0"
-                                  onClick={(e) => handleAppointmentAction('edit', slot.appointment!, e)}
+                                  onClick={(e) =>
+                                    handleAppointmentAction(
+                                      "edit",
+                                      slot.appointment!,
+                                      e
+                                    )
+                                  }
                                 >
                                   <EditIcon className="h-3 w-3" />
                                 </Button>
                               )}
-                              {onApproveAppointment && canApprove && (slot.appointment.status === 'pending' || slot.appointment.status === 'requested') && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-5 w-5 p-0"
-                                  onClick={(e) => handleAppointmentAction('approve', slot.appointment!, e)}
-                                >
-                                  <CheckIcon className="h-3 w-3" />
-                                </Button>
-                              )}
-                              {onCancelAppointment && (canEdit || canApprove) && (
-                                <Button
-                                  size="sm"
-                                  variant="ghost"
-                                  className="h-5 w-5 p-0"
-                                  onClick={(e) => handleAppointmentAction('cancel', slot.appointment!, e)}
-                                >
-                                  <XIcon className="h-3 w-3" />
-                                </Button>
-                              )}
+                              {onApproveAppointment &&
+                                canApprove &&
+                                (slot.appointment.status === "pending" ||
+                                  slot.appointment.status === "requested") && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-5 w-5 p-0"
+                                    onClick={(e) =>
+                                      handleAppointmentAction(
+                                        "approve",
+                                        slot.appointment!,
+                                        e
+                                      )
+                                    }
+                                  >
+                                    <CheckIcon className="h-3 w-3" />
+                                  </Button>
+                                )}
+                              {onCancelAppointment &&
+                                (canEdit || canApprove) && (
+                                  <Button
+                                    size="sm"
+                                    variant="ghost"
+                                    className="h-5 w-5 p-0"
+                                    onClick={(e) =>
+                                      handleAppointmentAction(
+                                        "cancel",
+                                        slot.appointment!,
+                                        e
+                                      )
+                                    }
+                                  >
+                                    <XIcon className="h-3 w-3" />
+                                  </Button>
+                                )}
                             </div>
                           )}
                         </div>
-                        
+
                         {slot.appointment ? (
                           <div className="space-y-1">
                             <div className="flex items-center gap-1">
                               <UserIcon className="h-3 w-3" />
                               <span className="font-medium truncate">
-                                {isPatientView ? slot.appointment.doctor?.full_name : slot.appointment.patient?.name}
+                                {isPatientView
+                                  ? slot.appointment.users?.full_name
+                                  : slot.appointment.patients?.full_name}
                               </span>
                             </div>
                             {!isDoctorView && !isPatientView && (
                               <div className="flex items-center gap-1">
                                 <StethoscopeIcon className="h-3 w-3" />
                                 <span className="truncate">
-                                  {doctors.find(d => d.id === slot.appointment?.doctor_id)?.full_name}
+                                  {
+                                    doctors.find(
+                                      (d) =>
+                                        d.id === slot.appointment?.doctor_id
+                                    )?.full_name
+                                  }
                                 </span>
                               </div>
                             )}
                             <div className="text-xs opacity-80 truncate">
-                              {slot.appointment.appointment_type} • {slot.appointment.department}
+                              {slot.appointment.appointment_type} •{" "}
+                              {slot.appointment.department}
                             </div>
                             <div className="flex items-center gap-1">
                               {slot.appointment.priority && (
@@ -963,9 +1242,12 @@ export function RoleBasedCalendar({
                         ) : (
                           <div className="text-center text-muted-foreground">
                             Available
-                            {filterDoctorId !== 'all' && (
+                            {filterDoctorId !== "all" && (
                               <div className="text-xs mt-1">
-                                {doctors.find(d => d.id === filterDoctorId)?.full_name}
+                                {
+                                  doctors.find((d) => d.id === filterDoctorId)
+                                    ?.full_name
+                                }
                               </div>
                             )}
                           </div>
@@ -1011,5 +1293,5 @@ export function RoleBasedCalendar({
         )}
       </CardContent>
     </Card>
-  )
+  );
 }

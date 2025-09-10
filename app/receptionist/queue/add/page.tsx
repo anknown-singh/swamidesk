@@ -105,7 +105,7 @@ export default function AddToQueuePage() {
           title,
           status,
           patients!inner(id, full_name, phone, email, date_of_birth),
-          users!appointments_doctor_id_fkey(id, full_name, department)
+          users!appointments_doctor_id_fkey(id, full_name, user_profiles(department))
         `)
         .eq('scheduled_date', today)
         .in('status', ['scheduled', 'confirmed'])

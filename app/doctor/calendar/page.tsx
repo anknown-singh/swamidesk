@@ -186,7 +186,13 @@ export default function DoctorCalendarPage() {
 
   const handleAppointmentSelect = (appointment: Appointment) => {
     // Navigate to OPD workflow for the patient
-    if (appointment.patient_id) {
+    console.log({ appointment });
+    if (appointment.patient_id && appointment.opd_id) {
+      router.push(
+        `/doctor/opd/${appointment.opd_id}?patientId=${appointment.patient_id}`
+      );
+    } else if (appointment.patient_id) {
+      // Fallback to general OPD page if opd_id is missing
       router.push(`/doctor/opd?patientId=${appointment.patient_id}`);
     } else {
       console.warn("No patient_id found for appointment:", appointment);
@@ -387,7 +393,7 @@ export default function DoctorCalendarPage() {
       time,
       doctorId: doctorId || user?.id || "",
     });
-    router.push(`/book-appointment?${params.toString()}`);
+    router.push(`/appointments/new?${params.toString()}`);
   };
 
   const handleEditAppointment = (appointment: Appointment) => {
@@ -405,7 +411,7 @@ export default function DoctorCalendarPage() {
 
   const handleBookAppointment = () => {
     console.log("📅 Navigating to book appointment page");
-    router.push(`/book-appointment?doctorId=${user?.id || ""}`);
+    router.push(`/appointments/new?doctorId=${user?.id || ""}`);
   };
 
   const handleApproveAppointment = async (appointment: Appointment) => {
@@ -428,7 +434,9 @@ export default function DoctorCalendarPage() {
   const handleCancelAppointment = async (appointment: Appointment) => {
     if (
       !confirm(
-        `Cancel appointment for ${appointment.patient?.name || "this patient"}?`
+        `Cancel appointment for ${
+          appointment.patients?.full_name || "this patient"
+        }?`
       )
     )
       return;
@@ -633,10 +641,10 @@ export default function DoctorCalendarPage() {
               <CardContent className="space-y-4">
                 <div>
                   <h4 className="font-medium">
-                    {stats.nextAppointment.patient?.name}
+                    {stats.nextAppointment.patients?.full_name}
                   </h4>
                   <p className="text-sm text-muted-foreground">
-                    {stats.nextAppointment.patient?.mobile}
+                    {stats.nextAppointment.patients?.phone}
                   </p>
                   <div className="flex items-center gap-2 mt-2">
                     <Badge variant="outline">

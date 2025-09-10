@@ -244,7 +244,7 @@ export function OPDManagement({
         .from("opd_records")
         .select("*")
         .eq("patient_id", patientId)
-        .eq("visit_date", today)
+        .gte("created_at", today + "T00:00:00.000Z").lt("created_at", today + "T23:59:59.999Z")
         .single();
 
       console.log("Existing record query result:", {
@@ -277,11 +277,9 @@ export function OPDManagement({
         .from("opd_records")
         .insert({
           patient_id: patientId,
-          visit_date: today,
-          token_number: Math.floor(Math.random() * 999) + 1, // Simple token generation
+                    token_number: Math.floor(Math.random() * 999) + 1, // Simple token generation
           opd_status: "consultation",
-          chief_complaint: "",
-          created_by: effectiveUserId,
+                    created_by: effectiveUserId,
         })
         .select()
         .single();
@@ -360,12 +358,8 @@ export function OPDManagement({
         .select(`
           id,
           patient_id,
-          visit_date,
           token_number,
           opd_status,
-          chief_complaint,
-          diagnosis,
-          treatment_plan,
           created_at,
           patients (
             id,
@@ -498,7 +492,7 @@ export function OPDManagement({
         .from("visits")
         .select("id")
         .eq("patient_id", patientId)
-        .eq("visit_date", today)
+        .gte("created_at", today + "T00:00:00.000Z").lt("created_at", today + "T23:59:59.999Z")
         .order("created_at", { ascending: false });
 
       if (visitError) {
@@ -838,8 +832,7 @@ export function OPDManagement({
         await supabase
           .from("opd_records")
           .update({
-            chief_complaint: workflowData.furtherSuggestions,
-            opd_status: "consultation",
+                        opd_status: "consultation",
             updated_at: new Date().toISOString(),
           })
           .eq("id", opdRecordId);
@@ -899,7 +892,7 @@ export function OPDManagement({
         .from("visits")
         .select("id")
         .eq("patient_id", selectedPatient.id)
-        .eq("visit_date", today)
+        .gte("created_at", today + "T00:00:00.000Z").lt("created_at", today + "T23:59:59.999Z")
         .eq("doctor_id", userIdToUse)
         .single();
 
@@ -916,11 +909,9 @@ export function OPDManagement({
           .insert({
             patient_id: selectedPatient.id,
             doctor_id: userIdToUse,
-            visit_date: today,
-            visit_time: new Date().toTimeString().slice(0, 5),
+                        visit_time: new Date().toTimeString().slice(0, 5),
             status: "waiting",
-            chief_complaint: "Regular consultation appointment",
-          })
+                      })
           .select("id")
           .single();
 
@@ -1419,8 +1410,7 @@ export function OPDManagement({
         await supabase
           .from("opd_records")
           .update({
-            treatment_plan: treatmentData.instructions,
-            opd_status: treatmentData.isImmediate
+                        opd_status: treatmentData.isImmediate
               ? "treatment_completed"
               : "treatment_planned",
             updated_at: new Date().toISOString(),
@@ -4362,7 +4352,7 @@ export function OPDManagement({
                       {opd.patients?.full_name || opd.patient?.full_name || opd.patient?.name || 'Unknown Patient'}
                     </h3>
                     <Badge variant="outline" className="text-xs">
-                      {new Date(opd.visit_date).toLocaleDateString()}
+                      {new Date(opd.created_at).toLocaleDateString()}
                     </Badge>
                     <Badge variant="outline" className="text-xs">
                       Token #{opd.token_number}
@@ -4380,7 +4370,7 @@ export function OPDManagement({
                     </Badge>
                   </div>
                   <div className="text-sm text-muted-foreground space-y-1">
-                    <div>Chief Complaint: {opd.chief_complaint || 'Not specified'}</div>
+                    <div>Status: {opd.opd_status || 'Not specified'}</div>
                     <div>Phone: {opd.patients?.phone || opd.patient?.phone || 'Not specified'}</div>
                     <div>Gender: {opd.patients?.gender || opd.patient?.gender || 'Not specified'}</div>
                   </div>
