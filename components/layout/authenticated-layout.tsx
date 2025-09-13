@@ -9,9 +9,10 @@ import { Header } from './header'
 interface AuthenticatedLayoutProps {
   children: ReactNode
   allowedRoles?: UserRole[]
+  rightSideActions?: ReactNode
 }
 
-export function AuthenticatedLayout({ children, allowedRoles }: AuthenticatedLayoutProps) {
+export function AuthenticatedLayout({ children, allowedRoles, rightSideActions }: AuthenticatedLayoutProps) {
   const { user, loading, isAuthenticated } = useAuth()
   const router = useRouter()
 
@@ -58,7 +59,7 @@ export function AuthenticatedLayout({ children, allowedRoles }: AuthenticatedLay
     <div className="flex h-screen bg-gray-100">
       <Sidebar userProfile={user} />
       <div className="flex-1 flex flex-col overflow-hidden">
-        <Header userProfile={user} />
+        <Header userProfile={user} rightSideActions={rightSideActions} />
         <main className="flex-1 overflow-x-hidden overflow-y-auto bg-gray-100 p-6">
           {children}
         </main>

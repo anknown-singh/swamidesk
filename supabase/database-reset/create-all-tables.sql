@@ -122,8 +122,12 @@ DECLARE
 BEGIN
     year_suffix := TO_CHAR(CURRENT_DATE, 'YYYY');
     
+    -- Fixed regex pattern to properly extract the number
     SELECT COALESCE(MAX(
-        CAST(SUBSTRING(order_number FROM 'PO-' || year_suffix || '-(\\d+)') AS INTEGER)
+        CAST(REGEXP_REPLACE(
+            SUBSTRING(order_number FROM 'PO-' || year_suffix || '-(.+)'), 
+            '[^0-9]', '', 'g'
+        ) AS INTEGER)
     ), 0) + 1
     INTO next_number
     FROM purchase_orders

@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { createClient } from '@/lib/supabase/client'
 import { inventoryManager } from '@/lib/pharmacy/inventory-manager'
+import { usePharmacyNotificationTriggers } from '@/lib/hooks/use-pharmacy-notifications'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
@@ -24,7 +25,8 @@ import {
   Edit,
   Save,
   X,
-  ShoppingCart
+  ShoppingCart,
+  Bell
 } from 'lucide-react'
 
 interface Medicine {
@@ -85,6 +87,7 @@ export default function InventoryPage() {
   const [lowStockAlerts, setLowStockAlerts] = useState<Medicine[]>([])
 
   const supabase = createClient()
+  const { triggerLowStockCheck, triggerExpiryCheck, isTriggering } = usePharmacyNotificationTriggers()
   // const router = useRouter()
 
   useEffect(() => {
@@ -342,10 +345,30 @@ export default function InventoryPage() {
           <h1 className="text-3xl font-bold tracking-tight">Inventory Management</h1>
           <p className="text-muted-foreground">Track medicine stock levels and manage inventory transactions</p>
         </div>
-        <Button onClick={() => setShowStockForm(true)} className="flex items-center gap-2">
-          <Plus className="h-4 w-4" />
-          Stock Transaction
-        </Button>
+        <div className="flex gap-2">
+          <Button 
+            onClick={triggerLowStockCheck} 
+            disabled={isTriggering}
+            variant="outline" 
+            className="flex items-center gap-2"
+          >
+            <Bell className="h-4 w-4" />
+            {isTriggering ? 'Checking...' : 'Check Stock'}
+          </Button>
+          <Button 
+            onClick={triggerExpiryCheck} 
+            disabled={isTriggering}
+            variant="outline" 
+            className="flex items-center gap-2"
+          >
+            <Calendar className="h-4 w-4" />
+            {isTriggering ? 'Checking...' : 'Check Expiry'}
+          </Button>
+          <Button onClick={() => setShowStockForm(true)} className="flex items-center gap-2">
+            <Plus className="h-4 w-4" />
+            Stock Transaction
+          </Button>
+        </div>
       </div>
 
       {error && (

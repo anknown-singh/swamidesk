@@ -9,9 +9,10 @@ import { useState } from "react";
 
 interface HeaderProps {
   userProfile: UserProfile;
+  rightSideActions?: React.ReactNode;
 }
 
-export function Header({ userProfile }: HeaderProps) {
+export function Header({ userProfile, rightSideActions }: HeaderProps) {
   const [isResetting, setIsResetting] = useState(false);
 
   const handleResetDatabase = async () => {
@@ -67,10 +68,12 @@ export function Header({ userProfile }: HeaderProps) {
               {isResetting ? "Resetting..." : "Reset DB"}
             </Button>
           )}
-          <NotificationCenter
-            userId={userProfile.id}
-            userRole={userProfile.role}
-          />
+          {rightSideActions || (
+            <NotificationCenter
+              userId={userProfile.id}
+              userRole={userProfile.role}
+            />
+          )}
         </div>
       </div>
     </header>
