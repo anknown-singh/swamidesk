@@ -373,7 +373,7 @@ CREATE TABLE pharmacy_issues (
 -- 13. PURCHASE_ORDERS TABLE
 CREATE TABLE purchase_orders (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    order_number VARCHAR(50) UNIQUE NOT NULL DEFAULT generate_purchase_order_number(),
+    order_number VARCHAR(50) UNIQUE NOT NULL,
     supplier_name VARCHAR(255) NOT NULL,
     supplier_contact VARCHAR(255),
     supplier_address TEXT,
@@ -1148,6 +1148,33 @@ CREATE TRIGGER trigger_update_appointment_slots_updated_at
 
 CREATE TRIGGER trigger_update_appointment_waitlist_updated_at
     BEFORE UPDATE ON appointment_waitlist
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+-- Purchase order triggers
+CREATE OR REPLACE FUNCTION set_purchase_order_number()
+RETURNS TRIGGER AS $$
+BEGIN
+    IF NEW.order_number IS NULL OR NEW.order_number = '' THEN
+        NEW.order_number := generate_purchase_order_number();
+    END IF;
+    NEW.updated_at := NOW();
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER purchase_orders_set_order_number
+    BEFORE INSERT ON purchase_orders
+    FOR EACH ROW
+    EXECUTE FUNCTION set_purchase_order_number();
+
+CREATE TRIGGER trigger_update_purchase_orders_updated_at
+    BEFORE UPDATE ON purchase_orders
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_update_purchase_order_items_updated_at
+    BEFORE UPDATE ON purchase_order_items
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
