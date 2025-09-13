@@ -393,15 +393,41 @@ export default function CreatePurchaseOrderPage() {
         return;
       }
       
-      const { data: purchaseOrder, error: orderError } = await supabase
-        .from("purchase_orders")
-        .insert(purchaseOrderData)
-        .select()
-        .single();
+      // Retry logic for handling duplicate order number conflicts
+      let purchaseOrder: any = null;
+      let retryCount = 0;
+      const maxRetries = 5;
+      
+      while (retryCount < maxRetries) {
+        const { data, error: orderError } = await supabase
+          .from("purchase_orders")
+          .insert(purchaseOrderData)
+          .select()
+          .single();
 
-      if (orderError) {
+        if (!orderError) {
+          purchaseOrder = data;
+          break;
+        }
+
+        // Check if it's a duplicate key error
+        if (orderError.code === '23505' && orderError.message.includes('order_number')) {
+          retryCount++;
+          console.warn(`Order number conflict, retrying... (attempt ${retryCount}/${maxRetries})`);
+          
+          // Add a small random delay to reduce race conditions
+          await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
+          continue;
+        }
+
+        // If it's not a duplicate key error, fail immediately
         console.error("Error creating purchase order:", orderError);
         setError(`Failed to create purchase order: ${orderError.message}`);
+        return;
+      }
+
+      if (!purchaseOrder) {
+        setError("Failed to create purchase order after multiple attempts. Please try again.");
         return;
       }
 
