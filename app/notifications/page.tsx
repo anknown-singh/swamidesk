@@ -37,12 +37,9 @@ export default function NotificationsPage() {
     notifications,
     unreadCount,
     isLoading,
-    error,
     markAsRead,
     markAllAsRead,
-    deleteNotification,
-    clearAll,
-    refresh
+    refreshNotifications
   } = useNotifications()
 
   // Filter notifications based on search and tab
@@ -123,7 +120,7 @@ export default function NotificationsPage() {
           <Button
             variant="outline"
             size="sm"
-            onClick={refresh}
+            onClick={refreshNotifications}
             disabled={isLoading}
           >
             <RotateCcw className="h-4 w-4 mr-2" />
@@ -205,7 +202,10 @@ export default function NotificationsPage() {
               <Button
                 variant="outline"
                 size="sm"
-                onClick={clearAll}
+                onClick={() => {
+                  // For now, just show a message that this feature is coming soon
+                  alert('Clear all functionality coming soon')
+                }}
                 disabled={notifications.length === 0}
               >
                 <Trash2 className="h-4 w-4 mr-2" />
@@ -236,11 +236,6 @@ export default function NotificationsPage() {
             </TabsList>
             
             <TabsContent value={activeTab} className="mt-6">
-              {error && (
-                <div className="p-4 text-sm text-red-600 bg-red-50 border border-red-200 rounded-lg mb-4">
-                  {error}
-                </div>
-              )}
               
               {isLoading ? (
                 <div className="text-center py-8 text-muted-foreground">
@@ -290,7 +285,8 @@ export default function NotificationsPage() {
                                 className="h-8 w-8 p-0"
                                 onClick={(e) => {
                                   e.stopPropagation()
-                                  deleteNotification(notification.id)
+                                  // For now, just show a message that this feature is coming soon
+                                  alert('Delete notification functionality coming soon')
                                 }}
                               >
                                 <Trash2 className="h-3 w-3" />
