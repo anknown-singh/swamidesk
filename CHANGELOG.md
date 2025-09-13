@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.1](https://github.com/anknown-singh/swamidesk/compare/v2.4.0...v2.4.1) (2025-09-13)
+
+
+### Bug Fixes
+
+* resolve vercel deployment issues with tailwind css and build scripts ([7382679](https://github.com/anknown-singh/swamidesk/commit/73826797a68cb300757f87c3b046c5b830ae7941))
+
 ## [2.4.0](https://github.com/anknown-singh/swamidesk/compare/v2.3.0...v2.4.0) (2025-09-13)
 
 
