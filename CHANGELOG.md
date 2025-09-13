@@ -5,6 +5,33 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.4.0](https://github.com/anknown-singh/swamidesk/compare/v2.3.0...v2.4.0) (2025-09-13)
+
+
+### Features
+
+* add medicine master database files with 100+ essential medicines ([0005fa7](https://github.com/anknown-singh/swamidesk/commit/0005fa76bcaaa875a631e4cf63ca96a01ff0344d))
+* add missing consultation and workflow tables to create-all-tables.sql ([7733e41](https://github.com/anknown-singh/swamidesk/commit/7733e41601fb7b3cf2295d6f17d8c6163b7f396c))
+
+
+### Bug Fixes
+
+* move generate_purchase_order_number function before table creation ([b2f0942](https://github.com/anknown-singh/swamidesk/commit/b2f094232fc6dc9037e042946783f923fae91e12))
+* remove undefined setselectedmedicineindex call in purchase orders page ([b65bc8b](https://github.com/anknown-singh/swamidesk/commit/b65bc8b04ca7f7c83de30d9544f21a66466af163))
+* resolve database schema and inventory manager issues ([b221933](https://github.com/anknown-singh/swamidesk/commit/b221933074e086ad5f1450a1923cff2428668d91))
+* resolve major typescript errors across application ([448d3cd](https://github.com/anknown-singh/swamidesk/commit/448d3cdf59d08c3a4378530bd63e8730d7a99780))
+* resolve purchase order 409 error and improve pharmacy module ([c59795f](https://github.com/anknown-singh/swamidesk/commit/c59795ff1d38401abf7246fd5e6d700cda37d516))
+* resolve purchase order duplicate key constraint and improve notification system ([d0fb69a](https://github.com/anknown-singh/swamidesk/commit/d0fb69a67d86625d18250a5b0fa979d0c2cb64e9))
+* update medicine schema references to match database structure ([8e476a9](https://github.com/anknown-singh/swamidesk/commit/8e476a9384f286276ac8a98a399bf765fc7ce304))
+* update medicines table schema to include name column ([2c5cdc5](https://github.com/anknown-singh/swamidesk/commit/2c5cdc51a6b1d76b77fe45f66c46e3bade31e84b))
+* update purchase_order_items table schema ([a1f4ba4](https://github.com/anknown-singh/swamidesk/commit/a1f4ba4b119454f7066bd668fff3cd5930448f29))
+* update purchase_orders table schema to include missing columns ([2f76af1](https://github.com/anknown-singh/swamidesk/commit/2f76af1e62cb64bd7363448a7d1386a175e33bc6))
+
+
+### Reverts
+
+* restore full medicine schema interfaces ([785b46a](https://github.com/anknown-singh/swamidesk/commit/785b46a06301be7beade3c1f96f532d2cd646d82))
+
 ## [2.3.0](https://github.com/anknown-singh/swamidesk/compare/v2.2.0...v2.3.0) (2025-09-10)
 
 
