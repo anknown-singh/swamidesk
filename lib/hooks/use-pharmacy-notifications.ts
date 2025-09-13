@@ -56,12 +56,15 @@ interface UsePharmacyNotificationsReturn {
   disconnectRealtime: () => void
 }
 
+// Default filter categories - stable reference to prevent re-renders
+const DEFAULT_FILTER_CATEGORIES = [NotificationCategory.PHARMACY]
+
 export function usePharmacyNotifications({
   pharmacistId,
   autoConnect = true,
   enableToasts = true,
   enableSound = true,
-  filterCategories = [NotificationCategory.PHARMACY],
+  filterCategories = DEFAULT_FILTER_CATEGORIES,
   minPriority = NotificationPriority.LOW
 }: UsePharmacyNotificationsProps = {}): UsePharmacyNotificationsReturn {
   
@@ -75,6 +78,7 @@ export function usePharmacyNotifications({
   const channelRef = useRef<any>(null)
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const toastQueueRef = useRef<Set<string>>(new Set()) // Prevent duplicate toasts
+  const loadingRef = useRef(false) // Prevent concurrent API calls
 
   // Priority weight for filtering
   const getPriorityWeight = (priority: NotificationPriority): number => {
@@ -107,7 +111,11 @@ export function usePharmacyNotifications({
 
   // Load notifications from database
   const loadNotifications = useCallback(async () => {
+    // Prevent concurrent calls
+    if (loadingRef.current) return
+    
     try {
+      loadingRef.current = true
       setIsLoading(true)
       setError(null)
 
@@ -119,9 +127,9 @@ export function usePharmacyNotifications({
 
       // Filter by pharmacist or role
       if (pharmacistId) {
-        query = query.or(`recipient_id.eq.${pharmacistId},recipient_role.eq.pharmacist`)
+        query = query.or(`user_id.eq.${pharmacistId},recipient_role.in.(pharmacist,all)`)
       } else {
-        query = query.eq('recipient_role', 'pharmacist')
+        query = query.in('recipient_role', ['pharmacist', 'all'])
       }
 
       // Filter by categories
@@ -148,6 +156,7 @@ export function usePharmacyNotifications({
       console.error('Error in loadNotifications:', err)
       setError('Failed to load notifications')
     } finally {
+      loadingRef.current = false
       setIsLoading(false)
     }
   }, [supabase, pharmacistId, filterCategories, filterNotifications])
@@ -270,8 +279,8 @@ export function usePharmacyNotifications({
           schema: 'public',
           table: 'notifications',
           filter: filterCategories.length > 0 
-            ? `category=in.(${filterCategories.join(',')})`
-            : 'recipient_role=eq.pharmacist'
+            ? `category=in.(${filterCategories.join(',')})` 
+            : 'recipient_role=in.(pharmacist,all)'
         }, handleNewNotification)
         
         // Listen for notification updates (read status, etc.)
@@ -280,8 +289,8 @@ export function usePharmacyNotifications({
           schema: 'public',
           table: 'notifications',
           filter: filterCategories.length > 0 
-            ? `category=in.(${filterCategories.join(',')})`
-            : 'recipient_role=eq.pharmacist'
+            ? `category=in.(${filterCategories.join(',')})` 
+            : 'recipient_role=in.(pharmacist,all)'
         }, handleNotificationUpdate)
         
         // Listen for notification deletions
@@ -290,8 +299,8 @@ export function usePharmacyNotifications({
           schema: 'public',
           table: 'notifications',
           filter: filterCategories.length > 0 
-            ? `category=in.(${filterCategories.join(',')})`
-            : 'recipient_role=eq.pharmacist'
+            ? `category=in.(${filterCategories.join(',')})` 
+            : 'recipient_role=in.(pharmacist,all)'
         }, handleNotificationDelete)
 
       // Subscribe to channel
@@ -458,7 +467,7 @@ export function usePharmacyNotifications({
     return () => {
       disconnectRealtime()
     }
-  }, [autoConnect, connectRealtime, disconnectRealtime, loadNotifications])
+  }, [autoConnect]) // Remove unstable function dependencies to prevent infinite loops
 
   return {
     notifications,

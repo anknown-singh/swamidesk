@@ -5,10 +5,10 @@
 -- Function to create pharmacy notifications
 CREATE OR REPLACE FUNCTION create_pharmacy_notification(
   p_type TEXT,
-  p_category TEXT DEFAULT 'pharmacy',
-  p_priority TEXT DEFAULT 'normal',
   p_title TEXT,
   p_message TEXT,
+  p_category TEXT DEFAULT 'pharmacy',
+  p_priority TEXT DEFAULT 'normal',
   p_data JSONB DEFAULT '{}',
   p_recipient_id UUID DEFAULT NULL,
   p_recipient_role TEXT DEFAULT 'pharmacist',
@@ -25,7 +25,7 @@ BEGIN
     title,
     message,
     data,
-    recipient_id,
+    user_id,
     recipient_role,
     action_url,
     created_at
@@ -55,10 +55,10 @@ BEGIN
   IF NEW.current_stock <= (NEW.minimum_stock * 0.1) THEN
     PERFORM create_pharmacy_notification(
       'stock_critical',
-      'pharmacy',
-      'critical',
       'Critical Stock Level: ' || NEW.product_name,
       'Stock is critically low (' || NEW.current_stock || ' remaining). Immediate restocking required.',
+      'pharmacy',
+      'critical',
       jsonb_build_object(
         'product_id', NEW.id,
         'product_name', NEW.product_name,
@@ -74,10 +74,10 @@ BEGIN
   ELSIF NEW.current_stock <= NEW.minimum_stock THEN
     PERFORM create_pharmacy_notification(
       'stock_low',
-      'pharmacy',
-      'high',
       'Low Stock Alert: ' || NEW.product_name,
       'Stock level is at minimum threshold (' || NEW.current_stock || ' remaining). Consider restocking.',
+      'pharmacy',
+      'high',
       jsonb_build_object(
         'product_id', NEW.id,
         'product_name', NEW.product_name,
@@ -96,12 +96,17 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger for low stock notifications
-DROP TRIGGER IF EXISTS trigger_notify_low_stock ON inventory;
-CREATE TRIGGER trigger_notify_low_stock
-  AFTER UPDATE OF current_stock ON inventory
-  FOR EACH ROW
-  WHEN (NEW.current_stock < OLD.current_stock AND NEW.current_stock <= NEW.minimum_stock)
-  EXECUTE FUNCTION notify_low_stock();
+DO $$ 
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'inventory') THEN
+    DROP TRIGGER IF EXISTS trigger_notify_low_stock ON inventory;
+    CREATE TRIGGER trigger_notify_low_stock
+      AFTER UPDATE OF current_stock ON inventory
+      FOR EACH ROW
+      WHEN (NEW.current_stock < OLD.current_stock AND NEW.current_stock <= NEW.minimum_stock)
+      EXECUTE FUNCTION notify_low_stock();
+  END IF;
+END $$;
 
 -- Trigger for prescription status updates
 CREATE OR REPLACE FUNCTION notify_prescription_status()
@@ -111,10 +116,10 @@ BEGIN
   IF NEW.status = 'ready' AND OLD.status != 'ready' THEN
     PERFORM create_pharmacy_notification(
       'prescription_ready',
-      'pharmacy',
-      'normal',
       'Prescription Ready: ' || COALESCE(NEW.patient_name, 'Patient'),
       'Prescription #' || NEW.prescription_number || ' is ready for pickup.',
+      'pharmacy',
+      'normal',
       jsonb_build_object(
         'prescription_id', NEW.id,
         'prescription_number', NEW.prescription_number,
@@ -130,10 +135,10 @@ BEGIN
   ELSIF NEW.status = 'dispensed' AND OLD.status != 'dispensed' THEN
     PERFORM create_pharmacy_notification(
       'prescription_dispensed',
-      'pharmacy',
-      'normal',
       'Prescription Dispensed: ' || COALESCE(NEW.patient_name, 'Patient'),
       'Prescription #' || NEW.prescription_number || ' has been dispensed.',
+      'pharmacy',
+      'normal',
       jsonb_build_object(
         'prescription_id', NEW.id,
         'prescription_number', NEW.prescription_number,
@@ -152,11 +157,16 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger for prescription status notifications
-DROP TRIGGER IF EXISTS trigger_notify_prescription_status ON prescriptions;
-CREATE TRIGGER trigger_notify_prescription_status
-  AFTER UPDATE OF status ON prescriptions
-  FOR EACH ROW
-  EXECUTE FUNCTION notify_prescription_status();
+DO $$ 
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'prescriptions') THEN
+    DROP TRIGGER IF EXISTS trigger_notify_prescription_status ON prescriptions;
+    CREATE TRIGGER trigger_notify_prescription_status
+      AFTER UPDATE OF status ON prescriptions
+      FOR EACH ROW
+      EXECUTE FUNCTION notify_prescription_status();
+  END IF;
+END $$;
 
 -- Trigger for expiring medications
 CREATE OR REPLACE FUNCTION notify_expiring_medications()
@@ -173,10 +183,10 @@ BEGIN
     IF days_until_expiry <= 7 THEN
       PERFORM create_pharmacy_notification(
         'medication_expiring_critical',
-        'pharmacy',
-        'critical',
         'URGENT: Medication Expiring Soon',
         NEW.product_name || ' expires in ' || days_until_expiry || ' days. Remove from inventory immediately.',
+        'pharmacy',
+        'critical',
         jsonb_build_object(
           'product_id', NEW.id,
           'product_name', NEW.product_name,
@@ -193,10 +203,10 @@ BEGIN
     ELSIF days_until_expiry <= 14 THEN
       PERFORM create_pharmacy_notification(
         'medication_expiring_soon',
-        'pharmacy',
-        'high',
         'Medication Expiring Soon',
         NEW.product_name || ' expires in ' || days_until_expiry || ' days. Plan for disposal or return.',
+        'pharmacy',
+        'high',
         jsonb_build_object(
           'product_id', NEW.id,
           'product_name', NEW.product_name,
@@ -213,10 +223,10 @@ BEGIN
     ELSE
       PERFORM create_pharmacy_notification(
         'medication_expiring',
-        'pharmacy',
-        'normal',
         'Medication Expiry Notice',
         NEW.product_name || ' expires in ' || days_until_expiry || ' days.',
+        'pharmacy',
+        'normal',
         jsonb_build_object(
           'product_id', NEW.id,
           'product_name', NEW.product_name,
@@ -237,11 +247,16 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger for expiring medications (runs on INSERT and UPDATE of expiry_date)
-DROP TRIGGER IF EXISTS trigger_notify_expiring_medications ON inventory;
-CREATE TRIGGER trigger_notify_expiring_medications
-  AFTER INSERT OR UPDATE OF expiry_date ON inventory
-  FOR EACH ROW
-  EXECUTE FUNCTION notify_expiring_medications();
+DO $$ 
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'inventory') THEN
+    DROP TRIGGER IF EXISTS trigger_notify_expiring_medications ON inventory;
+    CREATE TRIGGER trigger_notify_expiring_medications
+      AFTER INSERT OR UPDATE OF expiry_date ON inventory
+      FOR EACH ROW
+      EXECUTE FUNCTION notify_expiring_medications();
+  END IF;
+END $$;
 
 -- Trigger for new purchase orders
 CREATE OR REPLACE FUNCTION notify_new_purchase_order()
@@ -249,10 +264,10 @@ RETURNS TRIGGER AS $$
 BEGIN
   PERFORM create_pharmacy_notification(
     'purchase_order_created',
-    'pharmacy',
-    'normal',
     'New Purchase Order Created',
     'Purchase order #' || NEW.order_number || ' has been created for ' || NEW.supplier_name || '.',
+    'pharmacy',
+    'normal',
     jsonb_build_object(
       'purchase_order_id', NEW.id,
       'order_number', NEW.order_number,
@@ -271,11 +286,16 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger for new purchase orders
-DROP TRIGGER IF EXISTS trigger_notify_new_purchase_order ON purchase_orders;
-CREATE TRIGGER trigger_notify_new_purchase_order
-  AFTER INSERT ON purchase_orders
-  FOR EACH ROW
-  EXECUTE FUNCTION notify_new_purchase_order();
+DO $$ 
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'purchase_orders') THEN
+    DROP TRIGGER IF EXISTS trigger_notify_new_purchase_order ON purchase_orders;
+    CREATE TRIGGER trigger_notify_new_purchase_order
+      AFTER INSERT ON purchase_orders
+      FOR EACH ROW
+      EXECUTE FUNCTION notify_new_purchase_order();
+  END IF;
+END $$;
 
 -- Trigger for purchase order status updates
 CREATE OR REPLACE FUNCTION notify_purchase_order_status()
@@ -284,19 +304,19 @@ BEGIN
   -- Only notify on status changes
   IF NEW.status != OLD.status THEN
     CASE NEW.status
-      WHEN 'approved' THEN
+      WHEN 'confirmed' THEN
         PERFORM create_pharmacy_notification(
-          'purchase_order_approved',
+          'purchase_order_confirmed',
+          'Purchase Order Confirmed',
+          'Purchase order #' || NEW.order_number || ' has been confirmed.',
           'pharmacy',
           'normal',
-          'Purchase Order Approved',
-          'Purchase order #' || NEW.order_number || ' has been approved.',
           jsonb_build_object(
             'purchase_order_id', NEW.id,
             'order_number', NEW.order_number,
             'supplier_name', NEW.supplier_name,
             'total_amount', NEW.total_amount,
-            'approved_by', NEW.approved_by
+            'status', NEW.status
           ),
           NULL,
           'pharmacist',
@@ -305,16 +325,16 @@ BEGIN
       WHEN 'received' THEN
         PERFORM create_pharmacy_notification(
           'purchase_order_received',
-          'pharmacy',
-          'high',
           'Purchase Order Received',
           'Purchase order #' || NEW.order_number || ' has been received. Update inventory.',
+          'pharmacy',
+          'high',
           jsonb_build_object(
             'purchase_order_id', NEW.id,
             'order_number', NEW.order_number,
             'supplier_name', NEW.supplier_name,
             'total_amount', NEW.total_amount,
-            'received_date', NEW.received_date
+            'actual_delivery_date', NEW.actual_delivery_date
           ),
           NULL,
           'pharmacist',
@@ -323,20 +343,25 @@ BEGIN
       WHEN 'cancelled' THEN
         PERFORM create_pharmacy_notification(
           'purchase_order_cancelled',
-          'pharmacy',
-          'normal',
           'Purchase Order Cancelled',
           'Purchase order #' || NEW.order_number || ' has been cancelled.',
+          'pharmacy',
+          'normal',
           jsonb_build_object(
             'purchase_order_id', NEW.id,
             'order_number', NEW.order_number,
             'supplier_name', NEW.supplier_name,
-            'cancelled_reason', NEW.cancelled_reason
+            'status', NEW.status,
+            'notes', NEW.notes
           ),
           NULL,
           'pharmacist',
           '/pharmacy/purchase-orders/' || NEW.id
         );
+      ELSE
+        -- Handle other status values (e.g., 'draft', 'pending', 'rejected', etc.)
+        -- No notification needed for these statuses
+        NULL;
     END CASE;
   END IF;
   
@@ -345,11 +370,16 @@ END;
 $$ LANGUAGE plpgsql;
 
 -- Create trigger for purchase order status updates
-DROP TRIGGER IF EXISTS trigger_notify_purchase_order_status ON purchase_orders;
-CREATE TRIGGER trigger_notify_purchase_order_status
-  AFTER UPDATE OF status ON purchase_orders
-  FOR EACH ROW
-  EXECUTE FUNCTION notify_purchase_order_status();
+DO $$ 
+BEGIN
+  IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'purchase_orders') THEN
+    DROP TRIGGER IF EXISTS trigger_notify_purchase_order_status ON purchase_orders;
+    CREATE TRIGGER trigger_notify_purchase_order_status
+      AFTER UPDATE OF status ON purchase_orders
+      FOR EACH ROW
+      EXECUTE FUNCTION notify_purchase_order_status();
+  END IF;
+END $$;
 
 -- Function to check and create daily notifications (to be called by cron job or scheduled function)
 CREATE OR REPLACE FUNCTION create_daily_pharmacy_notifications()
@@ -379,16 +409,16 @@ BEGIN
   IF expired_count > 0 OR expiring_soon_count > 0 OR low_stock_count > 0 THEN
     PERFORM create_pharmacy_notification(
       'daily_summary',
+      'Daily Pharmacy Summary',
+      'Daily summary: ' || expired_count || ' expired items, ' || 
+      expiring_soon_count || ' expiring soon, ' || 
+      low_stock_count || ' low stock items.',
       'pharmacy',
       CASE 
         WHEN expired_count > 0 THEN 'critical'
         WHEN expiring_soon_count > 0 OR low_stock_count > 5 THEN 'high'
         ELSE 'normal'
       END,
-      'Daily Pharmacy Summary',
-      'Daily summary: ' || expired_count || ' expired items, ' || 
-      expiring_soon_count || ' expiring soon, ' || 
-      low_stock_count || ' low stock items.',
       jsonb_build_object(
         'expired_count', expired_count,
         'expiring_soon_count', expiring_soon_count,

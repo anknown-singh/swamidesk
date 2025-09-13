@@ -1,6 +1,7 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import { Bell, BellRing, X, Check, CheckCheck, Trash2, AlertCircle, Clock, Package, FileText } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -28,6 +29,7 @@ export function PharmacyNotificationCenter({
   className 
 }: PharmacyNotificationCenterProps) {
   const [isOpen, setIsOpen] = useState(false)
+  const router = useRouter()
   
   const {
     notifications,
@@ -97,7 +99,7 @@ export function PharmacyNotificationCenter({
     }
     
     if (notification.action_url) {
-      window.location.href = notification.action_url
+      router.push(notification.action_url)
     }
   }
 
@@ -285,7 +287,7 @@ export function PharmacyNotificationCenter({
                 className="text-xs"
                 onClick={() => {
                   setIsOpen(false)
-                  window.location.href = '/pharmacy/notifications'
+                  router.push('/pharmacy/notifications')
                 }}
               >
                 View All Notifications

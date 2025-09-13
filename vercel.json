@@ -2,8 +2,14 @@
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
   "framework": "nextjs",
-  "installCommand": "npm install",
+  "installCommand": "npm ci --production=false",
   "devCommand": "npm run dev",
+  "build": {
+    "env": {
+      "SKIP_ENV_VALIDATION": "true",
+      "NODE_OPTIONS": "--max_old_space_size=4096"
+    }
+  },
   "redirects": [
     {
       "source": "/(.*)",

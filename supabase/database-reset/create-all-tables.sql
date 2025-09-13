@@ -689,6 +689,7 @@ CREATE TABLE notifications (
     priority VARCHAR(20) NOT NULL DEFAULT 'normal',
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     role VARCHAR(50),
+    recipient_role VARCHAR(50),
     data JSONB DEFAULT '{}'::jsonb,
     action_url VARCHAR(500),
     actions JSONB DEFAULT '[]'::jsonb,
@@ -1296,6 +1297,15 @@ ALTER TABLE notifications DISABLE ROW LEVEL SECURITY;
 ALTER TABLE suppliers DISABLE ROW LEVEL SECURITY;
 ALTER TABLE billing_items DISABLE ROW LEVEL SECURITY;
 ALTER TABLE payments DISABLE ROW LEVEL SECURITY;
+
+-- =====================================================
+-- STEP 12: Create Performance Indexes
+-- =====================================================
+
+-- Notifications indexes for better query performance
+CREATE INDEX IF NOT EXISTS idx_notifications_recipient_role ON notifications(recipient_role);
+CREATE INDEX IF NOT EXISTS idx_notifications_pharmacy_role ON notifications(category, recipient_role, created_at);
+CREATE INDEX IF NOT EXISTS idx_notifications_user_read ON notifications(user_id, is_read, created_at);
 
 -- Grant all permissions to database roles
 GRANT ALL ON ALL TABLES IN SCHEMA public TO authenticator, anon, authenticated;

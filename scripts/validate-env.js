@@ -10,6 +10,12 @@ const path = require('path');
 
 const environment = process.argv[2] || 'development';
 
+// Skip validation if explicitly requested or in Vercel build environment
+if (process.env.SKIP_ENV_VALIDATION === 'true' || process.env.VERCEL === '1') {
+  console.log('⚠️ Environment validation skipped (SKIP_ENV_VALIDATION=true or Vercel build)');
+  process.exit(0);
+}
+
 console.log(`🔍 Validating environment variables for: ${environment}`);
 
 // Required environment variables for different environments

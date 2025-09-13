@@ -1,6 +1,7 @@
 'use client'
 
 import React, { useState, useEffect, useRef } from 'react'
+import { useRouter } from 'next/navigation'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
@@ -42,6 +43,7 @@ interface NotificationCenterProps {
 }
 
 export function NotificationCenter({ userId, userRole, className = '' }: NotificationCenterProps) {
+  const router = useRouter()
   const [notifications, setNotifications] = useState<Notification[]>([])
   const [unreadCount, setUnreadCount] = useState(0)
   const [selectedCategory, setSelectedCategory] = useState<NotificationCategory | 'all'>('all')
@@ -317,7 +319,7 @@ export function NotificationCenter({ userId, userRole, className = '' }: Notific
                               handleMarkAsRead(notification.id)
                             }
                             if (notification.action_url) {
-                              window.location.href = notification.action_url
+                              router.push(notification.action_url)
                             }
                           }}
                         >
@@ -411,7 +413,7 @@ export function NotificationCenter({ userId, userRole, className = '' }: Notific
                 onClick={() => {
                   setIsOpen(false)
                   // Navigate to full notifications page
-                  window.location.href = '/notifications'
+                  router.push('/notifications')
                 }}
               >
                 View all notifications
