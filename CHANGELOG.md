@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.5.2](https://github.com/anknown-singh/swamidesk/compare/v2.5.1...v2.5.2) (2025-09-24)
+
+
+### Bug Fixes
+
+* add missing purchase order number generation triggers to database reset ([085c43a](https://github.com/anknown-singh/swamidesk/commit/085c43ab99e9b01664b4a06add187fb81dd99664))
+
 ## [2.5.1](https://github.com/anknown-singh/swamidesk/compare/v2.5.0...v2.5.1) (2025-09-13)
 
 
