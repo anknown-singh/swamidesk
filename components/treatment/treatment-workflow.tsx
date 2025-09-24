@@ -35,7 +35,7 @@ import { TreatmentReviewForm } from './treatment-review-form'
 import { TreatmentSummary } from './treatment-summary'
 
 interface TreatmentWorkflowProps {
-  visitId: string
+  appointmentId: string
   onComplete?: () => void
   onCancel?: () => void
 }
@@ -70,7 +70,7 @@ const STEP_DESCRIPTIONS = {
   completed: 'Finalize treatment workflow and documentation'
 }
 
-export function TreatmentWorkflow({ visitId, onComplete, onCancel }: TreatmentWorkflowProps) {
+export function TreatmentWorkflow({ appointmentId, onComplete, onCancel }: TreatmentWorkflowProps) {
   const router = useRouter()
   const supabase = createClient()
   
@@ -98,7 +98,7 @@ export function TreatmentWorkflow({ visitId, onComplete, onCancel }: TreatmentWo
           *,
           patients(*)
         `)
-        .eq('id', visitId)
+        .eq('id', appointmentId)
         .single()
 
       if (visitError) throw visitError
@@ -128,7 +128,7 @@ export function TreatmentWorkflow({ visitId, onComplete, onCancel }: TreatmentWo
       const { data: sessionData, error: sessionError } = await supabase
         .from('treatment_sessions')
         .select('*')
-        .eq('visit_id', visitId)
+        .eq('appointment_id', appointmentId)
         .single()
 
       if (sessionError && sessionError.code !== 'PGRST116') {
@@ -156,7 +156,7 @@ export function TreatmentWorkflow({ visitId, onComplete, onCancel }: TreatmentWo
     } finally {
       setLoading(false)
     }
-  }, [visitId, supabase])
+  }, [appointmentId, supabase])
 
   useEffect(() => {
     loadData()
@@ -174,7 +174,7 @@ export function TreatmentWorkflow({ visitId, onComplete, onCancel }: TreatmentWo
       const { data: session, error } = await supabase
         .from('treatment_sessions')
         .insert({
-          visit_id: visitId,
+          appointment_id: appointmentId,
           doctor_id: visit.doctor_id,
           patient_id: visit.patient_id,
           started_at: now.toISOString(),
@@ -194,7 +194,7 @@ export function TreatmentWorkflow({ visitId, onComplete, onCancel }: TreatmentWo
           treatment_started_at: now.toISOString(),
           treatment_status: 'in_progress'
         })
-        .eq('id', visitId)
+        .eq('id', appointmentId)
 
       setTreatmentSession(session)
 
@@ -268,7 +268,7 @@ export function TreatmentWorkflow({ visitId, onComplete, onCancel }: TreatmentWo
           treatment_ended_at: now.toISOString(),
           treatment_status: 'completed'
         })
-        .eq('id', visitId)
+        .eq('id', appointmentId)
 
       
       if (onComplete) {

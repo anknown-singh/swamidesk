@@ -188,7 +188,12 @@ export function AppointmentBookingForm({
   });
   const [validationErrors, setValidationErrors] = useState<ValidationErrors>({
     department: null,
-    appointment_type: null
+    appointment_type: null,
+    patient_id: undefined,
+    doctor_id: undefined,
+    scheduled_date: undefined,
+    scheduled_time: undefined,
+    title: undefined,
   });
   const [retryCount, setRetryCount] = useState({
     patients: 0,
@@ -326,7 +331,12 @@ export function AppointmentBookingForm({
   const validateForm = useCallback((): boolean => {
     const newValidationErrors: ValidationErrors = {
       department: null,
-      appointment_type: null
+      appointment_type: null,
+      patient_id: undefined,
+      doctor_id: undefined,
+      scheduled_date: undefined,
+      scheduled_time: undefined,
+      title: undefined,
     };
 
     if (!formData.patient_id) {
@@ -359,7 +369,8 @@ export function AppointmentBookingForm({
     }
 
     setValidationErrors(newValidationErrors);
-    return Object.keys(newValidationErrors).length === 0;
+    // Check if any validation error has a non-null/undefined value
+    return !Object.values(newValidationErrors).some(error => error !== null && error !== undefined);
   }, [formData]);
 
   // Close dropdown when clicking outside
@@ -790,7 +801,12 @@ export function AppointmentBookingForm({
     clearError("submit");
     setValidationErrors({
       department: null,
-      appointment_type: null
+      appointment_type: null,
+      patient_id: undefined,
+      doctor_id: undefined,
+      scheduled_date: undefined,
+      scheduled_time: undefined,
+      title: undefined,
     });
 
     // Validate form
@@ -1160,12 +1176,7 @@ export function AppointmentBookingForm({
                 disabled={isLoading}
               >
                 <SelectTrigger className="h-auto min-h-[2.5rem] py-2">
-                  {/* <SelectValue placeholder="Select department" />
-                  Debug: Show current department value
-                  {console.log(
-                    "Current department in form:",
-                    formData.department
-                  )} */}
+                  <SelectValue placeholder="Select department (optional)" />
                 </SelectTrigger>
                 <SelectContent>
                   {departments.map((dept) => (

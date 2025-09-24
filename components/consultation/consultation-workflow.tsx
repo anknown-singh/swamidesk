@@ -9,7 +9,7 @@ import {
   ConsultationSession, 
   ConsultationStep, 
   ConsultationStatus,
-  Visit,
+  Appointment,
   Patient,
   UserProfile 
 } from '@/lib/types'
@@ -34,7 +34,7 @@ import { TreatmentPlanForm } from './treatment-plan-form'
 import { ConsultationSummary } from './consultation-summary'
 
 interface ConsultationWorkflowProps {
-  visitId: string
+  appointmentId: string
   onComplete?: () => void
   onCancel?: () => void
 }
@@ -72,13 +72,13 @@ const STEP_DESCRIPTIONS = {
   completed: 'Review and finalize consultation'
 }
 
-export function ConsultationWorkflow({ visitId, onComplete, onCancel }: ConsultationWorkflowProps) {
+export function ConsultationWorkflow({ appointmentId, onComplete, onCancel }: ConsultationWorkflowProps) {
   const router = useRouter()
   const supabase = createClient()
   
   // State
   const [consultationSession, setConsultationSession] = useState<ConsultationSession | null>(null)
-  const [visit, setVisit] = useState<Visit | null>(null)
+  const [appointment, setAppointment] = useState<Appointment | null>(null)
   const [patient, setPatient] = useState<Patient | null>(null)
   const [doctor, setDoctor] = useState<UserProfile | null>(null)
   const [currentStep, setCurrentStep] = useState<ConsultationStep>('chief_complaints')
@@ -93,26 +93,26 @@ export function ConsultationWorkflow({ visitId, onComplete, onCancel }: Consulta
       setLoading(true)
       setError(null)
 
-      // Load visit with patient data (using application-layer join for doctor)
-      const { data: visitData, error: visitError } = await supabase
-        .from('visits')
+      // Load appointment with patient data (using application-layer join for doctor)
+      const { data: appointmentData, error: appointmentError } = await supabase
+        .from('appointments')
         .select(`
           *,
           patients(*)
         `)
-        .eq('id', visitId)
+        .eq('id', appointmentId)
         .single()
 
-      if (visitError) throw visitError
-      if (!visitData) throw new Error('Visit not found')
+      if (appointmentError) throw appointmentError
+      if (!appointmentData) throw new Error('Appointment not found')
 
       // Load doctor data separately (application-layer join)
       let doctorData = null
-      if (visitData.doctor_id) {
+      if (appointmentData.doctor_id) {
         const { data: doctorResult, error: doctorError } = await supabase
           .from('users')
           .select('*')
-          .eq('id', visitData.doctor_id)
+          .eq('id', appointmentData.doctor_id)
           .single()
 
         if (doctorError) {
@@ -122,15 +122,15 @@ export function ConsultationWorkflow({ visitId, onComplete, onCancel }: Consulta
         }
       }
 
-      setVisit(visitData)
-      setPatient(visitData.patients)
+      setAppointment(appointmentData)
+      setPatient(appointmentData.patients)
       setDoctor(doctorData)
 
       // Check for existing consultation session
       const { data: sessionData, error: sessionError } = await supabase
         .from('consultation_sessions')
         .select('*')
-        .eq('visit_id', visitId)
+        .eq('appointment_id', appointmentId)
         .single()
 
       if (sessionError && sessionError.code !== 'PGRST116') {
@@ -158,7 +158,7 @@ export function ConsultationWorkflow({ visitId, onComplete, onCancel }: Consulta
     } finally {
       setLoading(false)
     }
-  }, [visitId, supabase])
+  }, [appointmentId, supabase])
 
   useEffect(() => {
     loadData()
@@ -166,7 +166,7 @@ export function ConsultationWorkflow({ visitId, onComplete, onCancel }: Consulta
 
   // Start consultation session
   const startConsultation = async () => {
-    if (!visit || !doctor || !patient) return
+    if (!appointment || !doctor || !patient) return
 
     try {
       setSaving(true)
@@ -176,9 +176,9 @@ export function ConsultationWorkflow({ visitId, onComplete, onCancel }: Consulta
       const { data: session, error } = await supabase
         .from('consultation_sessions')
         .insert({
-          visit_id: visitId,
-          doctor_id: visit.doctor_id,
-          patient_id: visit.patient_id,
+          appointment_id: appointmentId,
+          doctor_id: appointment.doctor_id,
+          patient_id: appointment.patient_id,
           started_at: now.toISOString(),
           current_step: 'chief_complaints',
           is_completed: false
@@ -188,15 +188,14 @@ export function ConsultationWorkflow({ visitId, onComplete, onCancel }: Consulta
 
       if (error) throw error
 
-      // Update visit status
+      // Update appointment status
       await supabase
-        .from('visits')
+        .from('appointments')
         .update({ 
-          status: 'in_consultation',
-          actual_start_time: now.toISOString(),
-          consultation_status: 'in_progress'
+          status: 'in_progress',
+          started_at: now.toISOString()
         })
-        .eq('id', visitId)
+        .eq('id', appointmentId)
 
       setConsultationSession(session)
 
@@ -293,18 +292,16 @@ export function ConsultationWorkflow({ visitId, onComplete, onCancel }: Consulta
         })
         .eq('id', consultationSession.id)
 
-      // Update visit status based on investigation requirements
-      const visitStatus = hasInvestigations ? 'investigations_pending' : 'completed'
+      // Update appointment status based on investigation requirements
+      const appointmentStatus = hasInvestigations ? 'investigations_pending' : 'completed'
       
       await supabase
-        .from('visits')
+        .from('appointments')
         .update({ 
-          status: visitStatus,
-          actual_end_time: now.toISOString(),
-          consultation_status: 'completed',
-          requires_investigation_followup: hasInvestigations
+          status: appointmentStatus,
+          ended_at: now.toISOString()
         })
-        .eq('id', visitId)
+        .eq('id', appointmentId)
 
       // Show appropriate success message
       if (hasInvestigations) {
@@ -347,7 +344,7 @@ export function ConsultationWorkflow({ visitId, onComplete, onCancel }: Consulta
     )
   }
 
-  if (!visit || !patient || !doctor) {
+  if (!appointment || !patient || !doctor) {
     return (
       <Alert variant="destructive">
         <AlertCircle className="h-4 w-4" />
@@ -513,7 +510,7 @@ export function ConsultationWorkflow({ visitId, onComplete, onCancel }: Consulta
             {currentStep === 'chief_complaints' && (
               <ChiefComplaintsForm 
                 consultationId={consultationSession.id}
-                visitData={visit}
+                visitData={appointment}
                 onNext={nextStep}
               />
             )}

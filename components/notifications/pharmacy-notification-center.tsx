@@ -125,7 +125,7 @@ export function PharmacyNotificationCenter({
             </Badge>
           )}
           {!isConnected && (
-            <div className="absolute -bottom-1 -right-1 h-2 w-2 bg-red-500 rounded-full" />
+            <div className="absolute -bottom-1 -right-1 h-2 w-2 bg-red-500 rounded-full animate-pulse" />
           )}
         </Button>
       </DropdownMenuTrigger>
@@ -135,8 +135,8 @@ export function PharmacyNotificationCenter({
           <span>Pharmacy Notifications</span>
           <div className="flex items-center space-x-2">
             {!isConnected && (
-              <Badge variant="secondary" className="text-xs">
-                Offline
+              <Badge variant="destructive" className="text-xs animate-pulse">
+                {error && error.includes('retrying') ? 'Reconnecting...' : 'Offline'}
               </Badge>
             )}
             <Button
@@ -153,8 +153,25 @@ export function PharmacyNotificationCenter({
         <DropdownMenuSeparator />
         
         {error && (
-          <div className="px-4 py-2 text-sm text-red-600 bg-red-50 border-b">
-            {error}
+          <div className={`px-4 py-2 text-sm border-b ${
+            error.includes('retrying') 
+              ? 'text-orange-600 bg-orange-50' 
+              : 'text-red-600 bg-red-50'
+          }`}>
+            <div className="flex items-center gap-2">
+              {error.includes('retrying') && (
+                <div className="h-3 w-3 border-2 border-orange-600 border-t-transparent rounded-full animate-spin" />
+              )}
+              {error}
+            </div>
+            {error.includes('refresh') && (
+              <button 
+                onClick={refresh}
+                className="mt-1 text-xs underline hover:no-underline"
+              >
+                Try again
+              </button>
+            )}
           </div>
         )}
         

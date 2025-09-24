@@ -52,7 +52,7 @@ interface PrescriptionFormData {
 }
 
 interface EnhancedPrescriptionFormProps {
-  visitId: string
+  appointmentId: string
   existingPrescriptions?: Prescription[]
   onSave?: (prescriptions: EnhancedPrescription[]) => void
   onCancel?: () => void
@@ -87,7 +87,7 @@ const COMMON_DURATIONS = [
 ]
 
 export function EnhancedPrescriptionForm({ 
-  visitId, 
+  appointmentId, 
   existingPrescriptions = [], 
   onSave, 
   onCancel 
@@ -105,7 +105,7 @@ export function EnhancedPrescriptionForm({
         }))
       : [{
           id: '',
-          visit_id: visitId,
+          appointment_id: appointmentId,
           medicine_id: '',
           medication_name: '',
           quantity: 1,
@@ -123,7 +123,7 @@ export function EnhancedPrescriptionForm({
     setFormData(prev => ({
       prescriptions: [...prev.prescriptions, {
         id: '',
-        visit_id: visitId,
+        appointment_id: appointmentId,
         medicine_id: '',
         medication_name: '',
         quantity: 1,
@@ -135,7 +135,7 @@ export function EnhancedPrescriptionForm({
         status: 'prescribed' as const
       }]
     }))
-  }, [visitId])
+  }, [appointmentId])
 
   const removePrescription = useCallback((index: number) => {
     if (formData.prescriptions.length > 1) {
@@ -258,7 +258,7 @@ export function EnhancedPrescriptionForm({
 
       // Save prescriptions to database
       const prescriptionsToSave = validPrescriptions.map(p => ({
-        visit_id: visitId,
+        appointment_id: appointmentId,
         medicine_id: p.medicine_id,
         quantity: p.quantity,
         dosage: p.dosage || null,
@@ -272,7 +272,7 @@ export function EnhancedPrescriptionForm({
         await supabase
           .from('prescriptions')
           .delete()
-          .eq('visit_id', visitId)
+          .eq('appointment_id', appointmentId)
       }
 
       // Insert new prescriptions

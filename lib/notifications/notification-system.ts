@@ -138,7 +138,9 @@ export class NotificationSystem {
   }
 
   constructor() {
-    this.initializeWebSocket()
+    // TODO: WebSocket endpoint '/api/notifications/ws' not implemented yet
+    // Disable WebSocket connection to prevent console errors
+    // this.initializeWebSocket()
     this.startCleanupTimer()
   }
 

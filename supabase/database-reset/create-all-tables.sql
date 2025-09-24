@@ -37,7 +37,6 @@ DROP TABLE IF EXISTS migration_log CASCADE;
 DROP TABLE IF EXISTS invoices CASCADE;
 DROP TABLE IF EXISTS treatment_plans CASCADE;
 DROP TABLE IF EXISTS prescriptions CASCADE;
-DROP TABLE IF EXISTS visits CASCADE;
 DROP TABLE IF EXISTS services CASCADE;
 DROP TABLE IF EXISTS patients CASCADE;
 DROP TABLE IF EXISTS user_profiles CASCADE;
@@ -112,30 +111,46 @@ BEGIN
 END;
 $$ LANGUAGE plpgsql;
 
--- Purchase order number generation function
+-- Purchase order number generation function with concurrency handling
 CREATE OR REPLACE FUNCTION generate_purchase_order_number()
 RETURNS TEXT AS $$
 DECLARE
     year_suffix TEXT;
     next_number INTEGER;
     new_order_number TEXT;
+    lock_key BIGINT;
 BEGIN
     year_suffix := TO_CHAR(CURRENT_DATE, 'YYYY');
     
-    -- Fixed regex pattern to properly extract the number
-    SELECT COALESCE(MAX(
-        CAST(REGEXP_REPLACE(
-            SUBSTRING(order_number FROM 'PO-' || year_suffix || '-(.+)'), 
-            '[^0-9]', '', 'g'
-        ) AS INTEGER)
-    ), 0) + 1
-    INTO next_number
-    FROM purchase_orders
-    WHERE order_number LIKE 'PO-' || year_suffix || '-%';
+    -- Create a unique lock key for this year to prevent concurrent number generation
+    lock_key := ('x' || RIGHT(MD5('purchase_order_' || year_suffix), 8))::BIT(32)::BIGINT;
     
-    new_order_number := 'PO-' || year_suffix || '-' || LPAD(next_number::TEXT, 3, '0');
+    -- Use advisory lock to ensure only one process generates numbers at a time
+    PERFORM pg_advisory_lock(lock_key);
     
-    RETURN new_order_number;
+    BEGIN
+        -- Get the next order number (advisory lock already provides concurrency protection)
+        SELECT COALESCE(MAX(
+            CAST(REGEXP_REPLACE(
+                SUBSTRING(order_number FROM 'PO-' || year_suffix || '-(.+)'), 
+                '[^0-9]', '', 'g'
+            ) AS INTEGER)
+        ), 0) + 1
+        INTO next_number
+        FROM purchase_orders
+        WHERE order_number LIKE 'PO-' || year_suffix || '-%';
+        
+        new_order_number := 'PO-' || year_suffix || '-' || LPAD(next_number::TEXT, 3, '0');
+        
+        -- Release the advisory lock
+        PERFORM pg_advisory_unlock(lock_key);
+        
+        RETURN new_order_number;
+    EXCEPTION WHEN OTHERS THEN
+        -- Make sure to release lock even on error
+        PERFORM pg_advisory_unlock(lock_key);
+        RAISE;
+    END;
 END;
 $$ LANGUAGE plpgsql;
 
@@ -211,30 +226,9 @@ CREATE TABLE services (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 5. VISITS TABLE
-CREATE TABLE visits (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    patient_id UUID NOT NULL REFERENCES patients(id),
-    doctor_id UUID REFERENCES users(id),
-    visit_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    visit_time TIME DEFAULT CURRENT_TIME,
-    token_number VARCHAR(10),
-    chief_complaint TEXT,
-    history_present_illness TEXT,
-    examination_findings TEXT,
-    diagnosis TEXT,
-    treatment_plan TEXT,
-    follow_up_date DATE,
-    status VARCHAR(50) DEFAULT 'scheduled',
-    notes TEXT,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
 -- 6. PRESCRIPTIONS TABLE
 CREATE TABLE prescriptions (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    visit_id UUID NOT NULL REFERENCES visits(id),
     medicine_id UUID,
     medicine_name VARCHAR(255) NOT NULL,
     dosage VARCHAR(100) NOT NULL,
@@ -273,7 +267,6 @@ CREATE TABLE treatment_plans (
 CREATE TABLE invoices (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     patient_id UUID NOT NULL REFERENCES patients(id),
-    visit_id UUID REFERENCES visits(id),
     invoice_number VARCHAR(50) UNIQUE NOT NULL,
     subtotal DECIMAL(10,2) NOT NULL DEFAULT 0,
     tax_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
@@ -373,7 +366,7 @@ CREATE TABLE pharmacy_issues (
 -- 13. PURCHASE_ORDERS TABLE
 CREATE TABLE purchase_orders (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    order_number VARCHAR(50) UNIQUE NOT NULL,
+    order_number VARCHAR(50) UNIQUE NOT NULL DEFAULT generate_purchase_order_number(),
     supplier_name VARCHAR(255) NOT NULL,
     supplier_contact VARCHAR(255),
     supplier_address TEXT,
@@ -471,7 +464,24 @@ CREATE TABLE inventory (
 -- STEP 6: Appointment System Tables (6 tables)
 -- =====================================================
 
--- 18. APPOINTMENTS TABLE
+-- 18. OPD_RECORDS TABLE (moved here to be before appointments)
+CREATE TABLE opd_records (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    patient_id UUID NOT NULL REFERENCES patients(id),
+    visit_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    token_number INTEGER,
+    opd_status VARCHAR(50) DEFAULT 'consultation',
+    chief_complaint TEXT,
+    examination_findings TEXT,
+    diagnosis TEXT,
+    treatment_plan TEXT,
+    procedure_quotes JSONB DEFAULT '[]'::jsonb,
+    created_by UUID REFERENCES users(id),
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 19. APPOINTMENTS TABLE
 CREATE TABLE appointments (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     appointment_number VARCHAR(30) UNIQUE NOT NULL,
@@ -504,6 +514,7 @@ CREATE TABLE appointments (
     completed_at TIMESTAMP WITH TIME ZONE,
     cancelled_at TIMESTAMP WITH TIME ZONE,
     cancellation_reason TEXT,
+    opd_id UUID REFERENCES opd_records(id),
     created_by UUID REFERENCES users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -515,7 +526,7 @@ CREATE TABLE appointments (
     CONSTRAINT valid_duration CHECK (duration BETWEEN 5 AND 480)
 );
 
--- 19. DOCTOR_AVAILABILITY TABLE
+-- 20. DOCTOR_AVAILABILITY TABLE
 CREATE TABLE doctor_availability (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     doctor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -544,7 +555,7 @@ CREATE TABLE doctor_availability (
     UNIQUE(doctor_id, day_of_week, effective_from)
 );
 
--- 20. APPOINTMENT_SLOTS TABLE
+-- 21. APPOINTMENT_SLOTS TABLE
 CREATE TABLE appointment_slots (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     doctor_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -568,7 +579,7 @@ CREATE TABLE appointment_slots (
     UNIQUE(doctor_id, slot_date, start_time)
 );
 
--- 21. APPOINTMENT_SERVICES TABLE
+-- 22. APPOINTMENT_SERVICES TABLE
 CREATE TABLE appointment_services (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     appointment_id UUID NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
@@ -592,7 +603,7 @@ CREATE TABLE appointment_services (
     )
 );
 
--- 22. APPOINTMENT_REMINDERS TABLE
+-- 23. APPOINTMENT_REMINDERS TABLE
 CREATE TABLE appointment_reminders (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     appointment_id UUID NOT NULL REFERENCES appointments(id) ON DELETE CASCADE,
@@ -614,7 +625,7 @@ CREATE TABLE appointment_reminders (
     )
 );
 
--- 23. APPOINTMENT_WAITLIST TABLE
+-- 24. APPOINTMENT_WAITLIST TABLE
 CREATE TABLE appointment_waitlist (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
@@ -646,10 +657,9 @@ CREATE TABLE appointment_waitlist (
 -- STEP 7: Clinical Management Tables (3 tables)
 -- =====================================================
 
--- 24. VISIT_SERVICES TABLE
+-- 25. VISIT_SERVICES TABLE
 CREATE TABLE visit_services (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    visit_id UUID NOT NULL REFERENCES visits(id),
     service_id UUID NOT NULL REFERENCES services(id),
     quantity INTEGER DEFAULT 1,
     unit_price DECIMAL(8,2),
@@ -658,23 +668,6 @@ CREATE TABLE visit_services (
     notes TEXT,
     performed_by UUID REFERENCES users(id),
     performed_at TIMESTAMP WITH TIME ZONE,
-    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
-    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
-);
-
--- 25. OPD_RECORDS TABLE
-CREATE TABLE opd_records (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    patient_id UUID NOT NULL REFERENCES patients(id),
-    visit_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    token_number INTEGER,
-    opd_status VARCHAR(50) DEFAULT 'consultation',
-    chief_complaint TEXT,
-    examination_findings TEXT,
-    diagnosis TEXT,
-    treatment_plan TEXT,
-    procedure_quotes JSONB DEFAULT '[]'::jsonb,
-    created_by UUID REFERENCES users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -689,7 +682,7 @@ CREATE TABLE notifications (
     priority VARCHAR(20) NOT NULL DEFAULT 'normal',
     user_id UUID REFERENCES users(id) ON DELETE CASCADE,
     role VARCHAR(50),
-    recipient_role VARCHAR(50),
+    recipient_role VARCHAR(50) DEFAULT 'all',
     data JSONB DEFAULT '{}'::jsonb,
     action_url VARCHAR(500),
     actions JSONB DEFAULT '[]'::jsonb,
@@ -697,6 +690,9 @@ CREATE TABLE notifications (
     read_at TIMESTAMPTZ,
     created_at TIMESTAMPTZ DEFAULT now()
 );
+
+-- Add comment for recipient_role column
+COMMENT ON COLUMN notifications.recipient_role IS 'Role that should receive this notification: admin, doctor, pharmacist, receptionist, or "all" for everyone';
 
 -- =====================================================
 -- STEP 8: Supporting Tables (3 tables)
@@ -780,7 +776,7 @@ CREATE TABLE audit_log (
 -- 32. CONSULTATION_SESSIONS TABLE
 CREATE TABLE consultation_sessions (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    visit_id UUID REFERENCES visits(id),
+    appointment_id UUID REFERENCES appointments(id),
     doctor_id UUID REFERENCES users(id),
     patient_id UUID REFERENCES patients(id),
     started_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
@@ -793,10 +789,11 @@ CREATE TABLE consultation_sessions (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 33. WORKFLOW_REQUESTS TABLE
+-- 34. WORKFLOW_REQUESTS TABLE
 CREATE TABLE workflow_requests (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     patient_id UUID NOT NULL REFERENCES patients(id),
+    opd_id UUID REFERENCES opd_records(id),
     request_type VARCHAR(50) NOT NULL,
     priority VARCHAR(20) DEFAULT 'medium',
     status VARCHAR(20) DEFAULT 'pending',
@@ -810,7 +807,7 @@ CREATE TABLE workflow_requests (
     completed_at TIMESTAMP WITH TIME ZONE
 );
 
--- 34. TREATMENT_SESSIONS TABLE
+-- 35. TREATMENT_SESSIONS TABLE
 CREATE TABLE treatment_sessions (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     treatment_plan_id UUID NOT NULL REFERENCES treatment_plans(id),
@@ -826,7 +823,7 @@ CREATE TABLE treatment_sessions (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 35. CONSULTATION_CHIEF_COMPLAINTS TABLE
+-- 36. CONSULTATION_CHIEF_COMPLAINTS TABLE
 CREATE TABLE consultation_chief_complaints (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     consultation_id UUID REFERENCES consultation_sessions(id),
@@ -844,7 +841,7 @@ CREATE TABLE consultation_chief_complaints (
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 36. CONSULTATION_HISTORY TABLE
+-- 37. CONSULTATION_HISTORY TABLE
 CREATE TABLE consultation_history (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     consultation_id UUID REFERENCES consultation_sessions(id),
@@ -856,7 +853,7 @@ CREATE TABLE consultation_history (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 37. CONSULTATION_VITALS TABLE
+-- 38. CONSULTATION_VITALS TABLE
 CREATE TABLE consultation_vitals (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     consultation_id UUID REFERENCES consultation_sessions(id),
@@ -874,7 +871,7 @@ CREATE TABLE consultation_vitals (
     recorded_by UUID REFERENCES users(id)
 );
 
--- 38. EXAMINATION_FINDINGS TABLE
+-- 39. EXAMINATION_FINDINGS TABLE
 CREATE TABLE examination_findings (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     consultation_id UUID REFERENCES consultation_sessions(id),
@@ -888,7 +885,7 @@ CREATE TABLE examination_findings (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 39. INVESTIGATION_ORDERS TABLE
+-- 40. INVESTIGATION_ORDERS TABLE
 CREATE TABLE investigation_orders (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     consultation_id UUID REFERENCES consultation_sessions(id),
@@ -910,7 +907,7 @@ CREATE TABLE investigation_orders (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 40. CONSULTATION_DIAGNOSES TABLE
+-- 41. CONSULTATION_DIAGNOSES TABLE
 CREATE TABLE consultation_diagnoses (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     consultation_id UUID REFERENCES consultation_sessions(id),
@@ -927,7 +924,7 @@ CREATE TABLE consultation_diagnoses (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 41. CONSULTATION_TREATMENT_PLANS TABLE
+-- 42. CONSULTATION_TREATMENT_PLANS TABLE
 CREATE TABLE consultation_treatment_plans (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     consultation_id UUID REFERENCES consultation_sessions(id),
@@ -960,7 +957,7 @@ CREATE TABLE consultation_treatment_plans (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 42. CONSULTATION_PROGRESS_NOTES TABLE
+-- 43. CONSULTATION_PROGRESS_NOTES TABLE
 CREATE TABLE consultation_progress_notes (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     consultation_id UUID REFERENCES consultation_sessions(id),
@@ -1075,11 +1072,6 @@ CREATE TRIGGER trigger_update_services_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER trigger_update_visits_updated_at
-    BEFORE UPDATE ON visits
-    FOR EACH ROW
-    EXECUTE FUNCTION update_updated_at_column();
-
 CREATE TRIGGER trigger_update_prescriptions_updated_at
     BEFORE UPDATE ON prescriptions
     FOR EACH ROW
@@ -1151,23 +1143,7 @@ CREATE TRIGGER trigger_update_appointment_waitlist_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
--- Purchase order triggers
-CREATE OR REPLACE FUNCTION set_purchase_order_number()
-RETURNS TRIGGER AS $$
-BEGIN
-    IF NEW.order_number IS NULL OR NEW.order_number = '' THEN
-        NEW.order_number := generate_purchase_order_number();
-    END IF;
-    NEW.updated_at := NOW();
-    RETURN NEW;
-END;
-$$ LANGUAGE plpgsql;
-
-CREATE TRIGGER purchase_orders_set_order_number
-    BEFORE INSERT ON purchase_orders
-    FOR EACH ROW
-    EXECUTE FUNCTION set_purchase_order_number();
-
+-- Purchase order update triggers (only for timestamp updates)
 CREATE TRIGGER trigger_update_purchase_orders_updated_at
     BEFORE UPDATE ON purchase_orders
     FOR EACH ROW
@@ -1196,17 +1172,11 @@ CREATE INDEX idx_patients_active ON patients(is_active);
 CREATE INDEX idx_services_category ON services(category);
 CREATE INDEX idx_services_active ON services(is_active);
 
-CREATE INDEX idx_visits_patient_id ON visits(patient_id);
-CREATE INDEX idx_visits_doctor_id ON visits(doctor_id);
-CREATE INDEX idx_visits_date ON visits(visit_date);
-
-CREATE INDEX idx_prescriptions_visit_id ON prescriptions(visit_id);
 CREATE INDEX idx_prescriptions_medicine_id ON prescriptions(medicine_id);
 
 CREATE INDEX idx_treatment_plans_patient_id ON treatment_plans(patient_id);
 
 CREATE INDEX idx_invoices_patient_id ON invoices(patient_id);
-CREATE INDEX idx_invoices_visit_id ON invoices(visit_id);
 
 -- Medicine and pharmacy indexes
 CREATE INDEX idx_medicines_name ON medicines(name);
@@ -1276,7 +1246,6 @@ CREATE INDEX idx_appointment_waitlist_status ON appointment_waitlist(status);
 CREATE INDEX idx_appointment_waitlist_priority ON appointment_waitlist(priority DESC);
 
 -- Other indexes
-CREATE INDEX idx_visit_services_visit_id ON visit_services(visit_id);
 CREATE INDEX idx_visit_services_service_id ON visit_services(service_id);
 
 CREATE INDEX idx_opd_records_patient_id ON opd_records(patient_id);
@@ -1300,7 +1269,6 @@ ALTER TABLE users DISABLE ROW LEVEL SECURITY;
 ALTER TABLE user_profiles DISABLE ROW LEVEL SECURITY;
 ALTER TABLE patients DISABLE ROW LEVEL SECURITY;
 ALTER TABLE services DISABLE ROW LEVEL SECURITY;
-ALTER TABLE visits DISABLE ROW LEVEL SECURITY;
 ALTER TABLE prescriptions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE treatment_plans DISABLE ROW LEVEL SECURITY;
 ALTER TABLE invoices DISABLE ROW LEVEL SECURITY;

@@ -50,6 +50,10 @@ interface Appointment {
   scheduled_time: string;
   status: string;
   appointment_type: string;
+  duration?: number;
+  notes?: string;
+  patient_notes?: string;
+  created_at: string;
   patient?: {
     id: string;
     full_name?: string;
@@ -70,11 +74,11 @@ interface OPDManagementProps {
   prefilledPatientId?: string | null;
 }
 
-export function OPDManagement({ 
-  userRole, 
+export function OPDManagement({
+  userRole,
   userId,
   prefilledOpdId,
-  prefilledPatientId
+  prefilledPatientId,
 }: OPDManagementProps) {
   const searchParams = useSearchParams();
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -88,11 +92,12 @@ export function OPDManagement({
     conductedDate: new Date().toISOString().split("T")[0],
     furtherSuggestions: "",
   });
-  const [showVisitWorkflow, setShowVisitWorkflow] = useState(false);
-  const [visitWorkflowStarted, setVisitWorkflowStarted] = useState(false);
+  const [showAppointmentWorkflow, setShowAppointmentWorkflow] = useState(false);
+  const [appointmentWorkflowStarted, setAppointmentWorkflowStarted] =
+    useState(false);
   const [showFullConsultationWorkflow, setShowFullConsultationWorkflow] =
     useState(false);
-  const [visitId, setVisitId] = useState<string | null>(null);
+  const [appointmentId, setAppointmentId] = useState<string | null>(null);
   const [consultationSession, setConsultationSession] = useState<Record<
     string,
     unknown
@@ -100,6 +105,14 @@ export function OPDManagement({
   const [consultationSummary, setConsultationSummary] = useState<any>(null);
   const [uploadingReport, setUploadingReport] = useState<string | null>(null);
   const [editingReport, setEditingReport] = useState<string | null>(null);
+
+  // State for different appointment workflows
+  const [consultationAppointment, setConsultationAppointment] =
+    useState<Appointment | null>(null);
+  const [followUpAppointments, setFollowUpAppointments] = useState<
+    Appointment[]
+  >([]);
+  const [activeFollowUpId, setActiveFollowUpId] = useState<string | null>(null);
   const [reportData, setReportData] = useState({
     summary: "",
     interpretation: "",
@@ -107,7 +120,6 @@ export function OPDManagement({
   const [showFollowUpWorkflow, setShowFollowUpWorkflow] = useState(false);
   const [showFollowUpOptions, setShowFollowUpOptions] = useState(false);
   const [showTreatmentWorkflow, setShowTreatmentWorkflow] = useState(false);
-  const [followUpRequested, setFollowUpRequested] = useState(false);
   const [followUpData, setFollowUpData] = useState({
     scheduledDate: "",
     followUpType: "follow_up",
@@ -126,10 +138,68 @@ export function OPDManagement({
   const [opdRecordId, setOpdRecordId] = useState<string | null>(null);
   const [isCreatingOPD, setIsCreatingOPD] = useState<boolean>(false);
   const [opdCreationFailed, setOpdCreationFailed] = useState<boolean>(false);
-  
+
   // New state for OPD records list
   const [opdRecords, setOpdRecords] = useState<any[]>([]);
   const [loadingOpdRecords, setLoadingOpdRecords] = useState<boolean>(false);
+
+  // Fetch appointments for a specific OPD session
+  const fetchOPDAppointments = useCallback(async (opdId: string) => {
+    setLoading(true);
+    try {
+      const supabase = createAuthenticatedClient();
+
+      const query = supabase
+        .from("appointments")
+        .select(
+          `
+          *,
+          patients(id, full_name, phone, email, gender, date_of_birth, address)
+        `
+        )
+        .eq("opd_id", opdId)
+        .order("created_at", { ascending: true }); // Order by creation time
+
+      const { data, error } = await query;
+
+      if (error) throw error;
+
+      // Transform data to match our interface
+      const transformedData: Appointment[] = (data || []).map((apt) => ({
+        ...apt,
+        patient: apt.patients
+          ? {
+              id: apt.patients.id,
+              name: apt.patients.full_name,
+              mobile: apt.patients.phone,
+              email: apt.patients.email,
+              gender: apt.patients.gender,
+              date_of_birth: apt.patients.date_of_birth,
+              address: apt.patients.address,
+            }
+          : undefined,
+      }));
+
+      setAppointments(transformedData);
+
+      // Categorize appointments by type
+      const consultation = transformedData.find(
+        (apt) => apt.appointment_type === "consultation"
+      );
+      const followUps = transformedData.filter(
+        (apt) => apt.appointment_type === "follow_up"
+      );
+
+      setConsultationAppointment(consultation || null);
+      setFollowUpAppointments(followUps);
+
+      console.log("Categorized appointments:", { consultation, followUps });
+    } catch (error) {
+      console.error("Error fetching OPD appointments:", error);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
 
   // Fetch today's appointments that need OPD
   const fetchAppointments = useCallback(async () => {
@@ -211,8 +281,8 @@ export function OPDManagement({
       };
 
       setSelectedPatient(patient);
-      // Auto-show visit workflow tile when navigated from appointment slot
-      setShowVisitWorkflow(true);
+      // Auto-show appointment workflow tile when navigated from appointment slot
+      setShowAppointmentWorkflow(true);
 
       // Load specific OPD record if provided, otherwise create or fetch a new one
       if (prefilledOpdId) {
@@ -244,7 +314,8 @@ export function OPDManagement({
         .from("opd_records")
         .select("*")
         .eq("patient_id", patientId)
-        .gte("created_at", today + "T00:00:00.000Z").lt("created_at", today + "T23:59:59.999Z")
+        .gte("created_at", today + "T00:00:00.000Z")
+        .lt("created_at", today + "T23:59:59.999Z")
         .single();
 
       console.log("Existing record query result:", {
@@ -277,9 +348,9 @@ export function OPDManagement({
         .from("opd_records")
         .insert({
           patient_id: patientId,
-                    token_number: Math.floor(Math.random() * 999) + 1, // Simple token generation
+          token_number: Math.floor(Math.random() * 999) + 1, // Simple token generation
           opd_status: "consultation",
-                    created_by: effectiveUserId,
+          created_by: effectiveUserId,
         })
         .select()
         .single();
@@ -314,10 +385,15 @@ export function OPDManagement({
       console.log("Loading specific OPD record:", opdRecordId);
       const supabase = createAuthenticatedClient();
 
-      // Fetch the specific OPD record
+      // Fetch the specific OPD record with patient data
       const { data: opdRecord, error: fetchError } = await supabase
         .from("opd_records")
-        .select("*")
+        .select(
+          `
+          *,
+          patients(id, full_name, phone, email, gender, date_of_birth, address)
+        `
+        )
         .eq("id", opdRecordId)
         .single();
 
@@ -331,6 +407,31 @@ export function OPDManagement({
         setOpdRecord(opdRecord);
         setOpdRecordId(opdRecord.id);
         setIsCreatingOPD(false);
+
+        // Set the patient from the OPD record
+        if (opdRecord.patients) {
+          const patient: Patient = {
+            id: opdRecord.patients.id,
+            name: opdRecord.patients.full_name,
+            mobile: opdRecord.patients.phone,
+            email: opdRecord.patients.email,
+            gender: opdRecord.patients.gender,
+            date_of_birth: opdRecord.patients.date_of_birth,
+            address: opdRecord.patients.address,
+          };
+          setSelectedPatient(patient);
+          console.log("Set selected patient:", patient.name);
+
+          // Show appointment workflow when navigated directly to an OPD
+          setShowAppointmentWorkflow(true);
+
+          // Check for existing consultation session for this patient
+          await checkConsultationStatus(patient.id);
+        }
+
+        // Fetch all appointments for this OPD
+        await fetchOPDAppointments(opdRecord.id);
+
         return opdRecord;
       } else {
         throw new Error("OPD record not found");
@@ -346,16 +447,17 @@ export function OPDManagement({
 
   // Fetch all OPD records for the authenticated doctor
   const fetchDoctorOpdRecords = useCallback(async () => {
-    if (!effectiveUserId || userRole !== 'doctor') return;
-    
+    if (!effectiveUserId || userRole !== "doctor") return;
+
     setLoadingOpdRecords(true);
     try {
       const supabase = createAuthenticatedClient();
-      
+
       // Fetch OPD records where the doctor is involved (created_by or via appointments)
       const { data: opdRecords, error } = await supabase
-        .from('opd_records')
-        .select(`
+        .from("opd_records")
+        .select(
+          `
           id,
           patient_id,
           token_number,
@@ -369,19 +471,20 @@ export function OPDManagement({
             gender,
             date_of_birth
           )
-        `)
-        .eq('created_by', effectiveUserId)
-        .order('created_at', { ascending: false });
+        `
+        )
+        .eq("created_by", effectiveUserId)
+        .order("created_at", { ascending: false });
 
       if (error) {
-        console.error('Error fetching doctor OPD records:', error);
+        console.error("Error fetching doctor OPD records:", error);
         return;
       }
 
-      console.log('Fetched OPD records for doctor:', opdRecords?.length || 0);
+      console.log("Fetched OPD records for doctor:", opdRecords?.length || 0);
       setOpdRecords(opdRecords || []);
     } catch (error) {
-      console.error('Error fetching OPD records:', error);
+      console.error("Error fetching OPD records:", error);
     } finally {
       setLoadingOpdRecords(false);
     }
@@ -447,13 +550,17 @@ export function OPDManagement({
   }, [userId]);
 
   useEffect(() => {
-    fetchAppointments();
+    // If we don't have a prefilled OPD ID, fetch today's appointments that need OPD
+    // If we do have a prefilled OPD ID, the appointments will be fetched by loadSpecificOPDRecord
+    if (!prefilledOpdId) {
+      fetchAppointments();
+    }
     fetchPatientFromWorkflow();
-  }, [fetchAppointments, fetchPatientFromWorkflow]);
+  }, [fetchAppointments, fetchPatientFromWorkflow, prefilledOpdId]);
 
   // Fetch OPD records for doctor when component loads
   useEffect(() => {
-    if (userRole === 'doctor' && effectiveUserId && !userIdLoading) {
+    if (userRole === "doctor" && effectiveUserId && !userIdLoading) {
       fetchDoctorOpdRecords();
     }
   }, [userRole, effectiveUserId, userIdLoading, fetchDoctorOpdRecords]);
@@ -470,7 +577,7 @@ export function OPDManagement({
         date_of_birth: appointment.patient.date_of_birth,
         address: appointment.patient.address,
       };
-      
+
       setSelectedPatient(patient);
       // Create or fetch OPD record for the patient
       await createOrFetchOPDRecord(appointment.patient.id);
@@ -487,27 +594,28 @@ export function OPDManagement({
       const supabase = createAuthenticatedClient();
       const today = new Date().toISOString().split("T")[0];
 
-      // First, look for visits for this patient today
-      const { data: visits, error: visitError } = await supabase
-        .from("visits")
+      // First, look for appointments for this patient today
+      const { data: appointments, error: appointmentError } = await supabase
+        .from("appointments")
         .select("id")
         .eq("patient_id", patientId)
-        .gte("created_at", today + "T00:00:00.000Z").lt("created_at", today + "T23:59:59.999Z")
+        .gte("created_at", today + "T00:00:00.000Z")
+        .lt("created_at", today + "T23:59:59.999Z")
         .order("created_at", { ascending: false });
 
-      if (visitError) {
-        console.error("Error checking visits:", visitError);
+      if (appointmentError) {
+        console.error("Error checking appointments:", appointmentError);
         return;
       }
 
-      if (!visits || visits.length === 0) return;
+      if (!appointments || appointments.length === 0) return;
 
-      // Look for consultation session for any of today's visits
-      const visitIds = visits.map((v) => v.id);
+      // Look for consultation session for any of today's appointments
+      const appointmentIds = appointments.map((apt) => apt.id);
       const { data: session, error: sessionError } = await supabase
         .from("consultation_sessions")
         .select("*")
-        .in("visit_id", visitIds)
+        .in("appointment_id", appointmentIds)
         .order("created_at", { ascending: false })
         .maybeSingle();
 
@@ -519,8 +627,8 @@ export function OPDManagement({
       if (session) {
         console.log("Found consultation session:", session);
         setConsultationSession(session);
-        setVisitWorkflowStarted(true);
-        setVisitId(session.visit_id);
+        setAppointmentWorkflowStarted(true);
+        setAppointmentId(session.appointment_id);
 
         // Always fetch summary data to show current progress
         console.log(
@@ -812,8 +920,8 @@ export function OPDManagement({
   const handleBackToList = () => {
     setSelectedPatient(null);
     setShowConsultationWorkflow(false);
-    setShowVisitWorkflow(false);
-    setVisitWorkflowStarted(false);
+    setShowAppointmentWorkflow(false);
+    setAppointmentWorkflowStarted(false);
     setWorkflowData({
       conductedDate: new Date().toISOString().split("T")[0],
       furtherSuggestions: "",
@@ -832,7 +940,7 @@ export function OPDManagement({
         await supabase
           .from("opd_records")
           .update({
-                        opd_status: "consultation",
+            opd_status: "consultation",
             updated_at: new Date().toISOString(),
           })
           .eq("id", opdRecordId);
@@ -849,16 +957,18 @@ export function OPDManagement({
     }
   };
 
-  const handleStartVisitWorkflow = async () => {
+  const handleStartConsultationWorkflow = async () => {
     // Use effective userId with fallback mechanisms
     const userIdToUse = effectiveUserId || userId;
 
     // Enhanced debug logging to identify what's missing
-    console.log("handleStartVisitWorkflow called with:", {
+    console.log("handleStartConsultationWorkflow called with:", {
+      consultationAppointment: consultationAppointment,
       selectedPatient: selectedPatient,
       userId: userId,
       effectiveUserId: effectiveUserId,
       userIdToUse: userIdToUse,
+      hasConsultationAppointment: !!consultationAppointment,
       hasSelectedPatient: !!selectedPatient,
       hasUserId: !!userId,
       hasEffectiveUserId: !!effectiveUserId,
@@ -867,6 +977,13 @@ export function OPDManagement({
 
     if (!selectedPatient) {
       console.error("Patient information not loaded. Please refresh the page.");
+      return;
+    }
+
+    if (!consultationAppointment) {
+      console.error(
+        "Consultation appointment not found. Please refresh the page."
+      );
       return;
     }
 
@@ -886,60 +1003,205 @@ export function OPDManagement({
     try {
       const supabase = createAuthenticatedClient();
 
-      // Check if a visit already exists for this patient today
-      const today = new Date().toISOString().split("T")[0];
-      const { data: existingVisit, error: checkError } = await supabase
-        .from("visits")
-        .select("id")
-        .eq("patient_id", selectedPatient.id)
-        .gte("created_at", today + "T00:00:00.000Z").lt("created_at", today + "T23:59:59.999Z")
-        .eq("doctor_id", userIdToUse)
-        .single();
+      // Update the consultation appointment status to in_progress
+      const { error: updateError } = await supabase
+        .from("appointments")
+        .update({
+          status: "in_progress",
+          started_at: new Date().toISOString(),
+        })
+        .eq("id", consultationAppointment.id);
 
-      if (checkError && checkError.code !== "PGRST116") {
-        console.error("Error checking for existing visit:", checkError);
+      if (updateError) {
+        console.error(
+          "Error updating consultation appointment status:",
+          updateError
+        );
+        return;
       }
 
-      let currentVisitId = existingVisit?.id;
-
-      // Create a new visit if none exists
-      if (!currentVisitId) {
-        const { data: newVisit, error: createError } = await supabase
-          .from("visits")
-          .insert({
-            patient_id: selectedPatient.id,
-            doctor_id: userIdToUse,
-                        visit_time: new Date().toTimeString().slice(0, 5),
-            status: "waiting",
-                      })
-          .select("id")
-          .single();
-
-        if (createError) {
-          console.error("Error creating visit:", createError);
-          return;
-        }
-
-        currentVisitId = newVisit.id;
-      }
-
-      setVisitId(currentVisitId);
-      setVisitWorkflowStarted(true);
+      // Use the consultation appointment ID directly - no need for visits table
+      setAppointmentId(consultationAppointment.id);
+      setAppointmentWorkflowStarted(true);
       setShowFullConsultationWorkflow(true);
 
-      // Update consultation status check with correct visitId
+      // Update consultation status check with correct appointmentId
       if (selectedPatient?.id) {
         await checkConsultationStatus(selectedPatient.id);
       }
       console.log("Opening comprehensive consultation workflow");
     } catch (error) {
-      console.error("Error starting visit workflow:", error);
+      console.error("Error starting consultation workflow:", error);
+    }
+  };
+
+  const handleStartFollowUpWorkflow = async (
+    followUpAppointment: Appointment
+  ) => {
+    // Use effective userId with fallback mechanisms
+    const userIdToUse = effectiveUserId || userId;
+
+    // Enhanced debug logging to identify what's missing
+    console.log("handleStartFollowUpWorkflow called with:", {
+      followUpAppointment: followUpAppointment,
+      selectedPatient: selectedPatient,
+      userId: userId,
+      effectiveUserId: effectiveUserId,
+      userIdToUse: userIdToUse,
+      hasSelectedPatient: !!selectedPatient,
+      hasFollowUpAppointment: !!followUpAppointment,
+      hasUserId: !!userId,
+      hasEffectiveUserId: !!effectiveUserId,
+      hasUserIdToUse: !!userIdToUse,
+    });
+
+    if (!selectedPatient) {
+      console.error("Patient information not loaded. Please refresh the page.");
+      return;
+    }
+
+    if (!followUpAppointment) {
+      console.error("Follow-up appointment information not provided.");
+      return;
+    }
+
+    if (!userIdToUse) {
+      // Additional debugging for userId resolution
+      console.error("UserId resolution failed:", {
+        userId,
+        effectiveUserId,
+        userIdToUse,
+        userIdLoading,
+        localStorageUser: localStorage.getItem("swamicare_user"),
+      });
+      console.error("User session not found. Please log in again.");
+      return;
+    }
+
+    try {
+      const supabase = createAuthenticatedClient();
+
+      // No need to create visits - we'll use the appointment ID directly
+
+      // Update the follow-up appointment status to in_progress
+      const { error: updateError } = await supabase
+        .from("appointments")
+        .update({ status: "in_progress" })
+        .eq("id", followUpAppointment.id);
+
+      if (updateError) {
+        console.error(
+          "Error updating follow-up appointment status:",
+          updateError
+        );
+      }
+
+      // Use the follow-up appointment ID directly
+      setAppointmentId(followUpAppointment.id);
+      setAppointmentWorkflowStarted(true);
+      setShowFullConsultationWorkflow(true);
+      setActiveFollowUpId(followUpAppointment.id);
+
+      // Update consultation status check with correct appointmentId
+      if (selectedPatient?.id) {
+        await checkConsultationStatus(selectedPatient.id);
+      }
+
+      // Refresh appointments to show updated status
+      if (prefilledOpdId) {
+        await fetchOPDAppointments(prefilledOpdId);
+      }
+
+      console.log(
+        "Opening comprehensive follow-up consultation workflow for appointment:",
+        followUpAppointment.id
+      );
+    } catch (error) {
+      console.error("Error starting follow-up workflow:", error);
+    }
+  };
+
+  const handleStartTreatmentWorkflow = async (appointment: Appointment) => {
+    // Use effective userId with fallback mechanisms
+    const userIdToUse = effectiveUserId || userId;
+
+    console.log("handleStartTreatmentWorkflow called with:", {
+      appointment: appointment,
+      selectedPatient: selectedPatient,
+      userId: userId,
+      effectiveUserId: effectiveUserId,
+      userIdToUse: userIdToUse,
+      hasAppointment: !!appointment,
+      hasSelectedPatient: !!selectedPatient,
+      hasUserId: !!userId,
+      hasEffectiveUserId: !!effectiveUserId,
+      hasUserIdToUse: !!userIdToUse,
+    });
+
+    if (!selectedPatient) {
+      console.error("Patient information not loaded. Please refresh the page.");
+      return;
+    }
+
+    if (!appointment) {
+      console.error("Treatment appointment information not provided.");
+      return;
+    }
+
+    if (!userIdToUse) {
+      console.error("UserId resolution failed:", {
+        userId,
+        effectiveUserId,
+        userIdToUse,
+        userIdLoading,
+        localStorageUser: localStorage.getItem("swamicare_user"),
+      });
+      console.error("User session not found. Please log in again.");
+      return;
+    }
+
+    try {
+      const supabase = createAuthenticatedClient();
+
+      // Update the treatment appointment status to in_progress
+      const { error: updateError } = await supabase
+        .from("appointments")
+        .update({
+          status: "in_progress",
+          started_at: new Date().toISOString(),
+        })
+        .eq("id", appointment.id);
+
+      if (updateError) {
+        console.error(
+          "Error updating treatment appointment status:",
+          updateError
+        );
+        return;
+      }
+
+      // Use the treatment appointment ID directly
+      setAppointmentId(appointment.id);
+      setAppointmentWorkflowStarted(true);
+      setShowTreatmentWorkflow(true);
+
+      // Refresh appointments to show updated status
+      if (prefilledOpdId) {
+        await fetchOPDAppointments(prefilledOpdId);
+      }
+
+      console.log(
+        "Opening treatment workflow for appointment:",
+        appointment.id
+      );
+    } catch (error) {
+      console.error("Error starting treatment workflow:", error);
     }
   };
 
   const handleConsultationComplete = async () => {
     setShowFullConsultationWorkflow(false);
-    // Keep visit workflow visible but mark as completed
+    // Keep appointment workflow visible but mark as completed
 
     console.log("Consultation completed, refreshing data...");
 
@@ -961,8 +1223,8 @@ export function OPDManagement({
 
   const handleConsultationCancel = async () => {
     setShowFullConsultationWorkflow(false);
-    // Keep the visit workflow tile visible but reset the started state
-    setVisitWorkflowStarted(false);
+    // Keep the appointment workflow tile visible but reset the started state
+    setAppointmentWorkflowStarted(false);
 
     console.log("Returned to OPD workflow, refreshing consultation summary...");
 
@@ -972,7 +1234,7 @@ export function OPDManagement({
     }
   };
 
-  // Mark consultation/visit as completed
+  // Mark consultation/appointment as completed
   const handleMarkAsCompleted = async () => {
     if (!consultationSession || !selectedPatient) {
       console.error("No consultation session or patient selected");
@@ -999,19 +1261,19 @@ export function OPDManagement({
         throw sessionError;
       }
 
-      // Update visit status to completed
-      if (visitId) {
-        const { error: visitError } = await supabase
-          .from("visits")
+      // Update appointment status to completed
+      if (appointmentId) {
+        const { error: appointmentError } = await supabase
+          .from("appointments")
           .update({
             status: "completed",
             updated_at: now,
           })
-          .eq("id", visitId);
+          .eq("id", appointmentId);
 
-        if (visitError) {
-          console.error("Error updating visit status:", visitError);
-          throw visitError;
+        if (appointmentError) {
+          console.error("Error updating appointment status:", appointmentError);
+          throw appointmentError;
         }
       }
 
@@ -1087,7 +1349,9 @@ export function OPDManagement({
 
         if (updateError) {
           console.error("Database update error:", updateError);
-          console.error("File uploaded but failed to update record. Please try again.");
+          console.error(
+            "File uploaded but failed to update record. Please try again."
+          );
           return;
         }
 
@@ -1274,54 +1538,65 @@ export function OPDManagement({
     console.log("🚀 handleRequestFollowUp called");
     console.log("📋 selectedPatient:", selectedPatient);
     console.log("📋 opdRecordId:", opdRecordId);
-    
+
     if (!selectedPatient) {
       console.log("Please select a patient first");
       return;
     }
 
     if (!opdRecordId) {
-      console.error("No OPD session found. Please ensure an OPD session is active.");
+      console.error(
+        "No OPD session found. Please ensure an OPD session is active."
+      );
       return;
     }
 
     try {
       const supabase = createAuthenticatedClient();
-      
+
       // Get the first available user profile to use as the requester
       // Since this is just a patient request, any staff member can be the "requested_by"
       const { data: availableProfiles, error: profilesError } = await supabase
-        .from('user_profiles')
-        .select('id')
+        .from("user_profiles")
+        .select("id")
         .limit(1);
-      
-      if (profilesError || !availableProfiles || availableProfiles.length === 0) {
-        console.error('No user profiles found:', profilesError);
-        console.error('System error: No staff profiles found. Please contact administrator.');
+
+      if (
+        profilesError ||
+        !availableProfiles ||
+        availableProfiles.length === 0
+      ) {
+        console.error("No user profiles found:", profilesError);
+        console.error(
+          "System error: No staff profiles found. Please contact administrator."
+        );
         return;
       }
 
       const workflowData = {
         patient_id: selectedPatient.id,
-        request_type: 'follow_up',
-        priority: 'medium',
-        status: 'pending',
+        opd_id: opdRecordId, // Use dedicated opd_id column to link to OPD session
+        request_type: "follow_up",
+        priority: "medium",
+        status: "pending",
         requested_by: availableProfiles[0].id, // Use first available user profile
         request_details: {
-          type: 'follow_up_request',
-          notes: 'Patient requested follow-up appointment',
-          followUpType: 'follow_up',
+          type: "follow_up_request",
+          notes: "Patient requested follow-up appointment",
+          followUpType: "follow_up",
           patientName: selectedPatient.name,
           patientMobile: selectedPatient.mobile,
-          opdId: opdRecordId, // Include OPD ID to link appointment to this OPD session
-        }
+        },
       };
-      
-      console.log("💾 Attempting to save workflow request with data:", workflowData);
-      
+
+      console.log(
+        "💾 Attempting to save workflow request with data:",
+        workflowData
+      );
+
       // Save workflow request to database
       const { data, error } = await supabase
-        .from('workflow_requests')
+        .from("workflow_requests")
         .insert(workflowData)
         .select();
 
@@ -1329,7 +1604,7 @@ export function OPDManagement({
       console.log("❌ Insert response - error:", error);
 
       if (error) {
-        console.error('Error saving workflow request:', error);
+        console.error("Error saving workflow request:", error);
         console.error(`Failed to save follow-up request: ${error.message}`);
         return;
       }
@@ -1337,7 +1612,6 @@ export function OPDManagement({
       console.log("✅ Successfully saved workflow request!");
 
       setShowFollowUpOptions(false);
-      setFollowUpRequested(true);
       setFollowUpData({
         scheduledDate: "",
         followUpType: "follow_up",
@@ -1347,10 +1621,12 @@ export function OPDManagement({
       setShowFollowUpWorkflow(true);
 
       // Show success message
-      console.log('Follow-up request has been sent to the receptionist for scheduling.');
+      console.log(
+        "Follow-up request has been sent to the receptionist for scheduling."
+      );
     } catch (error) {
-      console.error('Error in handleRequestFollowUp:', error);
-      console.error('Failed to save follow-up request. Please try again.');
+      console.error("Error in handleRequestFollowUp:", error);
+      console.error("Failed to save follow-up request. Please try again.");
     }
   };
 
@@ -1361,7 +1637,6 @@ export function OPDManagement({
       return;
     }
     setShowFollowUpOptions(false);
-    setFollowUpRequested(true);
     setFollowUpData({
       scheduledDate:
         new Date(Date.now() + 7 * 24 * 60 * 60 * 1000)
@@ -1410,7 +1685,7 @@ export function OPDManagement({
         await supabase
           .from("opd_records")
           .update({
-                        opd_status: treatmentData.isImmediate
+            opd_status: treatmentData.isImmediate
               ? "treatment_completed"
               : "treatment_planned",
             updated_at: new Date().toISOString(),
@@ -1640,7 +1915,7 @@ export function OPDManagement({
                 </p>
               </div>
 
-              {/* Visit Date */}
+              {/* Appointment Date */}
               <div className="bg-white/60 backdrop-blur-sm rounded-lg p-4 border border-white/50">
                 <div className="flex items-center gap-2 mb-2">
                   <div className="w-4 h-4 text-gray-600">
@@ -1653,7 +1928,7 @@ export function OPDManagement({
                     </svg>
                   </div>
                   <span className="text-xs font-medium text-gray-600 uppercase tracking-wide">
-                    Visit
+                    Appointment
                   </span>
                 </div>
                 <p className="text-lg font-semibold text-gray-900">
@@ -1703,8 +1978,8 @@ export function OPDManagement({
           </div>
         )}
 
-        {/* Initial Patient Consultation - Simplified Design */}
-        {showVisitWorkflow && (
+        {/* Patient Consultation Workflow */}
+        {selectedPatient && consultationAppointment && (
           <Card className="border border-gray-200">
             <CardContent className="p-6">
               {/* Header with Status */}
@@ -1722,7 +1997,7 @@ export function OPDManagement({
                         </p>
                       </div>
                     </div>
-                  ) : visitWorkflowStarted ? (
+                  ) : appointmentWorkflowStarted ? (
                     <div className="flex items-center gap-2">
                       <div className="h-6 w-6 bg-blue-500 rounded-full flex items-center justify-center">
                         <ClockIcon className="h-3 w-3 text-white" />
@@ -1758,9 +2033,9 @@ export function OPDManagement({
                     <CheckCircle2Icon className="h-3 w-3 mr-1" />
                     Completed
                   </Badge>
-                ) : !visitWorkflowStarted ? (
+                ) : !appointmentWorkflowStarted ? (
                   <Button
-                    onClick={handleStartVisitWorkflow}
+                    onClick={handleStartConsultationWorkflow}
                     disabled={userIdLoading}
                     className="bg-blue-600 hover:bg-blue-700 text-white"
                   >
@@ -2306,7 +2581,7 @@ export function OPDManagement({
                       <div className="space-y-1.5 max-h-32 overflow-y-auto">
                         {consultationSummary.investigations
                           .slice(0, 5)
-                           
+
                           .map((inv: any, index: number) => (
                             <div
                               key={index}
@@ -2454,7 +2729,7 @@ export function OPDManagement({
                                   <div className="ml-4 space-y-0.5">
                                     {medications
                                       .slice(0, 4)
-                                       
+
                                       .map((med: any, idx: number) => {
                                         // Try multiple possible medication name fields
                                         const medName =
@@ -2610,41 +2885,42 @@ export function OPDManagement({
               </div>
 
               {/* Progress/Status Information */}
-              {visitWorkflowStarted && !consultationSession?.is_completed && (
-                <div className="mb-6">
-                  <div className="flex items-center justify-between mb-3">
-                    <h4 className="font-medium text-gray-900">
-                      Consultation in Progress
-                    </h4>
-                    <span className="text-sm text-blue-600">
-                      Duration:{" "}
-                      {consultationSession?.started_at
-                        ? Math.round(
-                            (Date.now() -
-                              new Date(
-                                String(consultationSession.started_at)
-                              ).getTime()) /
-                              60000
-                          )
-                        : 0}{" "}
-                      min
-                    </span>
+              {appointmentWorkflowStarted &&
+                !consultationSession?.is_completed && (
+                  <div className="mb-6">
+                    <div className="flex items-center justify-between mb-3">
+                      <h4 className="font-medium text-gray-900">
+                        Consultation in Progress
+                      </h4>
+                      <span className="text-sm text-blue-600">
+                        Duration:{" "}
+                        {consultationSession?.started_at
+                          ? Math.round(
+                              (Date.now() -
+                                new Date(
+                                  String(consultationSession.started_at)
+                                ).getTime()) /
+                                60000
+                            )
+                          : 0}{" "}
+                        min
+                      </span>
+                    </div>
+                    <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
+                      <p className="text-sm text-blue-700 mb-3">
+                        Patient examination and documentation is in progress.
+                      </p>
+                      <Button
+                        size="sm"
+                        onClick={() => setShowFullConsultationWorkflow(true)}
+                        className="bg-blue-600 hover:bg-blue-700 text-white"
+                      >
+                        <StethoscopeIcon className="h-4 w-4 mr-2" />
+                        Continue Consultation
+                      </Button>
+                    </div>
                   </div>
-                  <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-                    <p className="text-sm text-blue-700 mb-3">
-                      Patient examination and documentation is in progress.
-                    </p>
-                    <Button
-                      size="sm"
-                      onClick={() => setShowFullConsultationWorkflow(true)}
-                      className="bg-blue-600 hover:bg-blue-700 text-white"
-                    >
-                      <StethoscopeIcon className="h-4 w-4 mr-2" />
-                      Continue Consultation
-                    </Button>
-                  </div>
-                </div>
-              )}
+                )}
 
               {/* Consultation Summary - Step by Step */}
               {consultationSession?.is_completed && consultationSummary && (
@@ -3603,139 +3879,179 @@ export function OPDManagement({
           </Card>
         )}
 
-        {/* Follow-up Card */}
-        {showVisitWorkflow && selectedPatient && followUpRequested && (
-          <Card className="border border-gray-200 mt-6">
-            <CardContent className="p-6">
-              {/* Header with Status */}
-              <div className="flex items-center justify-between mb-6">
-                <div className="flex items-center gap-3">
-                  {consultationSession?.is_completed ? (
-                    <div className="flex items-center gap-2">
-                      <div className="h-6 w-6 bg-green-600 rounded-full flex items-center justify-center">
-                        <CalendarIcon className="h-3 w-3 text-white" />
+        {/* Individual Follow-up Appointment Workflows */}
+        {selectedPatient &&
+          followUpAppointments.map((followUpApt, index) => (
+            <Card key={followUpApt.id} className="border border-blue-200 mt-6">
+              <CardContent className="p-6">
+                {/* Header with Status - Similar to Consultation */}
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    {followUpApt.status === "completed" ? (
+                      <div className="flex items-center gap-2">
+                        <CheckCircle2Icon className="h-6 w-6 text-green-600" />
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            Follow-up Consultation #{index + 1}
+                          </h3>
+                          <p className="text-sm text-green-600">
+                            Completed Successfully
+                          </p>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {new Date(
+                              followUpApt.scheduled_date
+                            ).toLocaleDateString()}{" "}
+                            at {followUpApt.scheduled_time}
+                          </div>
+                        </div>
                       </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          Follow-up Planning
-                        </h3>
-                        <p className="text-sm text-green-600">
-                          Ready to Schedule
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2">
-                      <div className="h-6 w-6 bg-gray-300 rounded-full flex items-center justify-center">
-                        <CalendarIcon className="h-3 w-3 text-white" />
-                      </div>
-                      <div>
-                        <h3 className="text-lg font-semibold text-gray-900">
-                          Follow-up Planning
-                        </h3>
-                        <p className="text-sm text-gray-600">
-                          Complete consultation first
-                        </p>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                {/* Action Button */}
-                {consultationSession?.is_completed ? (
-                  <Button
-                    onClick={handleFollowUpWorkflow}
-                    className="bg-green-600 hover:bg-green-700 text-white"
-                  >
-                    <CalendarIcon className="h-4 w-4 mr-2" />
-                    Schedule Follow-up
-                  </Button>
-                ) : (
-                  <Badge
-                    variant="secondary"
-                    className="bg-gray-100 text-gray-600 px-3 py-1"
-                  >
-                    <ClockIcon className="h-3 w-3 mr-1" />
-                    Pending Consultation
-                  </Badge>
-                )}
-              </div>
-
-              {/* Follow-up Summary */}
-              <div className="mb-6 bg-green-50 rounded-lg p-4">
-                <div className="flex items-center justify-between mb-3">
-                  <h4 className="font-medium text-gray-900">
-                    Follow-up Information
-                  </h4>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                  {/* Follow-up Instructions */}
-                  <div className="bg-white rounded-lg p-3 border border-green-100">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
-                        <span className="text-green-700 font-semibold text-xs">
-                          1
-                        </span>
-                      </div>
-                      <span className="font-medium text-gray-800 text-sm">
-                        Instructions
-                      </span>
-                    </div>
-                    {consultationSummary?.treatmentPlan?.follow_up_instructions ? (
-                      <div className="text-green-700 text-sm">
-                        {String(consultationSummary.treatmentPlan.follow_up_instructions)}
+                    ) : followUpApt.status === "in_progress" ? (
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-6 bg-blue-500 rounded-full flex items-center justify-center">
+                          <ClockIcon className="h-3 w-3 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            Follow-up Consultation #{index + 1}
+                          </h3>
+                          <p className="text-sm text-blue-600">In Progress</p>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {new Date(
+                              followUpApt.scheduled_date
+                            ).toLocaleDateString()}{" "}
+                            at {followUpApt.scheduled_time}
+                          </div>
+                        </div>
                       </div>
                     ) : (
-                      <div className="text-gray-500 text-sm italic">
-                        No follow-up instructions recorded
+                      <div className="flex items-center gap-2">
+                        <div className="h-6 w-6 bg-blue-300 rounded-full flex items-center justify-center">
+                          <CalendarIcon className="h-3 w-3 text-white" />
+                        </div>
+                        <div>
+                          <h3 className="text-lg font-semibold text-gray-900">
+                            Follow-up Consultation #{index + 1}
+                          </h3>
+                          <p className="text-sm text-blue-600">
+                            Status: {followUpApt.status}
+                          </p>
+                          <div className="text-xs text-gray-500 mt-1">
+                            {new Date(
+                              followUpApt.scheduled_date
+                            ).toLocaleDateString()}{" "}
+                            at {followUpApt.scheduled_time}
+                          </div>
+                        </div>
                       </div>
                     )}
                   </div>
 
-                  {/* Next Appointment Type */}
-                  <div className="bg-white rounded-lg p-3 border border-green-100">
-                    <div className="flex items-center gap-2 mb-2">
-                      <div className="w-5 h-5 bg-green-100 rounded-full flex items-center justify-center">
-                        <span className="text-green-700 font-semibold text-xs">
-                          2
+                  {/* Action Button - Similar to Consultation */}
+                  {followUpApt.status === "completed" ? (
+                    <Badge
+                      variant="secondary"
+                      className="bg-green-100 text-green-600 px-3 py-1"
+                    >
+                      <CheckCircle2Icon className="h-3 w-3 mr-1" />
+                      Completed
+                    </Badge>
+                  ) : activeFollowUpId === followUpApt.id ? (
+                    <Badge
+                      variant="secondary"
+                      className="bg-blue-100 text-blue-800 px-3 py-1"
+                    >
+                      <ClockIcon className="h-3 w-3 mr-1" />
+                      In Progress
+                    </Badge>
+                  ) : followUpApt.status === "confirmed" ? (
+                    <Button
+                      onClick={() => handleStartFollowUpWorkflow(followUpApt)}
+                      disabled={userIdLoading}
+                      className="bg-blue-600 hover:bg-blue-700 text-white"
+                    >
+                      {userIdLoading ? "Loading..." : "Start Follow-up"}
+                    </Button>
+                  ) : (
+                    <Badge
+                      variant="outline"
+                      className="bg-blue-50 text-blue-600 px-3 py-1"
+                    >
+                      <ClockIcon className="h-3 w-3 mr-1" />
+                      Scheduled
+                    </Badge>
+                  )}
+                </div>
+
+                {/* Appointment Details Summary - Similar to Consultation */}
+                <div className="mb-6 bg-blue-50 rounded-lg p-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <h4 className="font-medium text-gray-900">
+                      Follow-up Consultation Details
+                    </h4>
+                    <Badge variant="outline" className="text-blue-700">
+                      {followUpApt.duration || 30}min
+                    </Badge>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    {/* Schedule Info */}
+                    <div className="bg-white rounded-lg p-3 border border-blue-100">
+                      <div className="flex items-center gap-2 mb-2">
+                        <CalendarIcon className="h-4 w-4 text-blue-600" />
+                        <span className="font-medium text-gray-800 text-sm">
+                          Schedule
                         </span>
                       </div>
-                      <span className="font-medium text-gray-800 text-sm">
-                        Appointment Type
-                      </span>
+                      <div className="space-y-1 text-sm">
+                        <div className="text-blue-700">
+                          <strong>Date:</strong>{" "}
+                          {new Date(
+                            followUpApt.scheduled_date
+                          ).toLocaleDateString()}
+                        </div>
+                        <div className="text-blue-700">
+                          <strong>Time:</strong> {followUpApt.scheduled_time}
+                        </div>
+                        <div className="text-blue-700">
+                          <strong>Duration:</strong>{" "}
+                          {followUpApt.duration || 30} minutes
+                        </div>
+                      </div>
                     </div>
-                    <div className="text-green-700 text-sm">
-                      {consultationSession?.is_completed 
-                        ? "Follow-up Consultation" 
-                        : "To be determined"}
+
+                    {/* Notes & Instructions */}
+                    <div className="bg-white rounded-lg p-3 border border-blue-100">
+                      <div className="flex items-center gap-2 mb-2">
+                        <FileTextIcon className="h-4 w-4 text-blue-600" />
+                        <span className="font-medium text-gray-800 text-sm">
+                          Notes
+                        </span>
+                      </div>
+                      <div className="text-sm">
+                        {followUpApt.patient_notes || followUpApt.notes ? (
+                          <div className="text-blue-700">
+                            {followUpApt.patient_notes || followUpApt.notes}
+                          </div>
+                        ) : (
+                          <div className="text-gray-500 italic">
+                            No notes recorded for this follow-up
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Metadata */}
+                  <div className="mt-3 pt-3 border-t border-blue-200">
+                    <div className="text-xs text-gray-400">
+                      <span className="font-medium">Created:</span>{" "}
+                      {new Date(followUpApt.created_at).toLocaleString()}
                     </div>
                   </div>
                 </div>
-
-                {/* Action Summary */}
-                {consultationSession?.is_completed && (
-                  <div className="mt-4 flex items-center justify-between bg-white rounded-lg p-3 border border-green-100">
-                    <div className="flex items-center gap-2">
-                      <CheckCircle2Icon className="h-4 w-4 text-green-600" />
-                      <span className="text-sm text-gray-700">
-                        Patient consultation completed - Ready for follow-up scheduling
-                      </span>
-                    </div>
-                    <Button 
-                      size="sm" 
-                      variant="outline" 
-                      onClick={handleFollowUpWorkflow}
-                      className="text-green-700 border-green-200 hover:bg-green-50"
-                    >
-                      Schedule Now
-                    </Button>
-                  </div>
-                )}
-              </div>
-            </CardContent>
-          </Card>
-        )}
+              </CardContent>
+            </Card>
+          ))}
 
         {/* Add Workflow Section */}
         {selectedPatient && (
@@ -3902,7 +4218,8 @@ export function OPDManagement({
                       Follow-up Options
                     </CardTitle>
                     <CardDescription className="text-green-600 mt-1">
-                      Choose how to handle the follow-up for {selectedPatient?.name}
+                      Choose how to handle the follow-up for{" "}
+                      {selectedPatient?.name}
                     </CardDescription>
                   </div>
                   <Button
@@ -3920,7 +4237,7 @@ export function OPDManagement({
                   <div className="text-sm text-gray-600 mb-6">
                     Select the type of follow-up you want to create:
                   </div>
-                  
+
                   {/* Request Follow-up Option */}
                   <Button
                     variant="outline"
@@ -3932,8 +4249,12 @@ export function OPDManagement({
                         <FileTextIcon className="h-4 w-4 text-blue-600" />
                       </div>
                       <div className="text-left">
-                        <div className="font-medium text-blue-800">Request Follow-up</div>
-                        <div className="text-xs text-blue-600">Patient requests a follow-up appointment</div>
+                        <div className="font-medium text-blue-800">
+                          Request Follow-up
+                        </div>
+                        <div className="text-xs text-blue-600">
+                          Patient requests a follow-up appointment
+                        </div>
                       </div>
                     </div>
                   </Button>
@@ -3949,8 +4270,12 @@ export function OPDManagement({
                         <CalendarIcon className="h-4 w-4 text-green-600" />
                       </div>
                       <div className="text-left">
-                        <div className="font-medium text-green-800">Schedule Follow-up</div>
-                        <div className="text-xs text-green-600">Doctor schedules a follow-up appointment</div>
+                        <div className="font-medium text-green-800">
+                          Schedule Follow-up
+                        </div>
+                        <div className="text-xs text-green-600">
+                          Doctor schedules a follow-up appointment
+                        </div>
                       </div>
                     </div>
                   </Button>
@@ -4287,10 +4612,10 @@ export function OPDManagement({
         )}
 
         {/* Full Consultation Workflow Component */}
-        {showFullConsultationWorkflow && visitId && (
+        {showFullConsultationWorkflow && appointmentId && (
           <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
             <ConsultationWorkflow
-              visitId={visitId}
+              appointmentId={appointmentId}
               onComplete={handleConsultationComplete}
               onCancel={handleConsultationCancel}
             />
@@ -4308,11 +4633,13 @@ export function OPDManagement({
         <div>
           <h1 className="text-3xl font-bold tracking-tight">OPD Management</h1>
           <p className="text-muted-foreground">
-            {userRole === 'doctor' ? 'Your OPD sessions and scheduled consultations' : 'Manage outpatient department consultations'}
+            {userRole === "doctor"
+              ? "Your OPD sessions and scheduled consultations"
+              : "Manage outpatient department consultations"}
           </p>
         </div>
         <div className="flex items-center gap-2">
-          {userRole === 'doctor' && (
+          {userRole === "doctor" && (
             <Badge variant="outline" className="flex items-center gap-1">
               <FileTextIcon className="h-3 w-3" />
               {opdRecords.length} OPD sessions
@@ -4341,67 +4668,82 @@ export function OPDManagement({
                 <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
                 <p className="text-muted-foreground">Loading OPD records...</p>
               </div>
-            ) : opdRecords.map((opd) => (
-              <div
-                key={opd.id}
-                className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-2">
-                    <h3 className="font-semibold">
-                      {opd.patients?.full_name || opd.patient?.full_name || opd.patient?.name || 'Unknown Patient'}
-                    </h3>
-                    <Badge variant="outline" className="text-xs">
-                      {new Date(opd.created_at).toLocaleDateString()}
-                    </Badge>
-                    <Badge variant="outline" className="text-xs">
-                      Token #{opd.token_number}
-                    </Badge>
-                    <Badge
-                      variant={
-                        opd.opd_status === "completed"
-                          ? "default"
-                          : opd.opd_status === "consultation"
-                          ? "secondary"
-                          : "outline"
-                      }
-                    >
-                      {opd.opd_status}
-                    </Badge>
+            ) : (
+              opdRecords.map((opd) => (
+                <div
+                  key={opd.id}
+                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-gray-50"
+                >
+                  <div className="flex-1">
+                    <div className="flex items-center gap-3 mb-2">
+                      <h3 className="font-semibold">
+                        {opd.patients?.full_name ||
+                          opd.patient?.full_name ||
+                          opd.patient?.name ||
+                          "Unknown Patient"}
+                      </h3>
+                      <Badge variant="outline" className="text-xs">
+                        {new Date(opd.created_at).toLocaleDateString()}
+                      </Badge>
+                      <Badge variant="outline" className="text-xs">
+                        Token #{opd.token_number}
+                      </Badge>
+                      <Badge
+                        variant={
+                          opd.opd_status === "completed"
+                            ? "default"
+                            : opd.opd_status === "consultation"
+                            ? "secondary"
+                            : "outline"
+                        }
+                      >
+                        {opd.opd_status}
+                      </Badge>
+                    </div>
+                    <div className="text-sm text-muted-foreground space-y-1">
+                      <div>Status: {opd.opd_status || "Not specified"}</div>
+                      <div>
+                        Phone:{" "}
+                        {opd.patients?.phone ||
+                          opd.patient?.phone ||
+                          "Not specified"}
+                      </div>
+                      <div>
+                        Gender:{" "}
+                        {opd.patients?.gender ||
+                          opd.patient?.gender ||
+                          "Not specified"}
+                      </div>
+                    </div>
                   </div>
-                  <div className="text-sm text-muted-foreground space-y-1">
-                    <div>Status: {opd.opd_status || 'Not specified'}</div>
-                    <div>Phone: {opd.patients?.phone || opd.patient?.phone || 'Not specified'}</div>
-                    <div>Gender: {opd.patients?.gender || opd.patient?.gender || 'Not specified'}</div>
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  {opd.opd_status !== 'completed' && (
-                    <Button 
-                      variant="outline" 
+                  <div className="flex gap-2">
+                    {opd.opd_status !== "completed" && (
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => {
+                          // Navigate to individual OPD record
+                          window.location.href = `/doctor/opd/${opd.id}`;
+                        }}
+                      >
+                        <FileTextIcon className="h-4 w-4 mr-2" />
+                        Continue
+                      </Button>
+                    )}
+                    <Button
+                      variant="ghost"
                       size="sm"
                       onClick={() => {
-                        // Navigate to individual OPD record
+                        // Navigate to view OPD record
                         window.location.href = `/doctor/opd/${opd.id}`;
                       }}
                     >
-                      <FileTextIcon className="h-4 w-4 mr-2" />
-                      Continue
+                      View Details
                     </Button>
-                  )}
-                  <Button 
-                    variant="ghost" 
-                    size="sm"
-                    onClick={() => {
-                      // Navigate to view OPD record
-                      window.location.href = `/doctor/opd/${opd.id}`;
-                    }}
-                  >
-                    View Details
-                  </Button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              ))
+            )}
 
             {!loadingOpdRecords && opdRecords.length === 0 && (
               <div className="text-center py-8 text-muted-foreground">

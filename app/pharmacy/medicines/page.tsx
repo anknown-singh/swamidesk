@@ -240,6 +240,7 @@ export default function MedicinesPage() {
 
   const totalMedicines = medicines.length;
   const activeMedicines = medicines.filter((m) => m.is_active).length;
+  const inactiveMedicines = medicines.filter((m) => !m.is_active).length;
   const lowStockMedicines = medicines.filter(
     (m) => m.stock_quantity <= m.minimum_stock
   ).length;
@@ -279,7 +280,7 @@ export default function MedicinesPage() {
       )}
 
       {/* Statistics */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-5 gap-4">
         <Card>
           <CardContent className="p-4">
             <div className="flex items-center justify-between">
@@ -302,6 +303,20 @@ export default function MedicinesPage() {
                 </p>
               </div>
               <CheckCircle className="h-8 w-8 text-green-600" />
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardContent className="p-4">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-sm text-gray-600">Inactive</p>
+                <p className="text-2xl font-bold text-red-600">
+                  {inactiveMedicines}
+                </p>
+              </div>
+              <ToggleLeft className="h-8 w-8 text-red-600" />
             </div>
           </CardContent>
         </Card>
@@ -350,6 +365,7 @@ export default function MedicinesPage() {
               value={filterStatus}
               onChange={(e) => setFilterStatus(e.target.value)}
               className="p-2 border border-gray-300 rounded-md"
+              title="Filter medicines by status"
             >
               <option value="all">All Medicines</option>
               <option value="active">Active Only</option>
@@ -561,20 +577,30 @@ export default function MedicinesPage() {
           <div className="space-y-4">
             {filteredMedicines.map((medicine) => {
               const stockStatus = getStockStatus(medicine);
-              
+
               return (
-                <div 
-                  key={medicine.id} 
+                <div
+                  key={medicine.id}
                   className="border rounded-lg p-6 hover:shadow-md transition-shadow"
                 >
                   <div className="flex justify-between items-start mb-4">
                     <div className="space-y-2">
                       <div className="flex items-center gap-4">
-                        <h3 className="font-semibold text-lg">{medicine.name}</h3>
-                        <div className={`px-3 py-1 rounded-full text-sm font-medium ${stockStatus.color} flex items-center gap-1`}>
-                          {stockStatus.label === "In Stock" && <CheckCircle className="h-4 w-4" />}
-                          {stockStatus.label === "Low Stock" && <AlertTriangle className="h-4 w-4" />}
-                          {stockStatus.label === "Out of Stock" && <AlertTriangle className="h-4 w-4" />}
+                        <h3 className="font-semibold text-lg">
+                          {medicine.name}
+                        </h3>
+                        <div
+                          className={`px-3 py-1 rounded-full text-sm font-medium ${stockStatus.color} flex items-center gap-1`}
+                        >
+                          {stockStatus.label === "In Stock" && (
+                            <CheckCircle className="h-4 w-4" />
+                          )}
+                          {stockStatus.label === "Low Stock" && (
+                            <AlertTriangle className="h-4 w-4" />
+                          )}
+                          {stockStatus.label === "Out of Stock" && (
+                            <AlertTriangle className="h-4 w-4" />
+                          )}
                           {stockStatus.label}
                         </div>
                         {!medicine.is_active && (
@@ -587,21 +613,29 @@ export default function MedicinesPage() {
                       <div className="flex items-center gap-4 text-sm text-gray-600">
                         <div className="flex items-center gap-1">
                           <Factory className="h-4 w-4" />
-                          {medicine.manufacturer || 'Unknown'}
+                          {medicine.manufacturer || "Unknown"}
                         </div>
                         <div className="flex items-center gap-1">
                           <Building2 className="h-4 w-4" />
-                          {medicine.supplier || 'Unknown supplier'}
+                          {medicine.supplier || "Unknown supplier"}
                         </div>
                         <div className="flex items-center gap-1">
                           <Calendar className="h-4 w-4" />
-                          {medicine.expiry_date ? new Date(medicine.expiry_date).toLocaleDateString() : 'No expiry'}
+                          {medicine.expiry_date
+                            ? new Date(
+                                medicine.expiry_date
+                              ).toLocaleDateString()
+                            : "No expiry"}
                         </div>
                       </div>
                     </div>
                     <div className="text-right">
-                      <div className="text-2xl font-bold text-green-600">₹{medicine.unit_price?.toFixed(2) || "0.00"}</div>
-                      <div className="text-sm text-gray-600">Stock: {medicine.stock_quantity}</div>
+                      <div className="text-2xl font-bold text-green-600">
+                        ₹{medicine.unit_price?.toFixed(2) || "0.00"}
+                      </div>
+                      <div className="text-sm text-gray-600">
+                        Stock: {medicine.stock_quantity}
+                      </div>
                     </div>
                   </div>
 
@@ -610,20 +644,30 @@ export default function MedicinesPage() {
                     <h4 className="font-medium mb-3">Details:</h4>
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                       <div className="bg-gray-50 p-3 rounded">
-                        <div className="text-xs text-gray-600">Generic Name</div>
-                        <div className="font-medium">{medicine.generic_name || 'N/A'}</div>
+                        <div className="text-xs text-gray-600">
+                          Generic Name
+                        </div>
+                        <div className="font-medium">
+                          {medicine.generic_name || "N/A"}
+                        </div>
                       </div>
                       <div className="bg-gray-50 p-3 rounded">
                         <div className="text-xs text-gray-600">Brand</div>
-                        <div className="font-medium">{medicine.brand_name || 'N/A'}</div>
+                        <div className="font-medium">
+                          {medicine.brand_name || "N/A"}
+                        </div>
                       </div>
                       <div className="bg-gray-50 p-3 rounded">
                         <div className="text-xs text-gray-600">Strength</div>
-                        <div className="font-medium">{medicine.strength || 'N/A'}</div>
+                        <div className="font-medium">
+                          {medicine.strength || "N/A"}
+                        </div>
                       </div>
                       <div className="bg-gray-50 p-3 rounded">
                         <div className="text-xs text-gray-600">Form</div>
-                        <div className="font-medium">{medicine.dosage_form || 'N/A'}</div>
+                        <div className="font-medium">
+                          {medicine.dosage_form || "N/A"}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -636,7 +680,9 @@ export default function MedicinesPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          onClick={() => window.location.href = `/pharmacy/medicines/${medicine.id}`}
+                          onClick={() =>
+                            (window.location.href = `/pharmacy/medicines/${medicine.id}`)
+                          }
                         >
                           <Eye className="h-4 w-4 mr-1" />
                           View Details
@@ -645,7 +691,10 @@ export default function MedicinesPage() {
                           size="sm"
                           variant="outline"
                           onClick={() => {
-                            const newStock = prompt("Enter new stock quantity:", medicine.stock_quantity.toString());
+                            const newStock = prompt(
+                              "Enter new stock quantity:",
+                              medicine.stock_quantity.toString()
+                            );
                             if (newStock !== null) {
                               updateStock(medicine.id, parseInt(newStock));
                             }
@@ -657,8 +706,12 @@ export default function MedicinesPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          disabled={!medicine.is_active || medicine.stock_quantity <= 0}
-                          onClick={() => window.location.href = `/pharmacy/dispense?medicine_id=${medicine.id}`}
+                          disabled={
+                            !medicine.is_active || medicine.stock_quantity <= 0
+                          }
+                          onClick={() =>
+                            (window.location.href = `/pharmacy/dispense?medicine_id=${medicine.id}`)
+                          }
                           className="text-green-600 border-green-300 hover:bg-green-50"
                         >
                           <ShoppingCart className="h-4 w-4 mr-1" />
@@ -667,8 +720,17 @@ export default function MedicinesPage() {
                         <Button
                           size="sm"
                           variant="outline"
-                          className={medicine.is_active ? "text-red-600 border-red-300 hover:bg-red-50" : "text-green-600 border-green-300 hover:bg-green-50"}
-                          onClick={() => toggleMedicineStatus(medicine.id, medicine.is_active)}
+                          className={
+                            medicine.is_active
+                              ? "text-red-600 border-red-300 hover:bg-red-50"
+                              : "text-green-600 border-green-300 hover:bg-green-50"
+                          }
+                          onClick={() =>
+                            toggleMedicineStatus(
+                              medicine.id,
+                              medicine.is_active
+                            )
+                          }
                         >
                           {medicine.is_active ? (
                             <>
@@ -691,15 +753,21 @@ export default function MedicinesPage() {
                     <div className="grid grid-cols-3 gap-4 text-sm">
                       <div>
                         <span className="text-gray-600">Current Stock:</span>
-                        <div className="font-medium">{medicine.stock_quantity}</div>
+                        <div className="font-medium">
+                          {medicine.stock_quantity}
+                        </div>
                       </div>
                       <div>
                         <span className="text-gray-600">Minimum Stock:</span>
-                        <div className="font-medium">{medicine.minimum_stock}</div>
+                        <div className="font-medium">
+                          {medicine.minimum_stock}
+                        </div>
                       </div>
                       <div>
                         <span className="text-gray-600">Batch Number:</span>
-                        <div className="font-medium">{medicine.batch_number || 'N/A'}</div>
+                        <div className="font-medium">
+                          {medicine.batch_number || "N/A"}
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -707,18 +775,24 @@ export default function MedicinesPage() {
                   {medicine.description && (
                     <div className="border-t mt-4 pt-4">
                       <div className="text-sm">
-                        <span className="font-medium text-gray-700">Description:</span>
-                        <p className="text-gray-600 mt-1">{medicine.description}</p>
+                        <span className="font-medium text-gray-700">
+                          Description:
+                        </span>
+                        <p className="text-gray-600 mt-1">
+                          {medicine.description}
+                        </p>
                       </div>
                     </div>
                   )}
                 </div>
-              )
+              );
             })}
 
             {filteredMedicines.length === 0 && (
               <div className="text-center py-8 text-gray-500">
-                {searchTerm ? 'No medicines found matching your search' : 'No medicines in database yet'}
+                {searchTerm
+                  ? "No medicines found matching your search"
+                  : "No medicines in database yet"}
               </div>
             )}
           </div>

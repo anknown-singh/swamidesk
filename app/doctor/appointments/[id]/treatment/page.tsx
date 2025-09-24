@@ -132,7 +132,7 @@ export default function DoctorTreatmentWorkflowPage() {
       
       
       // Navigate to treatment workflow
-      router.push(`/doctor/patients/${appointment.patient_id}/treatment?visitId=${visit.id}`)
+      router.push(`/doctor/patients/${appointment.patient_id}/treatment?appointmentId=${appointmentId}`)
       
     } catch (error) {
       console.error('Error starting treatment:', error)

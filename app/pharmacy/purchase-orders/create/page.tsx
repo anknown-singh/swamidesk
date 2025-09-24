@@ -92,7 +92,8 @@ export default function CreatePurchaseOrderPage() {
   const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
   const [showMedicineDropdown, setShowMedicineDropdown] = useState(false);
   const [showGstDropdown, setShowGstDropdown] = useState<number | null>(null);
-  const [showPaymentTermsDropdown, setShowPaymentTermsDropdown] = useState(false);
+  const [showPaymentTermsDropdown, setShowPaymentTermsDropdown] =
+    useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
@@ -107,6 +108,11 @@ export default function CreatePurchaseOrderPage() {
 
   // Order Items
   const [orderItems, setOrderItems] = useState<PurchaseOrderItem[]>([]);
+
+  // Validation states
+  const [itemValidationErrors, setItemValidationErrors] = useState<{
+    [key: number]: { [key: string]: string };
+  }>({});
 
   // Order Details
   const [expectedDeliveryDate, setExpectedDeliveryDate] = useState("");
@@ -132,7 +138,10 @@ export default function CreatePurchaseOrderPage() {
       // Handle suppliers data with fallback
       let suppliersToUse: Supplier[] = [];
       if (suppliersError) {
-        console.warn("Error fetching suppliers, using fallback data:", suppliersError);
+        console.warn(
+          "Error fetching suppliers, using fallback data:",
+          suppliersError
+        );
         // Fallback to mock data if suppliers table doesn't exist or has issues
         suppliersToUse = [
           {
@@ -161,7 +170,9 @@ export default function CreatePurchaseOrderPage() {
         suppliersToUse = suppliersData || [];
         // If no suppliers in database, add some default ones
         if (suppliersToUse.length === 0) {
-          console.log("No suppliers found in database, using default suppliers");
+          console.log(
+            "No suppliers found in database, using default suppliers"
+          );
           suppliersToUse = [
             {
               id: "sup-1",
@@ -221,6 +232,37 @@ export default function CreatePurchaseOrderPage() {
   };
 
   const addMedicineItem = () => {
+    // Check if there are any existing items with validation errors
+    const hasInvalidItems = Object.keys(itemValidationErrors).some(
+      (itemIndex) => {
+        const errors = itemValidationErrors[parseInt(itemIndex)];
+        return errors && Object.keys(errors).some((field) => errors[field]);
+      }
+    );
+
+    if (hasInvalidItems) {
+      setError(
+        "Please fix all validation errors in existing items before adding a new item."
+      );
+      return;
+    }
+
+    // Check if the last item has required fields filled
+    if (orderItems.length > 0) {
+      const lastItem = orderItems[orderItems.length - 1];
+      if (
+        !lastItem.medicine_name.trim() ||
+        !lastItem.company_name.trim() ||
+        lastItem.quantity <= 0 ||
+        lastItem.unit_price <= 0
+      ) {
+        setError(
+          "Please complete the previous item (medicine name, company, quantity, and price are required) before adding a new one."
+        );
+        return;
+      }
+    }
+
     const newItem: PurchaseOrderItem = {
       medicine_name: "",
       salt_content: "",
@@ -234,6 +276,8 @@ export default function CreatePurchaseOrderPage() {
       gst_amount: 0,
       total_price: 0,
     };
+
+    setError(null); // Clear any previous errors
     setOrderItems((prev) => [...prev, newItem]);
   };
 
@@ -266,10 +310,33 @@ export default function CreatePurchaseOrderPage() {
         return item;
       })
     );
+
+    // Validate the field in real-time
+    const error = validateItemField(index, field as string, value);
+    updateItemValidationErrors(index, field as string, error);
   };
 
   const removeOrderItem = (index: number) => {
     setOrderItems((prev) => prev.filter((_, i) => i !== index));
+    // Clear validation errors for the removed item
+    clearItemValidationErrors(index);
+
+    // Reindex validation errors for remaining items
+    setItemValidationErrors((prev) => {
+      const newErrors: { [key: number]: { [key: string]: string } } = {};
+      Object.keys(prev).forEach((key) => {
+        const itemIndex = parseInt(key);
+        if (itemIndex < index) {
+          // Items before removed index keep their index
+          newErrors[itemIndex] = prev[itemIndex];
+        } else if (itemIndex > index) {
+          // Items after removed index get decremented index
+          newErrors[itemIndex - 1] = prev[itemIndex];
+        }
+        // Skip the removed item (itemIndex === index)
+      });
+      return newErrors;
+    });
   };
 
   const selectMedicineForItem = (medicine: Medicine, index: number) => {
@@ -287,7 +354,6 @@ export default function CreatePurchaseOrderPage() {
     setSearchMedicine("");
     setShowMedicineDropdown(false);
   };
-
 
   const calculateOrderTotals = () => {
     const subtotal = orderItems.reduce(
@@ -309,6 +375,172 @@ export default function CreatePurchaseOrderPage() {
     };
   };
 
+  // Validation functions
+  const validateItemField = (
+    itemIndex: number,
+    fieldName: string,
+    value: any
+  ): string => {
+    switch (fieldName) {
+      case "medicine_name":
+        if (!value || value.toString().trim().length === 0) {
+          return "Medicine name is required";
+        }
+        if (value.toString().trim().length < 2) {
+          return "Medicine name must be at least 2 characters";
+        }
+        return "";
+
+      case "company_name":
+        if (!value || value.toString().trim().length === 0) {
+          return "Company name is required";
+        }
+        if (value.toString().trim().length < 2) {
+          return "Company name must be at least 2 characters";
+        }
+        return "";
+
+      case "quantity":
+        const quantity = parseInt(value);
+        if (!quantity || isNaN(quantity)) {
+          return "Quantity is required";
+        }
+        if (quantity < 1) {
+          return "Quantity must be at least 1";
+        }
+        if (quantity > 10000) {
+          return "Quantity cannot exceed 10,000";
+        }
+        return "";
+
+      case "unit_price":
+        const price = parseFloat(value);
+        if (!price && price !== 0) {
+          return "Unit price is required";
+        }
+        if (isNaN(price)) {
+          return "Unit price must be a valid number";
+        }
+        if (price < 0) {
+          return "Unit price cannot be negative";
+        }
+        if (price > 100000) {
+          return "Unit price cannot exceed ₹1,00,000";
+        }
+        return "";
+
+      case "expiry_date":
+        if (value && value.toString().trim().length > 0) {
+          const expiryDate = new Date(value);
+          const today = new Date();
+          today.setHours(0, 0, 0, 0); // Reset time for accurate comparison
+
+          if (isNaN(expiryDate.getTime())) {
+            return "Invalid expiry date format";
+          }
+          if (expiryDate < today) {
+            return "Expiry date cannot be in the past";
+          }
+        }
+        return "";
+
+      case "batch_number":
+        if (value && value.toString().trim().length > 0) {
+          if (value.toString().trim().length < 2) {
+            return "Batch number must be at least 2 characters";
+          }
+          if (value.toString().trim().length > 50) {
+            return "Batch number cannot exceed 50 characters";
+          }
+        }
+        return "";
+
+      case "gst_percentage":
+        const gstPercentage = parseFloat(value);
+        if (isNaN(gstPercentage)) {
+          return "GST percentage must be a valid number";
+        }
+        if (gstPercentage < 0 || gstPercentage > 28) {
+          return "GST percentage must be between 0% and 28%";
+        }
+        return "";
+
+      default:
+        return "";
+    }
+  };
+
+  const validateAllItemFields = (
+    itemIndex: number
+  ): { [key: string]: string } => {
+    const item = orderItems[itemIndex];
+    if (!item) return {};
+
+    const errors: { [key: string]: string } = {};
+
+    // Validate all required and optional fields
+    const fieldsToValidate = [
+      "medicine_name",
+      "company_name",
+      "quantity",
+      "unit_price",
+      "expiry_date",
+      "batch_number",
+      "gst_percentage",
+    ];
+
+    fieldsToValidate.forEach((fieldName) => {
+      const error = validateItemField(
+        itemIndex,
+        fieldName,
+        (item as any)[fieldName]
+      );
+      if (error) {
+        errors[fieldName] = error;
+      }
+    });
+
+    return errors;
+  };
+
+  const updateItemValidationErrors = (
+    itemIndex: number,
+    fieldName: string,
+    error: string
+  ) => {
+    setItemValidationErrors((prev) => ({
+      ...prev,
+      [itemIndex]: {
+        ...prev[itemIndex],
+        [fieldName]: error,
+      },
+    }));
+  };
+
+  const clearItemValidationErrors = (itemIndex: number) => {
+    setItemValidationErrors((prev) => {
+      const newErrors = { ...prev };
+      delete newErrors[itemIndex];
+      return newErrors;
+    });
+  };
+
+  // Helper function to get validation styling classes
+  const getFieldValidationClass = (
+    itemIndex: number,
+    fieldName: string
+  ): string => {
+    const hasError = itemValidationErrors[itemIndex]?.[fieldName];
+    return hasError
+      ? "border-red-500 focus:border-red-500 focus:ring-red-200"
+      : "";
+  };
+
+  // Helper function to get field error message
+  const getFieldError = (itemIndex: number, fieldName: string): string => {
+    return itemValidationErrors[itemIndex]?.[fieldName] || "";
+  };
+
   const filteredSuppliers = suppliers.filter(
     (supplier) =>
       supplier.name.toLowerCase().includes(searchSupplier.toLowerCase()) ||
@@ -317,7 +549,9 @@ export default function CreatePurchaseOrderPage() {
 
   const filteredMedicines = medicines.filter(
     (medicine) =>
-      medicine.generic_name.toLowerCase().includes(searchMedicine.toLowerCase()) ||
+      medicine.generic_name
+        .toLowerCase()
+        .includes(searchMedicine.toLowerCase()) ||
       medicine.name.toLowerCase().includes(searchMedicine.toLowerCase()) ||
       medicine.generic_name
         ?.toLowerCase()
@@ -375,7 +609,7 @@ export default function CreatePurchaseOrderPage() {
         gst_amount: Number(totals.gstAmount) || 0,
         discount_amount: Number(totals.discountAmount) || 0,
         total_amount: Number(totals.grandTotal) || 0,
-        status: "pending"
+        status: "pending",
       };
 
       // Check if table exists by trying to select from it first
@@ -383,21 +617,27 @@ export default function CreatePurchaseOrderPage() {
         .from("purchase_orders")
         .select("id")
         .limit(1);
-      
+
       if (testError) {
-        if (testError.message.includes('relation "purchase_orders" does not exist')) {
-          setError("Purchase orders table doesn't exist. Please run the database setup script (setup-purchase-orders-table.sql) in your Supabase SQL editor first.");
+        if (
+          testError.message.includes(
+            'relation "purchase_orders" does not exist'
+          )
+        ) {
+          setError(
+            "Purchase orders table doesn't exist. Please run the database setup script (setup-purchase-orders-table.sql) in your Supabase SQL editor first."
+          );
         } else {
           setError(`Database error: ${testError.message}`);
         }
         return;
       }
-      
+
       // Retry logic for handling duplicate order number conflicts
       let purchaseOrder: any = null;
       let retryCount = 0;
       const maxRetries = 5;
-      
+
       while (retryCount < maxRetries) {
         const { data, error: orderError } = await supabase
           .from("purchase_orders")
@@ -411,12 +651,19 @@ export default function CreatePurchaseOrderPage() {
         }
 
         // Check if it's a duplicate key error
-        if (orderError.code === '23505' && orderError.message.includes('order_number')) {
+        if (
+          orderError.code === "23505" &&
+          orderError.message.includes("order_number")
+        ) {
           retryCount++;
-          console.warn(`Order number conflict, retrying... (attempt ${retryCount}/${maxRetries})`);
-          
+          console.warn(
+            `Order number conflict, retrying... (attempt ${retryCount}/${maxRetries})`
+          );
+
           // Add a small random delay to reduce race conditions
-          await new Promise(resolve => setTimeout(resolve, 100 + Math.random() * 200));
+          await new Promise((resolve) =>
+            setTimeout(resolve, 100 + Math.random() * 200)
+          );
           continue;
         }
 
@@ -427,12 +674,14 @@ export default function CreatePurchaseOrderPage() {
       }
 
       if (!purchaseOrder) {
-        setError("Failed to create purchase order after multiple attempts. Please try again.");
+        setError(
+          "Failed to create purchase order after multiple attempts. Please try again."
+        );
         return;
       }
 
       // Create purchase order items
-      const orderItemsData = orderItems.map(item => ({
+      const orderItemsData = orderItems.map((item) => ({
         purchase_order_id: purchaseOrder.id,
         medicine_name: item.medicine_name,
         salt_content: item.salt_content,
@@ -444,7 +693,7 @@ export default function CreatePurchaseOrderPage() {
         scheme_offer: item.scheme_offer || null,
         gst_percentage: item.gst_percentage,
         gst_amount: item.gst_amount,
-        total_price: item.total_price
+        total_price: item.total_price,
       }));
 
       const { error: itemsError } = await supabase
@@ -453,7 +702,9 @@ export default function CreatePurchaseOrderPage() {
 
       if (itemsError) {
         console.error("Error creating purchase order items:", itemsError);
-        throw new Error(`Failed to create purchase order items: ${itemsError.message}`);
+        throw new Error(
+          `Failed to create purchase order items: ${itemsError.message}`
+        );
       }
 
       setSuccess(
@@ -550,11 +801,13 @@ export default function CreatePurchaseOrderPage() {
 
               {supplierInfo.type === "existing" ? (
                 <SearchableDropdown
-                  options={filteredSuppliers.map(supplier => ({
-                    id: supplier.id || '',
+                  options={filteredSuppliers.map((supplier) => ({
+                    id: supplier.id || "",
                     label: supplier.name,
-                    secondaryLabel: `${supplier.contact || ""} • GST: ${supplier.gst_number}`,
-                    data: supplier
+                    secondaryLabel: `${supplier.contact || ""} • GST: ${
+                      supplier.gst_number
+                    }`,
+                    data: supplier,
                   }))}
                   searchValue={searchSupplier}
                   onSearchChange={setSearchSupplier}
@@ -692,27 +945,33 @@ export default function CreatePurchaseOrderPage() {
                           Medicine Name *
                         </label>
                         <SearchableDropdown
-                          options={filteredMedicines.map(medicine => ({
-                            id: medicine.id || '',
+                          options={filteredMedicines.map((medicine) => ({
+                            id: medicine.id || "",
                             label: medicine.name,
-                            secondaryLabel: `${medicine.generic_name} • ${medicine.category || "Generic"}`,
-                            data: medicine
+                            secondaryLabel: `${medicine.generic_name} • ${
+                              medicine.category || "Generic"
+                            }`,
+                            data: medicine,
                           }))}
                           searchValue={item.medicine_name}
                           onSearchChange={(value) => {
                             updateOrderItem(index, "medicine_name", value);
                             setSearchMedicine(value);
                           }}
-                          onSelect={(option) => selectMedicineForItem(option.data, index)}
+                          onSelect={(option) =>
+                            selectMedicineForItem(option.data, index)
+                          }
                           placeholder="Select or type medicine name"
                           maxItems={5}
-                          isOpen={showMedicineDropdown && !!searchMedicine && filteredMedicines.length > 0}
+                          isOpen={
+                            showMedicineDropdown &&
+                            !!searchMedicine &&
+                            filteredMedicines.length > 0
+                          }
                           onOpenChange={setShowMedicineDropdown}
                           renderOption={(option) => (
                             <div>
-                              <div className="font-medium">
-                                {option.label}
-                              </div>
+                              <div className="font-medium">{option.label}</div>
                               <div className="text-xs text-gray-600">
                                 {option.secondaryLabel}
                               </div>
@@ -750,7 +1009,16 @@ export default function CreatePurchaseOrderPage() {
                             )
                           }
                           placeholder="Manufacturer company"
+                          className={getFieldValidationClass(
+                            index,
+                            "company_name"
+                          )}
                         />
+                        {getFieldError(index, "company_name") && (
+                          <p className="text-sm text-red-600 mt-1">
+                            {getFieldError(index, "company_name")}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <label className="text-sm font-medium">
@@ -767,7 +1035,13 @@ export default function CreatePurchaseOrderPage() {
                             )
                           }
                           min="1"
+                          className={getFieldValidationClass(index, "quantity")}
                         />
+                        {getFieldError(index, "quantity") && (
+                          <p className="text-sm text-red-600 mt-1">
+                            {getFieldError(index, "quantity")}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <label className="text-sm font-medium">
@@ -785,24 +1059,41 @@ export default function CreatePurchaseOrderPage() {
                             )
                           }
                           placeholder="0.00"
+                          className={getFieldValidationClass(
+                            index,
+                            "unit_price"
+                          )}
                         />
+                        {getFieldError(index, "unit_price") && (
+                          <p className="text-sm text-red-600 mt-1">
+                            {getFieldError(index, "unit_price")}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <label className="text-sm font-medium">GST %</label>
                         <SearchableDropdown
                           options={[
-                            { id: '0', label: '0%', data: 0 },
-                            { id: '5', label: '5%', data: 5 },
-                            { id: '12', label: '12%', data: 12 },
-                            { id: '18', label: '18%', data: 18 },
-                            { id: '28', label: '28%', data: 28 },
+                            { id: "0", label: "0%", data: 0 },
+                            { id: "5", label: "5%", data: 5 },
+                            { id: "12", label: "12%", data: 12 },
+                            { id: "18", label: "18%", data: 18 },
+                            { id: "28", label: "28%", data: 28 },
                           ]}
                           searchValue={`${item.gst_percentage}%`}
                           onSearchChange={() => {}} // Read-only dropdown
-                          onSelect={(option) => updateOrderItem(index, "gst_percentage", option.data)}
+                          onSelect={(option) =>
+                            updateOrderItem(
+                              index,
+                              "gst_percentage",
+                              option.data
+                            )
+                          }
                           placeholder="Select GST %"
                           isOpen={showGstDropdown === index}
-                          onOpenChange={(open) => setShowGstDropdown(open ? index : null)}
+                          onOpenChange={(open) =>
+                            setShowGstDropdown(open ? index : null)
+                          }
                           className="w-full"
                         />
                       </div>
@@ -820,7 +1111,16 @@ export default function CreatePurchaseOrderPage() {
                             )
                           }
                           placeholder="Batch number"
+                          className={getFieldValidationClass(
+                            index,
+                            "batch_number"
+                          )}
                         />
+                        {getFieldError(index, "batch_number") && (
+                          <p className="text-sm text-red-600 mt-1">
+                            {getFieldError(index, "batch_number")}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <label className="text-sm font-medium">
@@ -836,7 +1136,16 @@ export default function CreatePurchaseOrderPage() {
                               e.target.value
                             )
                           }
+                          className={getFieldValidationClass(
+                            index,
+                            "expiry_date"
+                          )}
                         />
+                        {getFieldError(index, "expiry_date") && (
+                          <p className="text-sm text-red-600 mt-1">
+                            {getFieldError(index, "expiry_date")}
+                          </p>
+                        )}
                       </div>
                       <div>
                         <label className="text-sm font-medium">
@@ -875,8 +1184,8 @@ export default function CreatePurchaseOrderPage() {
 
                 {orderItems.length === 0 && (
                   <div className="text-center py-8 text-gray-500">
-                    Click &quot;Add Item&quot; to start adding medicines to your purchase
-                    order
+                    Click &quot;Add Item&quot; to start adding medicines to your
+                    purchase order
                   </div>
                 )}
               </div>
@@ -911,19 +1220,32 @@ export default function CreatePurchaseOrderPage() {
                   <label className="text-sm font-medium">Payment Terms</label>
                   <SearchableDropdown
                     options={[
-                      { id: 'immediate', label: 'Immediate Payment', data: 'immediate' },
-                      { id: '15_days', label: 'Net 15 Days', data: '15_days' },
-                      { id: '30_days', label: 'Net 30 Days', data: '30_days' },
-                      { id: '45_days', label: 'Net 45 Days', data: '45_days' },
-                      { id: '60_days', label: 'Net 60 Days', data: '60_days' },
-                      { id: '90_days', label: 'Net 90 Days', data: '90_days' },
+                      {
+                        id: "immediate",
+                        label: "Immediate Payment",
+                        data: "immediate",
+                      },
+                      { id: "15_days", label: "Net 15 Days", data: "15_days" },
+                      { id: "30_days", label: "Net 30 Days", data: "30_days" },
+                      { id: "45_days", label: "Net 45 Days", data: "45_days" },
+                      { id: "60_days", label: "Net 60 Days", data: "60_days" },
+                      { id: "90_days", label: "Net 90 Days", data: "90_days" },
                     ]}
-                    searchValue={paymentTerms === 'immediate' ? 'Immediate Payment' : 
-                      paymentTerms === '15_days' ? 'Net 15 Days' :
-                      paymentTerms === '30_days' ? 'Net 30 Days' :
-                      paymentTerms === '45_days' ? 'Net 45 Days' :
-                      paymentTerms === '60_days' ? 'Net 60 Days' :
-                      paymentTerms === '90_days' ? 'Net 90 Days' : ''}
+                    searchValue={
+                      paymentTerms === "immediate"
+                        ? "Immediate Payment"
+                        : paymentTerms === "15_days"
+                        ? "Net 15 Days"
+                        : paymentTerms === "30_days"
+                        ? "Net 30 Days"
+                        : paymentTerms === "45_days"
+                        ? "Net 45 Days"
+                        : paymentTerms === "60_days"
+                        ? "Net 60 Days"
+                        : paymentTerms === "90_days"
+                        ? "Net 90 Days"
+                        : ""
+                    }
                     onSearchChange={() => {}} // Read-only dropdown
                     onSelect={(option) => setPaymentTerms(option.data)}
                     placeholder="Select Payment Terms"

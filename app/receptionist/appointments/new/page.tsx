@@ -42,7 +42,7 @@ export default function NewAppointmentPage() {
   const workflowRequestId = searchParams.get("workflowRequestId");
   const preFilledNotes = searchParams.get("notes");
   const preFilledPriority = searchParams.get("priority") === "true";
-  const opdId = searchParams.get("opdId");
+  const opdId = searchParams.get("opd_id");
 
   const [isSubmitting, setIsSubmitting] = useState(false);
 

@@ -18,8 +18,8 @@ export interface PharmacyNotification {
   title: string
   message: string
   data: any
-  recipient_id?: string
-  recipient_role?: string
+  user_id?: string
+  role?: string
   created_at: string
   read_at?: string
   action_url?: string
@@ -79,6 +79,10 @@ export function usePharmacyNotifications({
   const audioRef = useRef<HTMLAudioElement | null>(null)
   const toastQueueRef = useRef<Set<string>>(new Set()) // Prevent duplicate toasts
   const loadingRef = useRef(false) // Prevent concurrent API calls
+  const retryTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  const retryCountRef = useRef(0)
+  const maxRetries = 5
+  const baseRetryDelay = 1000 // 1 second
 
   // Priority weight for filtering
   const getPriorityWeight = (priority: NotificationPriority): number => {
@@ -127,9 +131,9 @@ export function usePharmacyNotifications({
 
       // Filter by pharmacist or role
       if (pharmacistId) {
-        query = query.or(`user_id.eq.${pharmacistId},recipient_role.in.(pharmacist,all)`)
+        query = query.or(`user_id.eq.${pharmacistId},role.in.(pharmacist,all)`)
       } else {
-        query = query.in('recipient_role', ['pharmacist', 'all'])
+        query = query.in('role', ['pharmacist', 'all'])
       }
 
       // Filter by categories
@@ -264,14 +268,22 @@ export function usePharmacyNotifications({
     }
   }, [])
 
-  // Connect to realtime
+  // Connect to realtime with retry logic
   const connectRealtime = useCallback(() => {
     if (channelRef.current || isConnected) return
 
+    // Clear any existing retry timeout
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current)
+      retryTimeoutRef.current = null
+    }
+
     try {
+      console.log('📡 Connecting to pharmacy notifications channel...')
+      
       // Create channel for pharmacy notifications
       const channel = supabase
-        .channel('pharmacy-notifications')
+        .channel(`pharmacy-notifications-${Date.now()}`)
         
         // Listen for new notifications
         .on('postgres_changes', {
@@ -280,7 +292,7 @@ export function usePharmacyNotifications({
           table: 'notifications',
           filter: filterCategories.length > 0 
             ? `category=in.(${filterCategories.join(',')})` 
-            : 'recipient_role=in.(pharmacist,all)'
+            : 'role=in.(pharmacist,all)'
         }, handleNewNotification)
         
         // Listen for notification updates (read status, etc.)
@@ -290,7 +302,7 @@ export function usePharmacyNotifications({
           table: 'notifications',
           filter: filterCategories.length > 0 
             ? `category=in.(${filterCategories.join(',')})` 
-            : 'recipient_role=in.(pharmacist,all)'
+            : 'role=in.(pharmacist,all)'
         }, handleNotificationUpdate)
         
         // Listen for notification deletions
@@ -300,19 +312,41 @@ export function usePharmacyNotifications({
           table: 'notifications',
           filter: filterCategories.length > 0 
             ? `category=in.(${filterCategories.join(',')})` 
-            : 'recipient_role=in.(pharmacist,all)'
+            : 'role=in.(pharmacist,all)'
         }, handleNotificationDelete)
 
-      // Subscribe to channel
+      // Subscribe to channel with enhanced error handling
       channel.subscribe((status) => {
         console.log('📡 Pharmacy notifications channel status:', status)
-        setIsConnected(status === 'SUBSCRIBED')
         
-        if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
-          setError('Realtime connection failed')
-          setIsConnected(false)
-        } else if (status === 'SUBSCRIBED') {
+        if (status === 'SUBSCRIBED') {
+          setIsConnected(true)
           setError(null)
+          retryCountRef.current = 0 // Reset retry counter on success
+          console.log('✅ Successfully connected to pharmacy notifications')
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          setIsConnected(false)
+          
+          // Implement exponential backoff retry
+          if (retryCountRef.current < maxRetries) {
+            const delay = baseRetryDelay * Math.pow(2, retryCountRef.current)
+            retryCountRef.current++
+            
+            console.log(`⚠️ Connection failed (${status}), retrying in ${delay}ms (attempt ${retryCountRef.current}/${maxRetries})`)
+            setError(`Connection failed, retrying... (${retryCountRef.current}/${maxRetries})`)
+            
+            retryTimeoutRef.current = setTimeout(() => {
+              // Clean up current channel first
+              if (channelRef.current) {
+                supabase.removeChannel(channelRef.current)
+                channelRef.current = null
+              }
+              connectRealtime() // Retry connection
+            }, delay)
+          } else {
+            setError('Unable to connect to notifications. Please refresh the page.')
+            console.error('❌ Max retries reached, giving up connection attempts')
+          }
         }
       })
 
@@ -321,16 +355,27 @@ export function usePharmacyNotifications({
     } catch (err) {
       console.error('Error connecting to realtime:', err)
       setError('Failed to connect to realtime notifications')
+      setIsConnected(false)
     }
-  }, [supabase, isConnected, filterCategories, handleNewNotification, handleNotificationUpdate, handleNotificationDelete])
+  }, [supabase, filterCategories, handleNewNotification, handleNotificationUpdate, handleNotificationDelete]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Disconnect from realtime
   const disconnectRealtime = useCallback(() => {
+    // Clear retry timeout
+    if (retryTimeoutRef.current) {
+      clearTimeout(retryTimeoutRef.current)
+      retryTimeoutRef.current = null
+    }
+    
+    // Remove channel
     if (channelRef.current) {
+      console.log('🔌 Disconnecting from pharmacy notifications channel')
       supabase.removeChannel(channelRef.current)
       channelRef.current = null
     }
+    
     setIsConnected(false)
+    retryCountRef.current = 0
   }, [supabase])
 
   // Mark notification as read
@@ -460,14 +505,22 @@ export function usePharmacyNotifications({
     loadNotifications()
     
     if (autoConnect) {
-      connectRealtime()
+      // Slight delay to ensure proper initialization
+      const timer = setTimeout(() => {
+        connectRealtime()
+      }, 100)
+      
+      return () => {
+        clearTimeout(timer)
+        disconnectRealtime()
+      }
     }
 
     // Cleanup on unmount
     return () => {
       disconnectRealtime()
     }
-  }, [autoConnect]) // Remove unstable function dependencies to prevent infinite loops
+  }, [pharmacistId, autoConnect, loadNotifications, connectRealtime, disconnectRealtime])
 
   return {
     notifications,

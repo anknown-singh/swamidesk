@@ -8,14 +8,14 @@ import { ArrowLeft } from 'lucide-react'
 export default function ConsultationPage() {
   const params = useParams()
   const router = useRouter()
-  const visitId = params.visitId as string
+  const appointmentId = params.appointmentId as string
 
-  if (!visitId) {
+  if (!appointmentId) {
     return (
       <div className="flex items-center justify-center min-h-screen">
         <div className="text-center">
           <h1 className="text-2xl font-bold mb-4">Invalid Consultation</h1>
-          <p className="text-muted-foreground mb-4">No visit ID provided</p>
+          <p className="text-muted-foreground mb-4">No appointment ID provided</p>
           <Button onClick={() => router.push('/doctor/consultations')}>
             <ArrowLeft className="w-4 h-4 mr-2" />
             Back to Consultations
@@ -28,7 +28,7 @@ export default function ConsultationPage() {
   return (
     <div className="min-h-screen bg-background">
       <ConsultationWorkflow 
-        visitId={visitId}
+        appointmentId={appointmentId}
         onComplete={() => {
           router.push('/doctor/consultations?completed=true')
         }}

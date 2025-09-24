@@ -36,6 +36,7 @@ interface WorkflowRequest {
   status: "pending" | "approved" | "rejected" | "completed";
   priority: "low" | "medium" | "high" | "urgent";
   patient_id: string;
+  opd_id?: string;
   doctor_id?: string;
   requested_by: string;
   request_date: string;
@@ -91,6 +92,7 @@ export default function WorkflowRequestsPage() {
           `
           id,
           patient_id,
+          opd_id,
           request_type,
           priority,
           status,
@@ -123,6 +125,7 @@ export default function WorkflowRequestsPage() {
             status: request.status as "pending" | "approved" | "rejected" | "completed",
             priority: request.priority as "low" | "medium" | "high" | "urgent",
             patient_id: request.patient_id,
+            opd_id: request.opd_id,
             doctor_id: request.requested_by, // For now, use requested_by as doctor_id
             requested_by: request.requested_by,
             request_date: request.created_at,
@@ -224,9 +227,6 @@ export default function WorkflowRequestsPage() {
                    request.notes || 
                    "Follow-up appointment from workflow request";
       
-      // Get OPD ID from request_details
-      const opdId = request.request_details?.opdId;
-      
       // Navigate to appointment booking page with patient ID and request details
       const queryParams = new URLSearchParams({
         patientId: request.patient_id,
@@ -236,15 +236,15 @@ export default function WorkflowRequestsPage() {
         priority: request.priority === "high" ? "true" : "false",
       });
       
-      // Add OPD ID if available
-      if (opdId) {
-        queryParams.set('opdId', opdId);
+      // Add OPD ID if available - now using direct opd_id field
+      if (request.opd_id) {
+        queryParams.set('opd_id', request.opd_id);
       }
       
       console.log('=== DEBUG: Navigating to appointment booking ===');
       console.log('Query params:', queryParams.toString());
       console.log('Request object:', request);
-      console.log('OPD ID:', opdId);
+      console.log('OPD ID (from opd_id field):', request.opd_id);
       
       router.push(`/receptionist/appointments/new?${queryParams.toString()}`);
     }
