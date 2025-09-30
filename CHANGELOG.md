@@ -5,6 +5,13 @@ All notable changes to this project will be documented in this file.
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [2.6.1](https://github.com/anknown-singh/swamidesk/compare/v2.6.0...v2.6.1) (2025-09-30)
+
+
+### Bug Fixes
+
+* remove gst from pharmacy invoices ([c0c9fea](https://github.com/anknown-singh/swamidesk/commit/c0c9fea61d0ef7cf8b31d659dd6e5369ad38ffa8))
+
 ## [2.5.2](https://github.com/anknown-singh/swamidesk/compare/v2.5.1...v2.5.2) (2025-09-24)
 
 
