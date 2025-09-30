@@ -469,9 +469,7 @@ export default function CreateSellOrderPage() {
       0
     );
     const discount = parseFloat(createdOrderData.totals.discountAmount);
-    const gstRate = 0.12; // 12% GST
-    const gstAmount = (subtotal - discount) * gstRate;
-    const total = subtotal - discount + gstAmount;
+    const total = subtotal - discount;
 
     return `
       <div style="max-width: 93%; margin: 0; background: white; border: 1px solid #e5e7eb; border-radius: 8px; overflow: hidden; position: relative;">
@@ -621,10 +619,6 @@ export default function CreateSellOrderPage() {
                 `
                     : ""
                 }
-                <div style="display: flex; justify-content: space-between; color: #6b7280; margin-bottom: 8px;">
-                  <span>GST (12%):</span>
-                  <span>₹${gstAmount.toFixed(2)}</span>
-                </div>
                 <div style="border-top: 1px solid #e5e7eb; padding-top: 8px;">
                   <div style="display: flex; justify-content: space-between; font-weight: bold; color: #111827;">
                     <span>TOTAL:</span>
