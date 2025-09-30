@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useRouter } from 'next/navigation'
 import { createClient } from '@/lib/supabase/client'
 import { inventoryManager } from '@/lib/pharmacy/inventory-manager'
 import { Button } from '@/components/ui/button'
@@ -59,6 +60,7 @@ interface SellOrderItem {
 
 
 export default function SellOrdersPage() {
+  const router = useRouter()
   const [sellOrders, setSellOrders] = useState<SellOrder[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
@@ -399,9 +401,20 @@ export default function SellOrdersPage() {
                           </>
                         )}
                         {(order.status === 'delivered' || order.status === 'shipped') && (
-                          <div className="text-xs text-green-600 mt-1">
-                            ✅ Dispensed & Inventory Updated
-                          </div>
+                          <>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              onClick={() => router.push(`/pharmacy/invoices/${order.id}`)}
+                              className="text-blue-600 border-blue-600 hover:bg-blue-50"
+                            >
+                              <FileText className="h-3 w-3 mr-1" />
+                              Show Invoice
+                            </Button>
+                            <div className="text-xs text-green-600 mt-1">
+                              ✅ Dispensed & Inventory Updated
+                            </div>
+                          </>
                         )}
                       </div>
                     </div>
@@ -447,7 +460,7 @@ export default function SellOrdersPage() {
                       </div>
                       <div>
                         <span className="text-gray-600">GST:</span>
-                        <div className="font-medium">₹{order.gst_amount.toFixed(2)}</div>
+                        <div className="font-medium">₹{((order.subtotal - (order.discount_amount || 0)) * 0.12).toFixed(2)}</div>
                       </div>
                       <div>
                         <span className="text-gray-600">Total:</span>

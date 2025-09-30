@@ -41,11 +41,18 @@ export class InventoryManager {
   // Update stock when purchase order is received
   async processPurchaseOrder(orderId: string, items: Array<{
     medicine_name: string
+    salt_content?: string
+    company_name?: string
+    unit_category?: string
+    purchase_unit?: string
+    sale_unit?: string
+    units_per_purchase_pack?: number
     quantity: number
     unit_price: number
+    mrp?: number
     batch_number?: string
     expiry_date?: string
-    company_name?: string
+    scheme_offer?: string
     supplier_name?: string
   }>) {
     try {
@@ -66,6 +73,30 @@ export class InventoryManager {
             updated_at: new Date().toISOString()
           }
 
+          // Update MRP if provided
+          if (item.mrp !== undefined && item.mrp > 0) {
+            updateData.mrp = item.mrp
+          }
+
+          // Update unit information if provided
+          if (item.unit_category) {
+            updateData.unit_category = item.unit_category
+          }
+          if (item.purchase_unit) {
+            updateData.purchase_unit = item.purchase_unit
+          }
+          if (item.sale_unit) {
+            updateData.sale_unit = item.sale_unit
+          }
+          if (item.units_per_purchase_pack !== undefined && item.units_per_purchase_pack > 0) {
+            updateData.units_per_purchase_pack = item.units_per_purchase_pack
+          }
+
+          // Update strength with salt content if provided
+          if (item.salt_content) {
+            updateData.strength = item.salt_content
+          }
+
           // Note: supplier info is tracked in purchase_orders, not in medicines table
 
           // Update batch/expiry if this is newer information
@@ -82,6 +113,11 @@ export class InventoryManager {
             .eq('id', medicine.id)
 
           // Create inventory transaction record
+          const transactionNotes = `Purchase order received: ${item.medicine_name}`
+          const schemeInfo = item.scheme_offer && item.scheme_offer !== 'No offer' && item.scheme_offer !== ''
+            ? ` | Scheme: ${item.scheme_offer}`
+            : ''
+
           await this.createInventoryTransaction({
             medicine_id: medicine.id,
             transaction_type: 'purchase',
@@ -90,7 +126,7 @@ export class InventoryManager {
             batch_number: item.batch_number,
             expiry_date: item.expiry_date,
             reference_id: orderId,
-            notes: `Purchase order received: ${item.medicine_name}`
+            notes: `${transactionNotes}${schemeInfo}`
           })
 
           console.log(`✅ Updated stock for ${item.medicine_name}: +${item.quantity} = ${newStock}`)
@@ -178,11 +214,18 @@ export class InventoryManager {
   // Find existing medicine or create new one
   private async findOrCreateMedicine(item: {
     medicine_name: string
-    unit_price: number
+    salt_content?: string
     company_name?: string
-    supplier_name?: string
+    unit_category?: string
+    purchase_unit?: string
+    sale_unit?: string
+    units_per_purchase_pack?: number
+    unit_price: number
+    mrp?: number
     batch_number?: string
     expiry_date?: string
+    scheme_offer?: string
+    supplier_name?: string
   }) {
     try {
       // First try to find existing medicine
@@ -203,8 +246,14 @@ export class InventoryManager {
           name: item.medicine_name,
           manufacturer: item.company_name || 'Unknown',
           category: 'General',
+          unit_category: item.unit_category || 'SINGLE_UNIT',
+          purchase_unit: item.purchase_unit || 'piece',
+          sale_unit: item.sale_unit || 'piece',
+          units_per_purchase_pack: item.units_per_purchase_pack || 1,
           dosage_form: 'Unknown',
+          strength: item.salt_content || null,
           unit_price: item.unit_price,
+          mrp: item.mrp || 0,
           stock_quantity: 0,
           minimum_stock: 10,
           batch_number: item.batch_number || null,

@@ -63,8 +63,14 @@ interface PurchaseOrderItem {
   medicine_name: string;
   salt_content: string;
   company_name: string;
+  unit_category: 'TABLET_STRIP' | 'SUPPLY_PACK' | 'SINGLE_UNIT';
+  purchase_unit: string;
+  sale_unit: string;
+  units_per_purchase_pack: number;
   quantity: number;
   unit_price: number;
+  mrp: number;
+  total_sale_units: number;
   batch_number: string;
   expiry_date: string;
   scheme_offer: string;
@@ -267,8 +273,14 @@ export default function CreatePurchaseOrderPage() {
       medicine_name: "",
       salt_content: "",
       company_name: "",
+      unit_category: 'SINGLE_UNIT',
+      purchase_unit: 'piece',
+      sale_unit: 'piece',
+      units_per_purchase_pack: 1,
       quantity: 1,
       unit_price: 0,
+      mrp: 0,
+      total_sale_units: 1,
       batch_number: "",
       expiry_date: "",
       scheme_offer: "",
@@ -286,22 +298,55 @@ export default function CreatePurchaseOrderPage() {
     field: keyof PurchaseOrderItem,
     value: any
   ) => {
+    // Debug log for MRP updates
+    if (field === 'mrp') {
+      console.log(`Updating MRP for item ${index}: ${value}`);
+    }
+
     setOrderItems((prev) =>
       prev.map((item, i) => {
         if (i === index) {
           const updatedItem = { ...item, [field]: value };
 
-          // Recalculate totals when quantity, unit_price, or gst_percentage changes
+          // Update default values when category changes
+          if (field === "unit_category") {
+            switch (value) {
+              case 'TABLET_STRIP':
+                updatedItem.purchase_unit = 'strip';
+                updatedItem.sale_unit = 'tablet';
+                updatedItem.units_per_purchase_pack = 10;
+                break;
+              case 'SUPPLY_PACK':
+                updatedItem.purchase_unit = 'pack';
+                updatedItem.sale_unit = 'piece';
+                updatedItem.units_per_purchase_pack = 20;
+                break;
+              case 'SINGLE_UNIT':
+                updatedItem.purchase_unit = 'piece';
+                updatedItem.sale_unit = 'piece';
+                updatedItem.units_per_purchase_pack = 1;
+                break;
+            }
+          }
+
+          // Recalculate totals and conversions when relevant fields change
           if (
             field === "quantity" ||
             field === "unit_price" ||
-            field === "gst_percentage"
+            field === "gst_percentage" ||
+            field === "units_per_purchase_pack"
           ) {
+            // Calculate total sale units
+            updatedItem.total_sale_units = updatedItem.quantity * updatedItem.units_per_purchase_pack;
+
+            // Calculate pricing
             const subtotal = updatedItem.quantity * updatedItem.unit_price;
-            const gstAmount = (subtotal * updatedItem.gst_percentage) / 100;
+            const discountAmount = (subtotal * supplierDiscount) / 100;
+            const discountedSubtotal = subtotal - discountAmount;
+            const gstAmount = (discountedSubtotal * updatedItem.gst_percentage) / 100;
             updatedItem.gst_amount = parseFloat(gstAmount.toFixed(2));
             updatedItem.total_price = parseFloat(
-              (subtotal + gstAmount).toFixed(2)
+              (discountedSubtotal + gstAmount).toFixed(2)
             );
           }
 
@@ -355,22 +400,46 @@ export default function CreatePurchaseOrderPage() {
     setShowMedicineDropdown(false);
   };
 
+  const recalculateAllItemTotals = () => {
+    setOrderItems((prev) =>
+      prev.map((item) => {
+        const subtotal = item.quantity * item.unit_price;
+        const discountAmount = (subtotal * supplierDiscount) / 100;
+        const discountedSubtotal = subtotal - discountAmount;
+        const gstAmount = (discountedSubtotal * item.gst_percentage) / 100;
+
+        return {
+          ...item,
+          gst_amount: parseFloat(gstAmount.toFixed(2)),
+          total_price: parseFloat((discountedSubtotal + gstAmount).toFixed(2)),
+        };
+      })
+    );
+  };
+
   const calculateOrderTotals = () => {
     const subtotal = orderItems.reduce(
       (sum, item) => sum + item.quantity * item.unit_price,
       0
     );
+    const discountAmount = (subtotal * supplierDiscount) / 100;
+    const discountedSubtotal = subtotal - discountAmount;
     const gstAmount = orderItems.reduce(
-      (sum, item) => sum + item.gst_amount,
+      (sum, item) => {
+        const itemSubtotal = item.quantity * item.unit_price;
+        const itemDiscountedSubtotal = itemSubtotal - (itemSubtotal * supplierDiscount) / 100;
+        const itemGst = (itemDiscountedSubtotal * item.gst_percentage) / 100;
+        return sum + itemGst;
+      },
       0
     );
-    const discountAmount = (subtotal * supplierDiscount) / 100;
-    const grandTotal = subtotal + gstAmount - discountAmount;
+    const grandTotal = discountedSubtotal + gstAmount;
 
     return {
       subtotal: subtotal.toFixed(2),
-      gstAmount: gstAmount.toFixed(2),
       discountAmount: discountAmount.toFixed(2),
+      discountedSubtotal: discountedSubtotal.toFixed(2),
+      gstAmount: gstAmount.toFixed(2),
       grandTotal: grandTotal.toFixed(2),
     };
   };
@@ -598,11 +667,15 @@ export default function CreatePurchaseOrderPage() {
         return;
       }
 
+      // Get current user info for created_by field
+      const { data: { user } } = await supabase.auth.getUser();
+
       // Create purchase order header (order_number will be auto-generated by database DEFAULT)
       const purchaseOrderData = {
         supplier_name: supplierInfo.name.trim(),
         supplier_contact: supplierInfo.contact || null,
         supplier_address: supplierInfo.address || null,
+        order_date: new Date().toISOString().split('T')[0], // Current date in YYYY-MM-DD format
         expected_delivery_date: expectedDeliveryDate || null,
         notes: notes || null,
         subtotal: Number(totals.subtotal) || 0,
@@ -610,6 +683,7 @@ export default function CreatePurchaseOrderPage() {
         discount_amount: Number(totals.discountAmount) || 0,
         total_amount: Number(totals.grandTotal) || 0,
         status: "pending",
+        created_by: user?.id || null,
       };
 
       // Check if table exists by trying to select from it first
@@ -686,14 +760,20 @@ export default function CreatePurchaseOrderPage() {
         medicine_name: item.medicine_name,
         salt_content: item.salt_content,
         company_name: item.company_name,
+        unit_category: item.unit_category,
+        purchase_unit: item.purchase_unit,
+        sale_unit: item.sale_unit,
+        units_per_purchase_pack: item.units_per_purchase_pack,
         quantity: item.quantity,
         unit_price: item.unit_price,
+        mrp: item.mrp,
         batch_number: item.batch_number || null,
         expiry_date: item.expiry_date || null,
         scheme_offer: item.scheme_offer || null,
         gst_percentage: item.gst_percentage,
         gst_amount: item.gst_amount,
         total_price: item.total_price,
+        received_quantity: 0, // Initialize to 0 for new purchase orders
       }));
 
       const { error: itemsError } = await supabase
@@ -981,6 +1061,26 @@ export default function CreatePurchaseOrderPage() {
                       </div>
                       <div>
                         <label className="text-sm font-medium">
+                          Category *
+                        </label>
+                        <select
+                          value={item.unit_category}
+                          onChange={(e) =>
+                            updateOrderItem(
+                              index,
+                              "unit_category",
+                              e.target.value as 'TABLET_STRIP' | 'SUPPLY_PACK' | 'SINGLE_UNIT'
+                            )
+                          }
+                          className="w-full p-2 border border-gray-300 rounded-md"
+                        >
+                          <option value="SINGLE_UNIT">Single Unit</option>
+                          <option value="TABLET_STRIP">Tablet Strip</option>
+                          <option value="SUPPLY_PACK">Supply Pack</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">
                           Salt/Content
                         </label>
                         <Input
@@ -1043,9 +1143,30 @@ export default function CreatePurchaseOrderPage() {
                           </p>
                         )}
                       </div>
+                      {item.unit_category !== 'SINGLE_UNIT' && (
+                        <div>
+                          <label className="text-sm font-medium">
+                            {item.unit_category === 'TABLET_STRIP' ? 'Tablets per Strip *' : 'Pieces per Pack *'}
+                          </label>
+                          <Input
+                            type="number"
+                            value={item.units_per_purchase_pack}
+                            onChange={(e) =>
+                              updateOrderItem(
+                                index,
+                                "units_per_purchase_pack",
+                                parseInt(e.target.value) || 1
+                              )
+                            }
+                            min="1"
+                            placeholder={item.unit_category === 'TABLET_STRIP' ? 'e.g., 10' : 'e.g., 20'}
+                          />
+                        </div>
+                      )}
                       <div>
                         <label className="text-sm font-medium">
-                          Unit Price *
+                          Unit Price * ({item.unit_category === 'TABLET_STRIP' ? 'per strip' :
+                                        item.unit_category === 'SUPPLY_PACK' ? 'per pack' : 'per piece'})
                         </label>
                         <Input
                           type="number"
@@ -1069,6 +1190,28 @@ export default function CreatePurchaseOrderPage() {
                             {getFieldError(index, "unit_price")}
                           </p>
                         )}
+                      </div>
+                      <div>
+                        <label className="text-sm font-medium">
+                          MRP * ({item.unit_category === 'TABLET_STRIP' ? 'per tablet' :
+                                  item.unit_category === 'SUPPLY_PACK' ? 'per piece' : 'per piece'})
+                        </label>
+                        <Input
+                          type="number"
+                          step="0.01"
+                          value={item.mrp || 0}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Allow empty string for better UX while typing
+                            if (value === '') {
+                              updateOrderItem(index, "mrp", 0);
+                            } else {
+                              const numValue = parseFloat(value);
+                              updateOrderItem(index, "mrp", isNaN(numValue) ? 0 : numValue);
+                            }
+                          }}
+                          placeholder="0.00"
+                        />
                       </div>
                       <div>
                         <label className="text-sm font-medium">GST %</label>
@@ -1165,12 +1308,27 @@ export default function CreatePurchaseOrderPage() {
                       </div>
                     </div>
 
+                    {/* Unit Conversion Display */}
+                    {item.unit_category !== 'SINGLE_UNIT' && (
+                      <div className="bg-blue-50 p-2 rounded-md text-sm">
+                        <span className="text-blue-800 font-medium">
+                          Conversion: {item.quantity} {item.purchase_unit}s × {item.units_per_purchase_pack} {item.sale_unit}s = {item.total_sale_units} {item.sale_unit}s available for sale
+                        </span>
+                      </div>
+                    )}
+
                     <div className="bg-gray-50 p-3 rounded-md flex justify-between items-center">
                       <div className="text-sm">
                         <span className="text-gray-600">
                           Subtotal: ₹
                           {(item.quantity * item.unit_price).toFixed(2)}
                         </span>
+                        {supplierDiscount > 0 && (
+                          <span className="ml-4 text-green-600">
+                            Discount ({supplierDiscount}%): -₹
+                            {((item.quantity * item.unit_price * supplierDiscount) / 100).toFixed(2)}
+                          </span>
+                        )}
                         <span className="ml-4 text-gray-600">
                           GST: ₹{item.gst_amount}
                         </span>
@@ -1265,9 +1423,11 @@ export default function CreatePurchaseOrderPage() {
                     max="20"
                     step="0.1"
                     value={supplierDiscount}
-                    onChange={(e) =>
-                      setSupplierDiscount(parseFloat(e.target.value) || 0)
-                    }
+                    onChange={(e) => {
+                      setSupplierDiscount(parseFloat(e.target.value) || 0);
+                      // Recalculate all item totals when discount changes
+                      setTimeout(() => recalculateAllItemTotals(), 0);
+                    }}
                     className="mt-1"
                   />
                 </div>
@@ -1288,16 +1448,22 @@ export default function CreatePurchaseOrderPage() {
                     <span>Subtotal:</span>
                     <span>₹{totals.subtotal}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span>GST Amount:</span>
-                    <span>₹{totals.gstAmount}</span>
-                  </div>
                   {supplierDiscount > 0 && (
                     <div className="flex justify-between text-green-600">
                       <span>Supplier Discount ({supplierDiscount}%):</span>
                       <span>-₹{totals.discountAmount}</span>
                     </div>
                   )}
+                  {supplierDiscount > 0 && (
+                    <div className="flex justify-between border-b pb-1">
+                      <span>Discounted Subtotal:</span>
+                      <span>₹{totals.discountedSubtotal}</span>
+                    </div>
+                  )}
+                  <div className="flex justify-between">
+                    <span>GST Amount (on discounted amount):</span>
+                    <span>₹{totals.gstAmount}</span>
+                  </div>
                   <div className="flex justify-between font-semibold text-lg pt-2 border-t">
                     <span>Grand Total:</span>
                     <span>₹{totals.grandTotal}</span>

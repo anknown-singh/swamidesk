@@ -13,7 +13,7 @@ CREATE EXTENSION IF NOT EXISTS pgcrypto;
 -- =====================================================
 
 -- Drop all tables in dependency order (reverse of creation order)
-DROP TABLE IF EXISTS billing_items CASCADE;
+DROP TABLE IF EXISTS sell_order_invoice_items CASCADE;
 DROP TABLE IF EXISTS payments CASCADE;
 DROP TABLE IF EXISTS suppliers CASCADE;
 DROP TABLE IF EXISTS notifications CASCADE;
@@ -34,7 +34,7 @@ DROP TABLE IF EXISTS pharmacy_issues CASCADE;
 DROP TABLE IF EXISTS medicine_master CASCADE;
 DROP TABLE IF EXISTS medicines CASCADE;
 DROP TABLE IF EXISTS migration_log CASCADE;
-DROP TABLE IF EXISTS invoices CASCADE;
+DROP TABLE IF EXISTS sell_order_invoices CASCADE;
 DROP TABLE IF EXISTS treatment_plans CASCADE;
 DROP TABLE IF EXISTS prescriptions CASCADE;
 DROP TABLE IF EXISTS services CASCADE;
@@ -263,25 +263,72 @@ CREATE TABLE treatment_plans (
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 8. INVOICES TABLE
-CREATE TABLE invoices (
+-- 8. SELL_ORDERS TABLE
+CREATE TABLE sell_orders (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    patient_id UUID NOT NULL REFERENCES patients(id),
+    order_number VARCHAR(50) UNIQUE NOT NULL,
+    customer_name VARCHAR(255) NOT NULL,
+    customer_contact VARCHAR(255),
+    customer_address TEXT,
+    customer_email VARCHAR(255),
+    sale_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')),
+    subtotal DECIMAL(12,2) NOT NULL DEFAULT 0,
+    total_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
+    discount_amount DECIMAL(12,2) DEFAULT 0,
+    payment_method VARCHAR(50) CHECK (payment_method IN ('cash', 'card', 'upi', 'online', 'credit')),
+    payment_status VARCHAR(20) DEFAULT 'pending' CHECK (payment_status IN ('pending', 'partial', 'completed', 'refunded')),
+    notes TEXT,
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now(),
+    created_by UUID REFERENCES users(id),
+    patient_id UUID REFERENCES patients(id)
+);
+
+-- 9. SELL_ORDER_ITEMS TABLE
+CREATE TABLE sell_order_items (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    sell_order_id UUID NOT NULL REFERENCES sell_orders(id) ON DELETE CASCADE,
+    medicine_name VARCHAR(255) NOT NULL,
+    salt_content VARCHAR(255),
+    company_name VARCHAR(255) NOT NULL,
+    unit_category VARCHAR(20) NOT NULL CHECK (unit_category IN ('TABLET_STRIP', 'SUPPLY_PACK', 'SINGLE_UNIT')),
+    sale_unit VARCHAR(20) NOT NULL,
+    quantity INTEGER NOT NULL CHECK (quantity > 0),
+    mrp DECIMAL(10,2) NOT NULL CHECK (mrp >= 0),
+    batch_number VARCHAR(100),
+    expiry_date DATE,
+    scheme_offer TEXT,
+    total_price DECIMAL(10,2) NOT NULL DEFAULT 0,
+    prescription_id UUID REFERENCES prescriptions(id),
+    created_at TIMESTAMPTZ DEFAULT now(),
+    updated_at TIMESTAMPTZ DEFAULT now()
+);
+
+-- 10. SELL_ORDER_INVOICES TABLE
+CREATE TABLE sell_order_invoices (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    sell_order_id UUID NOT NULL REFERENCES sell_orders(id),
     invoice_number VARCHAR(50) UNIQUE NOT NULL,
-    subtotal DECIMAL(10,2) NOT NULL DEFAULT 0,
-    tax_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
-    discount_amount DECIMAL(10,2) DEFAULT 0,
-    total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    invoice_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    customer_name VARCHAR(255) NOT NULL,
+    customer_contact VARCHAR(255),
+    customer_address TEXT,
+    customer_email VARCHAR(255),
+    subtotal DECIMAL(12,2) NOT NULL DEFAULT 0,
+    discount_amount DECIMAL(12,2) DEFAULT 0,
+    total_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
     payment_status VARCHAR(20) DEFAULT 'pending',
     payment_method VARCHAR(50),
     payment_date DATE,
     notes TEXT,
+    patient_id UUID REFERENCES patients(id),
     created_by UUID REFERENCES users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
 
--- 9. MIGRATION_LOG TABLE
+-- 11. MIGRATION_LOG TABLE
 CREATE TABLE migration_log (
     id SERIAL PRIMARY KEY,
     migration_name VARCHAR(255) UNIQUE NOT NULL,
@@ -298,10 +345,15 @@ CREATE TABLE medicines (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     name VARCHAR(255) NOT NULL,
     category VARCHAR(100) NOT NULL,
+    unit_category VARCHAR(20) NOT NULL DEFAULT 'SINGLE_UNIT' CHECK (unit_category IN ('TABLET_STRIP', 'SUPPLY_PACK', 'SINGLE_UNIT')),
+    purchase_unit VARCHAR(20) NOT NULL DEFAULT 'piece',
+    sale_unit VARCHAR(20) NOT NULL DEFAULT 'piece',
+    units_per_purchase_pack INTEGER NOT NULL DEFAULT 1 CHECK (units_per_purchase_pack > 0),
     manufacturer VARCHAR(200),
     batch_number VARCHAR(100),
     expiry_date DATE,
     unit_price DECIMAL(8,2) NOT NULL DEFAULT 0,
+    mrp DECIMAL(8,2) NOT NULL DEFAULT 0 CHECK (mrp >= 0),
     stock_quantity INTEGER NOT NULL DEFAULT 0,
     minimum_stock INTEGER DEFAULT 10,
     dosage_form VARCHAR(50),
@@ -391,8 +443,14 @@ CREATE TABLE purchase_order_items (
     medicine_name VARCHAR(255) NOT NULL,
     salt_content VARCHAR(255),
     company_name VARCHAR(255) NOT NULL,
+    unit_category VARCHAR(20) NOT NULL DEFAULT 'SINGLE_UNIT' CHECK (unit_category IN ('TABLET_STRIP', 'SUPPLY_PACK', 'SINGLE_UNIT')),
+    purchase_unit VARCHAR(20) NOT NULL DEFAULT 'piece',
+    sale_unit VARCHAR(20) NOT NULL DEFAULT 'piece',
+    units_per_purchase_pack INTEGER NOT NULL DEFAULT 1 CHECK (units_per_purchase_pack > 0),
     quantity INTEGER NOT NULL CHECK (quantity > 0),
     unit_price DECIMAL(10,2) NOT NULL CHECK (unit_price >= 0),
+    mrp DECIMAL(10,2) NOT NULL DEFAULT 0 CHECK (mrp >= 0),
+    total_sale_units INTEGER GENERATED ALWAYS AS (quantity * units_per_purchase_pack) STORED,
     batch_number VARCHAR(100),
     expiry_date DATE,
     scheme_offer TEXT,
@@ -404,50 +462,7 @@ CREATE TABLE purchase_order_items (
     updated_at TIMESTAMPTZ DEFAULT now()
 );
 
--- 15. SELL_ORDERS TABLE
-CREATE TABLE sell_orders (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    order_number VARCHAR(50) UNIQUE NOT NULL,
-    customer_name VARCHAR(255) NOT NULL,
-    customer_contact VARCHAR(255),
-    customer_address TEXT,
-    customer_email VARCHAR(255),
-    sale_date DATE NOT NULL DEFAULT CURRENT_DATE,
-    status VARCHAR(20) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending', 'confirmed', 'shipped', 'delivered', 'cancelled')),
-    subtotal DECIMAL(12,2) NOT NULL DEFAULT 0,
-    gst_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
-    total_amount DECIMAL(12,2) NOT NULL DEFAULT 0,
-    discount_amount DECIMAL(12,2) DEFAULT 0,
-    payment_method VARCHAR(50) CHECK (payment_method IN ('cash', 'card', 'upi', 'online', 'credit')),
-    payment_status VARCHAR(20) DEFAULT 'pending' CHECK (payment_status IN ('pending', 'partial', 'completed', 'refunded')),
-    notes TEXT,
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now(),
-    created_by UUID REFERENCES users(id),
-    patient_id UUID REFERENCES patients(id)
-);
-
--- 16. SELL_ORDER_ITEMS TABLE
-CREATE TABLE sell_order_items (
-    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    sell_order_id UUID NOT NULL REFERENCES sell_orders(id) ON DELETE CASCADE,
-    medicine_name VARCHAR(255) NOT NULL,
-    salt_content VARCHAR(255),
-    company_name VARCHAR(255) NOT NULL,
-    quantity INTEGER NOT NULL CHECK (quantity > 0),
-    unit_price DECIMAL(10,2) NOT NULL CHECK (unit_price >= 0),
-    batch_number VARCHAR(100),
-    expiry_date DATE,
-    scheme_offer TEXT,
-    gst_percentage DECIMAL(5,2) NOT NULL DEFAULT 18.00 CHECK (gst_percentage >= 0 AND gst_percentage <= 100),
-    gst_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
-    total_price DECIMAL(10,2) NOT NULL DEFAULT 0,
-    prescription_id UUID REFERENCES prescriptions(id),
-    created_at TIMESTAMPTZ DEFAULT now(),
-    updated_at TIMESTAMPTZ DEFAULT now()
-);
-
--- 17. INVENTORY TABLE
+-- 15. INVENTORY TABLE
 CREATE TABLE inventory (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
     medicine_id UUID REFERENCES medicines(id),
@@ -714,9 +729,9 @@ CREATE TABLE suppliers (
 );
 
 -- 28. BILLING_ITEMS TABLE
-CREATE TABLE billing_items (
+CREATE TABLE sell_order_invoice_items (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    invoice_id UUID NOT NULL REFERENCES invoices(id),
+    sell_order_invoice_id UUID NOT NULL REFERENCES sell_order_invoices(id),
     service_id UUID REFERENCES services(id),
     description VARCHAR(500) NOT NULL,
     quantity INTEGER NOT NULL DEFAULT 1,
@@ -728,7 +743,7 @@ CREATE TABLE billing_items (
 -- 29. PAYMENTS TABLE
 CREATE TABLE payments (
     id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-    invoice_id UUID NOT NULL REFERENCES invoices(id),
+    sell_order_invoice_id UUID NOT NULL REFERENCES sell_order_invoices(id),
     amount DECIMAL(10,2) NOT NULL,
     payment_method VARCHAR(50) NOT NULL,
     payment_date DATE NOT NULL DEFAULT CURRENT_DATE,
@@ -785,6 +800,35 @@ CREATE TABLE consultation_sessions (
     is_completed BOOLEAN DEFAULT false,
     total_duration_minutes INTEGER,
     consultation_data JSONB DEFAULT '{}',
+    created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
+    updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
+);
+
+-- 33. CONSULTATION_INVOICES TABLE
+CREATE TABLE consultation_invoices (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    appointment_id UUID NOT NULL REFERENCES appointments(id),
+    consultation_session_id UUID REFERENCES consultation_sessions(id),
+    invoice_number VARCHAR(50) UNIQUE NOT NULL,
+    invoice_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    patient_name VARCHAR(255) NOT NULL,
+    patient_contact VARCHAR(255),
+    patient_address TEXT,
+    patient_email VARCHAR(255),
+    doctor_name VARCHAR(255) NOT NULL,
+    doctor_id UUID NOT NULL REFERENCES users(id),
+    department VARCHAR(100) NOT NULL,
+    consultation_fee DECIMAL(8,2) NOT NULL DEFAULT 0,
+    additional_charges DECIMAL(8,2) DEFAULT 0,
+    discount_amount DECIMAL(8,2) DEFAULT 0,
+    total_amount DECIMAL(10,2) NOT NULL DEFAULT 0,
+    payment_status VARCHAR(20) DEFAULT 'pending',
+    payment_method VARCHAR(50),
+    payment_date DATE,
+    consultation_date DATE NOT NULL,
+    consultation_duration INTEGER, -- in minutes
+    notes TEXT,
+    created_by UUID REFERENCES users(id),
     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
 );
@@ -1082,8 +1126,13 @@ CREATE TRIGGER trigger_update_treatment_plans_updated_at
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
-CREATE TRIGGER trigger_update_invoices_updated_at
-    BEFORE UPDATE ON invoices
+CREATE TRIGGER trigger_update_sell_order_invoices_updated_at
+    BEFORE UPDATE ON sell_order_invoices
+    FOR EACH ROW
+    EXECUTE FUNCTION update_updated_at_column();
+
+CREATE TRIGGER trigger_update_consultation_invoices_updated_at
+    BEFORE UPDATE ON consultation_invoices
     FOR EACH ROW
     EXECUTE FUNCTION update_updated_at_column();
 
@@ -1176,7 +1225,15 @@ CREATE INDEX idx_prescriptions_medicine_id ON prescriptions(medicine_id);
 
 CREATE INDEX idx_treatment_plans_patient_id ON treatment_plans(patient_id);
 
-CREATE INDEX idx_invoices_patient_id ON invoices(patient_id);
+CREATE INDEX idx_sell_order_invoices_patient_id ON sell_order_invoices(patient_id);
+CREATE INDEX idx_sell_order_invoices_sell_order_id ON sell_order_invoices(sell_order_id);
+
+-- Consultation invoice indexes
+CREATE INDEX idx_consultation_invoices_appointment_id ON consultation_invoices(appointment_id);
+CREATE INDEX idx_consultation_invoices_consultation_session_id ON consultation_invoices(consultation_session_id);
+CREATE INDEX idx_consultation_invoices_doctor_id ON consultation_invoices(doctor_id);
+CREATE INDEX idx_consultation_invoices_invoice_date ON consultation_invoices(invoice_date);
+CREATE INDEX idx_consultation_invoices_payment_status ON consultation_invoices(payment_status);
 
 -- Medicine and pharmacy indexes
 CREATE INDEX idx_medicines_name ON medicines(name);
@@ -1257,8 +1314,8 @@ CREATE INDEX idx_notifications_created_at ON notifications(created_at);
 CREATE INDEX idx_notifications_priority ON notifications(priority);
 CREATE INDEX idx_notifications_is_read ON notifications(is_read);
 
-CREATE INDEX idx_billing_items_invoice_id ON billing_items(invoice_id);
-CREATE INDEX idx_payments_invoice_id ON payments(invoice_id);
+CREATE INDEX idx_sell_order_invoice_items_invoice_id ON sell_order_invoice_items(sell_order_invoice_id);
+CREATE INDEX idx_payments_sell_order_invoice_id ON payments(sell_order_invoice_id);
 
 -- =====================================================
 -- STEP 12: Grant Permissions
@@ -1271,7 +1328,8 @@ ALTER TABLE patients DISABLE ROW LEVEL SECURITY;
 ALTER TABLE services DISABLE ROW LEVEL SECURITY;
 ALTER TABLE prescriptions DISABLE ROW LEVEL SECURITY;
 ALTER TABLE treatment_plans DISABLE ROW LEVEL SECURITY;
-ALTER TABLE invoices DISABLE ROW LEVEL SECURITY;
+ALTER TABLE sell_order_invoices DISABLE ROW LEVEL SECURITY;
+ALTER TABLE sell_order_invoice_items DISABLE ROW LEVEL SECURITY;
 ALTER TABLE medicines DISABLE ROW LEVEL SECURITY;
 ALTER TABLE medicine_master DISABLE ROW LEVEL SECURITY;
 ALTER TABLE pharmacy_issues DISABLE ROW LEVEL SECURITY;
@@ -1279,6 +1337,8 @@ ALTER TABLE purchase_orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE purchase_order_items DISABLE ROW LEVEL SECURITY;
 ALTER TABLE sell_orders DISABLE ROW LEVEL SECURITY;
 ALTER TABLE sell_order_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE sell_order_invoices DISABLE ROW LEVEL SECURITY;
+ALTER TABLE consultation_invoices DISABLE ROW LEVEL SECURITY;
 ALTER TABLE inventory DISABLE ROW LEVEL SECURITY;
 ALTER TABLE appointments DISABLE ROW LEVEL SECURITY;
 ALTER TABLE doctor_availability DISABLE ROW LEVEL SECURITY;
@@ -1290,8 +1350,125 @@ ALTER TABLE visit_services DISABLE ROW LEVEL SECURITY;
 ALTER TABLE opd_records DISABLE ROW LEVEL SECURITY;
 ALTER TABLE notifications DISABLE ROW LEVEL SECURITY;
 ALTER TABLE suppliers DISABLE ROW LEVEL SECURITY;
-ALTER TABLE billing_items DISABLE ROW LEVEL SECURITY;
+ALTER TABLE sell_order_invoice_items DISABLE ROW LEVEL SECURITY;
 ALTER TABLE payments DISABLE ROW LEVEL SECURITY;
+
+-- =====================================================
+-- STEP 11.5: Create Dental-Specific Tables
+-- =====================================================
+
+-- Dental chart data for storing tooth conditions and treatments
+CREATE TABLE dental_charts (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+  consultation_id UUID REFERENCES consultation_sessions(id) ON DELETE SET NULL,
+  created_by UUID NOT NULL REFERENCES user_profiles(id),
+  chart_data JSONB NOT NULL DEFAULT '{}', -- Stores all tooth conditions and notes
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Individual tooth records for detailed tracking
+CREATE TABLE dental_teeth (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  chart_id UUID NOT NULL REFERENCES dental_charts(id) ON DELETE CASCADE,
+  tooth_number INTEGER NOT NULL CHECK (tooth_number >= 1 AND tooth_number <= 32),
+  quadrant INTEGER NOT NULL CHECK (quadrant >= 1 AND quadrant <= 4),
+  position INTEGER NOT NULL CHECK (position >= 1 AND position <= 8),
+  condition VARCHAR(50) NOT NULL DEFAULT 'healthy',
+  notes TEXT,
+  procedures JSONB DEFAULT '[]',
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW(),
+
+  -- Ensure unique tooth per chart
+  UNIQUE(chart_id, tooth_number)
+);
+
+-- Dental procedures and treatments
+CREATE TABLE dental_procedures (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+  consultation_id UUID REFERENCES consultation_sessions(id) ON DELETE SET NULL,
+  tooth_numbers INTEGER[] DEFAULT '{}', -- Array of affected tooth numbers
+  procedure_type VARCHAR(100) NOT NULL,
+  procedure_name VARCHAR(200) NOT NULL,
+  description TEXT,
+  cost DECIMAL(10,2),
+  status VARCHAR(50) DEFAULT 'planned', -- planned, in_progress, completed, cancelled
+  scheduled_date DATE,
+  completed_date DATE,
+  performed_by UUID REFERENCES user_profiles(id),
+  notes TEXT,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Dental treatment plans
+CREATE TABLE dental_treatment_plans (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+  consultation_id UUID REFERENCES consultation_sessions(id) ON DELETE SET NULL,
+  created_by UUID NOT NULL REFERENCES user_profiles(id),
+  plan_name VARCHAR(200) NOT NULL,
+  total_cost DECIMAL(12,2) DEFAULT 0,
+  estimated_duration VARCHAR(100), -- e.g., "6 months", "3 visits"
+  priority VARCHAR(20) DEFAULT 'normal', -- urgent, high, normal, low
+  status VARCHAR(50) DEFAULT 'active', -- active, completed, cancelled, on_hold
+  start_date DATE,
+  target_completion_date DATE,
+  actual_completion_date DATE,
+  notes TEXT,
+  procedures JSONB DEFAULT '[]', -- Array of procedure IDs and details
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Dental X-rays and images
+CREATE TABLE dental_images (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  patient_id UUID NOT NULL REFERENCES patients(id) ON DELETE CASCADE,
+  consultation_id UUID REFERENCES consultation_sessions(id) ON DELETE SET NULL,
+  image_type VARCHAR(50) NOT NULL, -- xray, intraoral_photo, extraoral_photo, panoramic, etc.
+  file_path VARCHAR(500) NOT NULL,
+  file_name VARCHAR(200) NOT NULL,
+  file_size INTEGER,
+  mime_type VARCHAR(100),
+  tooth_numbers INTEGER[] DEFAULT '{}', -- Array of related tooth numbers
+  description TEXT,
+  taken_date DATE DEFAULT CURRENT_DATE,
+  taken_by UUID REFERENCES user_profiles(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- Add dental specialty to consultation sessions (update existing enum if needed)
+DO $$ BEGIN
+    IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'specialty_type') THEN
+        CREATE TYPE specialty_type AS ENUM ('general-medicine', 'dental', 'ent', 'facial-plastic');
+    ELSE
+        -- Add dental to existing enum
+        ALTER TYPE specialty_type ADD VALUE IF NOT EXISTS 'dental';
+    END IF;
+END $$;
+
+-- Add indexes for dental tables
+CREATE INDEX IF NOT EXISTS idx_dental_charts_patient_id ON dental_charts(patient_id);
+CREATE INDEX IF NOT EXISTS idx_dental_charts_consultation_id ON dental_charts(consultation_id);
+CREATE INDEX IF NOT EXISTS idx_dental_teeth_chart_id ON dental_teeth(chart_id);
+CREATE INDEX IF NOT EXISTS idx_dental_teeth_tooth_number ON dental_teeth(tooth_number);
+CREATE INDEX IF NOT EXISTS idx_dental_procedures_patient_id ON dental_procedures(patient_id);
+CREATE INDEX IF NOT EXISTS idx_dental_procedures_consultation_id ON dental_procedures(consultation_id);
+CREATE INDEX IF NOT EXISTS idx_dental_procedures_status ON dental_procedures(status);
+CREATE INDEX IF NOT EXISTS idx_dental_treatment_plans_patient_id ON dental_treatment_plans(patient_id);
+CREATE INDEX IF NOT EXISTS idx_dental_treatment_plans_status ON dental_treatment_plans(status);
+CREATE INDEX IF NOT EXISTS idx_dental_images_patient_id ON dental_images(patient_id);
+
+-- Set up RLS policies for dental tables (disable for now, enable as needed)
+ALTER TABLE dental_charts DISABLE ROW LEVEL SECURITY;
+ALTER TABLE dental_teeth DISABLE ROW LEVEL SECURITY;
+ALTER TABLE dental_procedures DISABLE ROW LEVEL SECURITY;
+ALTER TABLE dental_treatment_plans DISABLE ROW LEVEL SECURITY;
+ALTER TABLE dental_images DISABLE ROW LEVEL SECURITY;
 
 -- =====================================================
 -- STEP 12: Create Performance Indexes

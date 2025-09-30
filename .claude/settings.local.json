@@ -1,7 +1,8 @@
 {
   "permissions": {
     "allow": [
-      "Bash(git commit:*)"
+      "Bash(git commit:*)",
+      "Read(//Users/anknown/development/swamidesk/Pharmacy Invoice Template (1)/**)"
     ],
     "deny": [],
     "ask": []

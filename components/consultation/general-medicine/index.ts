@@ -1,0 +1,10 @@
+// Export all general medicine consultation components
+export { ConsultationWorkflow } from './general-consultation-workflow'
+export { ChiefComplaintsForm } from './general-chief-complaints-form'
+export { HistoryTakingForm } from './general-history-taking-form'
+export { VitalsForm } from './general-vitals-form'
+export { ExaminationForm } from './general-examination-form'
+export { DiagnosisForm } from './general-diagnosis-form'
+export { InvestigationOrdersForm } from './general-investigation-orders-form'
+export { TreatmentPlanForm } from './general-treatment-plan-form'
+export { ConsultationSummary } from './general-consultation-summary'

@@ -28,9 +28,109 @@ import {
   Download,
   FileText,
   PlusIcon,
+  User,
 } from "lucide-react";
 import { createAuthenticatedClient } from "@/lib/supabase/authenticated-client";
-import { ConsultationWorkflow } from "@/components/consultation/consultation-workflow";
+import { ConsultationWorkflow as GeneralMedicineWorkflow } from "@/components/consultation/general-medicine";
+import { DentalConsultationWorkflow } from "@/components/consultation/dental/dental-consultation-workflow";
+import {
+  getSpecialtyConfig,
+  SPECIALTY_CONFIGS,
+} from "@/components/consultation/shared/base-consultation-workflow";
+
+// Mapping of specialties to consultation workflow components
+const CONSULTATION_WORKFLOW_COMPONENTS = {
+  "general-medicine": GeneralMedicineWorkflow,
+  dental: DentalConsultationWorkflow,
+  // Add more specialties as they are implemented
+  cardiology: GeneralMedicineWorkflow, // Fallback to general medicine for now
+  orthopedics: GeneralMedicineWorkflow, // Fallback to general medicine for now
+  dermatology: GeneralMedicineWorkflow, // Fallback to general medicine for now
+  pediatrics: GeneralMedicineWorkflow, // Fallback to general medicine for now
+  ent: GeneralMedicineWorkflow, // Fallback to general medicine for now
+  "facial-plastic-surgery": GeneralMedicineWorkflow, // Fallback to general medicine for now
+} as const;
+
+// Utility function to determine specialty from appointment
+const determineSpecialty = (appointment: Appointment | null): string => {
+  // Simple debug logging
+  console.log("🔍 determineSpecialty called with appointment:", {
+    id: appointment?.id,
+    department: appointment?.department,
+    doctorSpecialization:
+      appointment?.users?.user_profiles?.[0]?.specialization,
+  });
+
+  if (!appointment) {
+    console.log("❌ No appointment, defaulting to general-medicine");
+    return "general-medicine";
+  }
+
+  // Test: Verify SPECIALTY_CONFIGS is accessible
+  console.log("🧪 SPECIALTY_CONFIGS test:", {
+    hasConfigs: !!SPECIALTY_CONFIGS,
+    hasDental: !!SPECIALTY_CONFIGS?.["dental"],
+    allKeys: Object.keys(SPECIALTY_CONFIGS || {}),
+  });
+
+  // Priority 1: Appointment department
+  const department = appointment.department?.toLowerCase().trim();
+  console.log("🏥 Department processing:", {
+    original: appointment.department,
+    processed: department,
+  });
+
+  if (department === "dental") {
+    console.log(
+      "🦷 Found dental department, checking if dental config exists:",
+      !!SPECIALTY_CONFIGS["dental"]
+    );
+    if (SPECIALTY_CONFIGS["dental"]) {
+      console.log("✅ SUCCESS: Using dental specialty");
+      return "dental";
+    } else {
+      console.log("❌ ERROR: dental config not found in SPECIALTY_CONFIGS");
+    }
+  }
+
+  // Map other departments
+  const departmentMap: Record<string, string> = {
+    dentistry: "dental",
+    cardiology: "cardiology",
+    orthopedics: "orthopedics",
+    orthopaedics: "orthopedics",
+    dermatology: "dermatology",
+    pediatrics: "pediatrics",
+    paediatrics: "pediatrics",
+    ent: "ent",
+    otolaryngology: "ent",
+    "facial-plastic-surgery": "facial-plastic-surgery",
+    general: "general-medicine",
+    medicine: "general-medicine",
+    opd: "general-medicine",
+  };
+
+  if (department && departmentMap[department]) {
+    const mappedSpecialty = departmentMap[department];
+    if (SPECIALTY_CONFIGS[mappedSpecialty]) {
+      console.log("✅ Using mapped department specialty:", mappedSpecialty);
+      return mappedSpecialty;
+    }
+  }
+
+  // Priority 2: Doctor specialization (fallback)
+  const doctorSpec = appointment.users?.user_profiles?.[0]?.specialization
+    ?.toLowerCase()
+    .trim();
+  if (doctorSpec && SPECIALTY_CONFIGS[doctorSpec]) {
+    console.log("✅ Using doctor specialization:", doctorSpec);
+    return doctorSpec;
+  }
+
+  // Default fallback
+  console.log("⚠️ Falling back to general-medicine");
+  return "general-medicine";
+};
 
 interface Patient {
   id: string;
@@ -46,6 +146,7 @@ interface Appointment {
   id: string;
   patient_id: string;
   doctor_id: string;
+  department: string;
   scheduled_date: string;
   scheduled_time: string;
   status: string;
@@ -64,6 +165,13 @@ interface Appointment {
     gender: string;
     date_of_birth: string;
     address?: string;
+  };
+  users?: {
+    id: string;
+    full_name: string;
+    user_profiles: {
+      specialization: string | null;
+    } | null;
   };
 }
 
@@ -98,6 +206,8 @@ export function OPDManagement({
   const [showFullConsultationWorkflow, setShowFullConsultationWorkflow] =
     useState(false);
   const [appointmentId, setAppointmentId] = useState<string | null>(null);
+  const [detectedSpecialty, setDetectedSpecialty] =
+    useState<string>("general-medicine");
   const [consultationSession, setConsultationSession] = useState<Record<
     string,
     unknown
@@ -154,7 +264,8 @@ export function OPDManagement({
         .select(
           `
           *,
-          patients(id, full_name, phone, email, gender, date_of_birth, address)
+          patients(id, full_name, phone, email, gender, date_of_birth, address),
+          users!doctor_id(id, full_name, user_profiles(specialization))
         `
         )
         .eq("opd_id", opdId)
@@ -179,7 +290,7 @@ export function OPDManagement({
             }
           : undefined,
       }));
-
+      console.log({ transformedData });
       setAppointments(transformedData);
 
       // Categorize appointments by type
@@ -192,6 +303,18 @@ export function OPDManagement({
 
       setConsultationAppointment(consultation || null);
       setFollowUpAppointments(followUps);
+
+      // Detect specialty from consultation appointment
+      if (consultation) {
+        const detectedSpecialty = determineSpecialty(consultation);
+        setDetectedSpecialty(detectedSpecialty);
+        console.log("🎯 Specialty detected from consultation appointment:", {
+          appointmentId: consultation.id,
+          department: consultation.department,
+          detectedSpecialty,
+          workflowComponent: CONSULTATION_WORKFLOW_COMPONENTS[detectedSpecialty]?.name || 'Unknown'
+        });
+      }
 
       console.log("Categorized appointments:", { consultation, followUps });
     } catch (error) {
@@ -213,7 +336,8 @@ export function OPDManagement({
         .select(
           `
           *,
-          patients(id, full_name, phone, email, gender, date_of_birth, address)
+          patients(id, full_name, phone, email, gender, date_of_birth, address),
+          users!doctor_id(id, full_name, user_profiles(specialization))
         `
         )
         .eq("scheduled_date", today)
@@ -961,6 +1085,10 @@ export function OPDManagement({
     // Use effective userId with fallback mechanisms
     const userIdToUse = effectiveUserId || userId;
 
+    // Detect specialty from consultation appointment
+    const specialty = determineSpecialty(consultationAppointment);
+    setDetectedSpecialty(specialty);
+
     // Enhanced debug logging to identify what's missing
     console.log("handleStartConsultationWorkflow called with:", {
       consultationAppointment: consultationAppointment,
@@ -968,6 +1096,8 @@ export function OPDManagement({
       userId: userId,
       effectiveUserId: effectiveUserId,
       userIdToUse: userIdToUse,
+      detectedSpecialty: specialty,
+      specialtyConfig: getSpecialtyConfig(specialty),
       hasConsultationAppointment: !!consultationAppointment,
       hasSelectedPatient: !!selectedPatient,
       hasUserId: !!userId,
@@ -1041,6 +1171,10 @@ export function OPDManagement({
     // Use effective userId with fallback mechanisms
     const userIdToUse = effectiveUserId || userId;
 
+    // Detect specialty from follow-up appointment
+    const specialty = determineSpecialty(followUpAppointment);
+    setDetectedSpecialty(specialty);
+
     // Enhanced debug logging to identify what's missing
     console.log("handleStartFollowUpWorkflow called with:", {
       followUpAppointment: followUpAppointment,
@@ -1048,6 +1182,8 @@ export function OPDManagement({
       userId: userId,
       effectiveUserId: effectiveUserId,
       userIdToUse: userIdToUse,
+      detectedSpecialty: specialty,
+      specialtyConfig: getSpecialtyConfig(specialty),
       hasSelectedPatient: !!selectedPatient,
       hasFollowUpAppointment: !!followUpAppointment,
       hasUserId: !!userId,
@@ -1990,7 +2126,8 @@ export function OPDManagement({
                       <CheckCircle2Icon className="h-6 w-6 text-green-600" />
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">
-                          Patient Consultation
+                          {getSpecialtyConfig(detectedSpecialty).displayName}{" "}
+                          Consultation
                         </h3>
                         <p className="text-sm text-green-600">
                           Completed Successfully
@@ -2004,7 +2141,8 @@ export function OPDManagement({
                       </div>
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">
-                          Patient Consultation
+                          {getSpecialtyConfig(detectedSpecialty).displayName}{" "}
+                          Consultation
                         </h3>
                         <p className="text-sm text-blue-600">In Progress</p>
                       </div>
@@ -2016,7 +2154,8 @@ export function OPDManagement({
                       </div>
                       <div>
                         <h3 className="text-lg font-semibold text-gray-900">
-                          Patient Consultation
+                          {getSpecialtyConfig(detectedSpecialty).displayName}{" "}
+                          Consultation
                         </h3>
                         <p className="text-sm text-gray-600">Ready to Start</p>
                       </div>
@@ -2050,6 +2189,30 @@ export function OPDManagement({
                     In Progress
                   </Badge>
                 )}
+              </div>
+
+              {/* Doctor and Specialty Information */}
+              <div className="mb-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4 text-blue-600" />
+                    <span className="text-gray-600">Doctor:</span>
+                    <span className="font-medium text-gray-900">
+                      {consultationAppointment?.users?.full_name ||
+                        "Not specified"}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <StethoscopeIcon className="h-4 w-4 text-blue-600" />
+                    <span className="text-gray-600">Specialty:</span>
+                    <Badge
+                      variant="secondary"
+                      className="bg-blue-100 text-blue-800 px-2 py-1 text-xs"
+                    >
+                      {getSpecialtyConfig(detectedSpecialty).displayName}
+                    </Badge>
+                  </div>
+                </div>
               </div>
 
               {/* Data Summary - Always show existing data regardless of consultation status */}
@@ -4612,15 +4775,44 @@ export function OPDManagement({
         )}
 
         {/* Full Consultation Workflow Component */}
-        {showFullConsultationWorkflow && appointmentId && (
-          <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
-            <ConsultationWorkflow
-              appointmentId={appointmentId}
-              onComplete={handleConsultationComplete}
-              onCancel={handleConsultationCancel}
-            />
-          </div>
-        )}
+        {showFullConsultationWorkflow &&
+          appointmentId &&
+          (() => {
+            const SpecialtyWorkflowComponent =
+              CONSULTATION_WORKFLOW_COMPONENTS[detectedSpecialty] ||
+              GeneralMedicineWorkflow;
+            const specialtyConfig = getSpecialtyConfig(detectedSpecialty);
+
+            console.log(
+              "🏥 OPD Management - Rendering Consultation Workflow:",
+              {
+                detectedSpecialty,
+                specialtyConfig: specialtyConfig.displayName,
+                workflowComponent: SpecialtyWorkflowComponent.name || "Unknown",
+                appointmentId,
+                consultationAppointment: consultationAppointment
+                  ? {
+                      department: consultationAppointment.department,
+                      doctorName: consultationAppointment.users?.full_name,
+                      doctorSpecialization:
+                        consultationAppointment.users?.user_profiles
+                          ?.specialization,
+                    }
+                  : null,
+              }
+            );
+
+            return (
+              <div className="fixed inset-0 bg-white z-50 overflow-y-auto">
+                <SpecialtyWorkflowComponent
+                  appointmentId={appointmentId}
+                  onComplete={handleConsultationComplete}
+                  onCancel={handleConsultationCancel}
+                  specialty={detectedSpecialty}
+                />
+              </div>
+            );
+          })()}
       </div>
     );
   }
